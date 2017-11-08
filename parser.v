@@ -29,36 +29,35 @@ End MDT_Symbol.
 
 Module SymbolAsDT := Make_UDT(MDT_Symbol).
 
+(* Will adding an annotation make the ascription transparent? *)
 Module S := MSetWeakList.Make SymbolAsDT.
+
+Module SyMod := S.
+Print SyMod.
 
 Module M := FMapWeakList.Make SymbolAsDT.
 
 Definition addList syms se := fold_right S.add se syms. 
 
 Definition production := (symbol * list symbol)%type.
-Check production.
 
 Definition grammar := (list production)%type.
 
-Definition G311 : grammar := (NT "S", T "if" :: NT "E" ::  T "then" :: NT "S" :: T "else" :: NT "S" :: nil) :: nil.
+Definition G311 : grammar :=
+  (NT "S", T "if" :: NT "E" ::  T "then" :: NT "S" :: T "else" :: NT "S" :: nil) ::
+  (NT "S", T "begin" :: NT "S" :: NT "L" :: nil) ::
+  (NT "S", T "print" :: NT "E" :: nil) ::
+  
+  (NT "L", T "end" :: nil) :: 
+  (NT "L", T ";" :: NT "S" :: NT "L" :: nil) ::
 
-(*
-
-	    (NT "S", [T "begin", NT "S", NT "L"]),
-	    (NT "S", [T "print", NT "E"]),
-
-	    (NT "L", [T "end"]),
-	    (NT "L", [T ";", NT "S", NT "L"]),
-
-	    (NT "E", [T "num", T "=", T "num"])].
-*)
+  (NT "E", T "num" :: T "=" :: T "num" :: nil) :: nil.
 
 Fixpoint isT (sy : symbol) : bool :=
   match sy with
   | T _ => true
   | _   => false
   end.
-
 
 Definition nonterminals (g : grammar) :=
   addList (map fst g) S.empty.
@@ -68,8 +67,6 @@ Definition terminals (g : grammar) : S.t  :=
   in  fold_right (fun ts se => addList ts se) 
 		 S.empty 
 		 tsPerProd.
-
-Eval compute in terminals G311.
 
 Definition nullable nSet sym :=
   match sym with
@@ -100,6 +97,14 @@ Definition fixp {A} update (cmp : A -> A -> bool) x0 fuel :=
       end
   in iter x0 fuel.
 
+(*
+Definition get (k : symbol) m default :=
+  match M.find k m with
+  | Some v => v
+  | None   => default
+  end.
+*)
+
 Definition getOrEmpty k m :=
   match M.find k m with
   | Some v => v
@@ -112,13 +117,11 @@ Definition mkNullableSet g fuel :=
       if forallb (nullable nSet) ys then S.add x nSet else nSet
   in  fixp (fun nu => fold_right updateNu nu g) S.equal S.empty fuel.
 
-Print String.
 
 (* There must be a way to avoid doing this. *)
 Definition cmpSymbol sy sy2 := if SymbolAsDT.eq_dec sy sy2 then true else false.
 
-(* Known issues : the (M.equal cmpSymbol) application is failing because Coq can't figure out
-   that the map key type is the same as the set element type (they're both grammar symbols). *)
+
 Definition mkFirstSet g nu fuel :=
   let fix updateFi (prod : production) fi :=
       let (x, ys) := prod in
@@ -127,32 +130,135 @@ Definition mkFirstSet g nu fuel :=
           | nil => fi
           | EPS :: ys'  => helper x ys' fi
           | T s :: ys'  => M.add x (S.add (T s) (getOrEmpty x fi)) fi 
-          | NT s :: ys' => helper x ys' fi
+          | NT s :: ys' =>
+            let vx := S.union (getOrEmpty x fi) (getOrEmpty (NT s) fi) in
+            let fi' := M.add x vx fi in
+            if S.mem (NT s) nu then helper x ys' fi' else fi'
           end
       in  helper x ys fi
   in  fixp (fun fi => fold_right updateFi fi g)
-           (M.equal cmpSymbol)
+           (M.equal S.equal)
            (M.empty S.t)
            fuel.
 
-(* Known issues : the return type of the pattern match against the production can't be inferred. *)
+
 Definition mkFollowSet g nu fi fuel :=
   let updateFo (prod : production) fo :=
-      let (x, ys) := prod in
-      let fix helper (x : symbol) (ys : list symbol) fo :=
-          match ys with
-          | nil => fo
-          | NT s :: ys' =>
-            let fix loopr ys' fo :=
-                match ys' with
-                | nil => M.add (NT s) (S.union (getOrEmpty x fo) (getOrEmpty (NT s) fo)) fo
-                | z :: zs =>
-                  let fo' := M.add (NT s) (S.union (getOrEmpty (NT s) fo) (getOrEmpty z fi)) fo in
-                  if nullable nu z then loopr zs fo' else fo'
-                end
-            in  helper x ys' (loopr ys' fo)
-          | _ :: ys' => helper x ys' fo
-          end
-      in  helper x ys fo
-  in  fixp (fun fo => fold_right updateFo fo g) (M.equal cmpSymbol) (M.empty symbol) fuel.
+      match prod with
+      | (x, ys) =>
+        let fix helper (x : symbol) (ys : list symbol) fo :=
+            match ys with
+            | nil => fo
+            | NT s :: ys' =>
+              let fix loopr ys' fo :=
+                  match ys' with
+                  | nil => M.add (NT s) (S.union (getOrEmpty x fo) (getOrEmpty (NT s) fo)) fo
+                  | z :: zs =>
+                    let fo' := M.add (NT s) (S.union (getOrEmpty (NT s) fo) (getOrEmpty z fi)) fo in
+                    if nullable nu z then loopr zs fo' else fo'
+                  end
+              in  helper x ys' (loopr ys' fo)
+            | _ :: ys' => helper x ys' fo
+            end
+        in  helper x ys fo
+      end            
+  in  fixp (fun fo => fold_right updateFo fo g) (M.equal S.equal) (M.empty S.t) fuel.
 
+
+Record nff := mkNFF {nu : S.t; fi : M.t S.t; fo : M.t S.t}.
+
+Definition gToNFF g fuel :=
+  let nu := mkNullableSet g fuel in
+  let fi := mkFirstSet g nu fuel in
+  let fo := mkFollowSet g nu fi fuel in
+  mkNFF nu fi fo.
+
+
+Fixpoint firstGamma gamma nu fi :=
+  match gamma with
+  | nil => S.empty
+  | y :: ys =>
+    if nullable nu y then
+      S.union (first fi y) (firstGamma ys nu fi)
+    else
+      first fi y
+  end.
+
+Definition nullableGamma ys nu := forallb (nullable nu) ys.
+
+Type "a" :: nil.
+
+Definition mkParseTable g fuel :=
+  let nff := gToNFF g fuel in
+  let addEntry entry nt t ma :=
+      let row :=  match M.find nt ma with
+                  | Some r => r
+                  | None   => (M.empty (list production))
+                  end  in
+      let cell := match M.find t row with
+                  | Some c => c
+                  | None   => nil
+                  end  in
+      M.add nt (M.add t (entry :: cell) row) ma  in
+  let addProd prod tbl :=
+      match prod with
+        | (x, ys) =>
+          let fg := firstGamma ys (nu nff) (fi nff) in
+          let ts := if nullableGamma ys (nu nff) then
+                      S.union fg (getOrEmpty x (fo nff))
+                    else
+                      fg
+          in  S.fold (addEntry (x, ys) x) ts tbl
+      end
+  in  fold_right addProd (M.empty (M.t (list production))) g.
+
+Eval compute in mkParseTable G311 100.
+
+
+Inductive ast {A} :=
+| Node : A -> list ast -> ast
+| Leaf : A -> ast.
+
+Definition parse g start input fuel1 fuel2 :=
+  let pt := mkParseTable g fuel1 in
+  let fix loop sym input fuel :=
+      match fuel with
+      | O => None
+      | S n =>
+        match (sym, input) with
+        | (NT s, t :: ts) =>
+          match M.find (NT s) pt with
+          | None    => None  (* No parse table entries for the NT *)
+          | Some ma => match M.find (T t) ma with
+                       | None => None (* No expansions of NT that start with T *)
+                       | Some nil => None
+                       | Some (p1 :: p2 :: ps) => None
+                       | Some (p :: nil) =>
+                         let (x, ys) := p in
+                         let subresult :=
+                             fold_left (fun subtrees_input y =>
+                                          match subtrees_input with
+                                          | None => None
+                                          | Some (subtrees, input) =>
+                                            match loop y input n with
+                                            | None => None
+                                            | Some (subtree, input') =>
+                                              Some (app subtrees (subtree :: nil), input')
+                                            end
+                                          end) ys (Some (nil, input))
+                         in  match subresult with
+                             | None => None
+                             | Some (subtrees, input') => Some (Node (NT s) subtrees, input')
+                             end
+                       end
+          end
+        | (NT s, nil) => None
+        | (T s, s2 :: ts) => match cmpSymbol (T s) (T s2) with
+                             | true => Some (Leaf (T s), ts)
+                             | false => None
+                             end
+        | (T _, nil) => None
+        | (EPS, _)   => Some (Leaf EPS, input)
+        end
+      end
+  in  loop start input fuel2.
