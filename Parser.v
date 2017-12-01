@@ -7,9 +7,9 @@ Require Import List.
 Open Scope string_scope.
 
 Inductive symbol :=
-  | EPS : symbol
-  | T   : string -> symbol
-  | NT  : string -> symbol.
+| EPS : symbol
+| T   : string -> symbol
+| NT  : string -> symbol.
 
 Definition symbol_eq_dec : forall (sy sy2 : symbol),
     {sy = sy2} + {~sy = sy2}.
@@ -40,6 +40,9 @@ Module M := FMapWeakList.Make SymbolAsDT.
 Definition addList syms se := fold_right S.add se syms. 
 
 Definition production := (symbol * list symbol)%type.
+
+Definition lhs (p : production) := fst p.
+Definition rhs (p : production) := snd p.
 
 Definition grammar := (list production)%type.
 
@@ -218,6 +221,12 @@ Eval compute in mkParseTable G311 100.
 Inductive ast {A} :=
 | Node : A -> list ast -> ast
 | Leaf : A -> ast.
+
+Definition getRoot (tree : ast) : symbol :=
+  match tree with
+  | Node ntName _ => NT ntName
+  | Leaf tName    => T tName
+  end.
 
 Definition parse g start input fuel1 fuel2 :=
   let pt := mkParseTable g fuel1 in
