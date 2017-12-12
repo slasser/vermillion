@@ -3,7 +3,7 @@ Require Import ListSet.
 Require Import MSets.
 Require Import FMaps.
 Require Import List.
-
+Import ListNotations.
 Open Scope string_scope.
 
 Inductive symbol :=
@@ -216,6 +216,7 @@ Definition mkParseTable g fuel :=
   in  fold_right addProd (M.empty (M.t (list production))) g.
 
 Eval compute in mkParseTable G311 100.
+Type mkParseTable.
 
 
 Inductive ast {A} :=
@@ -232,15 +233,15 @@ Definition parse g start input fuel1 fuel2 :=
   let pt := mkParseTable g fuel1 in
   let fix loop sym input fuel :=
       match fuel with
-      | O => None
+      | O   => None
       | S n =>
         match (sym, input) with
-        | (NT s, t :: ts) =>
-          match M.find (NT s) pt with
+        | (NT ntName, token :: _) =>
+          match M.find sym pt with
           | None    => None  (* No parse table entries for the NT *)
-          | Some ma => match M.find (T t) ma with
-                       | None => None (* No expansions of NT that start with T *)
-                       | Some nil => None
+          | Some ma => match M.find (T token) ma with
+                       | None                  => None (* No expansions of NT that start with T *)
+                       | Some nil              => None
                        | Some (p1 :: p2 :: ps) => None
                        | Some (p :: nil) =>
                          let (x, ys) := p in
@@ -257,17 +258,94 @@ Definition parse g start input fuel1 fuel2 :=
                                           end) ys (Some (nil, input))
                          in  match subresult with
                              | None => None
-                             | Some (subtrees, input') => Some (Node (NT s) subtrees, input')
+                             | Some (subtrees, input') => Some (Node ntName subtrees, input')
                              end
                        end
           end
-        | (NT s, nil) => None
-        | (T s, s2 :: ts) => match cmpSymbol (T s) (T s2) with
-                             | true => Some (Leaf (T s), ts)
-                             | false => None
-                             end
+        | (NT _, nil) => None
+        | (T tName, token :: tokens) => match cmpSymbol (T tName) (T token) with
+                                        | true =>  Some (Leaf tName, tokens)
+                                        | false => None
+                                        end
         | (T _, nil) => None
-        | (EPS, _)   => Some (Leaf EPS, input)
+        | (EPS, _)   => Some (Leaf "", input) (* Come back to this *)
         end
       end
   in  loop start input fuel2.
+
+Definition ptLookup (nt : symbol) (t : symbol)
+           (pt : M.t (M.t (list production))) : option production :=
+  match M.find nt pt with
+  | None    => None
+  | Some ma => match M.find t ma with
+               | None                  => None
+               | Some nil              => None
+               | Some (p1 :: p2 :: ps) => None
+               | Some [p]              =>
+                 let (x, ys) := p in Some (x, ys)
+               end
+  end.
+
+Fixpoint parseLoop (pt : M.t (M.t (list production)))
+         (stack : list symbol)
+         (input : list string) (fuel : nat) : bool :=
+  match fuel with
+  | O   => false
+  | S n =>
+    match (stack, input) with
+    | (nil, _) => true
+    | (NT ntName :: stack', token :: _) =>
+      match ptLookup (NT ntName) (T token) pt with
+      | None => false
+      | Some (x, ys) => parseLoop pt (app ys stack') input n
+      end
+    | (NT _ :: _, nil) => false
+    | (T tName :: stack', token :: input') =>
+      match cmpSymbol (T tName) (T token) with
+      | true  => parseLoop pt stack' input' n
+      | false => false
+      end
+    | (T _ :: _, nil) => false
+    | (EPS :: stack', _)   => parseLoop pt stack' input n
+    end
+  end.
+
+Definition parse' pt start input fuel :=
+  parseLoop pt [start] input fuel.
+
+
+
+(* Stack-based version *)
+(* To do : move lookup routine into separate function *)
+Definition parse'' (pt : M.t (M.t (list production))) start input fuel :=
+  let fix loop stack input fuel :=
+      match fuel with
+      | O   => false
+      | S n =>
+        match (stack, input) with
+        | (nil, _) => true
+        | (NT ntName :: stack', token :: _) =>
+          match M.find (NT ntName) pt with
+          | None    => false  (* No parse table entries for the NT *)
+          | Some ma => match M.find (T token) ma with
+                       | None                  => false (* No expansions of NT that start with T *)
+                       | Some nil              => false
+                       | Some (p1 :: p2 :: ps) => false
+                       | Some [p] =>
+                         let (x, ys) := p
+                         in  loop (app ys stack') input n
+                       end
+          end
+        | (NT _ :: _, nil) => false
+        | (T tName :: stack', token :: input') =>
+          match cmpSymbol (T tName) (T token) with
+          | true  => loop stack' input' n
+          | false => false
+          end
+        | (T _ :: _, nil) => false
+        | (EPS :: stack', _)   => loop stack' input n
+        end
+      end
+  in  loop [start] input fuel.
+
+Type parse'.
