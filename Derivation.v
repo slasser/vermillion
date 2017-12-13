@@ -6,6 +6,24 @@ Import ListNotations.
 (* To do : rephrase this in terms of a grammar and it's productions.
    At the moment, NT and subtrees in derivesNT could be from different productions. *)
 
+(* Binary version of the derives relation *)
+Inductive derives2 {g : grammar} : symbol -> list string -> Prop :=
+| derivesT2  : forall (tName : string),
+    derives2 (T tName)  [tName]
+| derivesNT2 : forall (ntName : string) (prod : production) (tokens : list string),
+    In prod g /\ derivesList2 (rhs prod) tokens /\ lhs prod = (NT ntName) ->
+    derives2 (NT ntName) tokens
+            
+with derivesList2 {g : grammar} : list symbol -> list string -> Prop :=
+     | derivesNil2  : derivesList2 nil nil
+     | derivesCons2 :
+         forall (hdRoot : symbol) (prefix : list string),
+           derives2 hdRoot prefix ->
+           
+           forall (tlRoots : list symbol) (suffix : list string),
+             derivesList2 tlRoots suffix ->
+             derivesList2 (hdRoot :: tlRoots) (prefix ++ suffix).
+
 Inductive derives {g : grammar} : symbol -> list string -> ast -> Prop :=
 | derivesT  : forall (tName : string),
     derives (T tName)  [tName] (Leaf tName)
