@@ -1,11 +1,14 @@
 #!/bin/bash
 
 
-SOURCE_FILES=("Parser.v"
-	      "Grammar.v"
+SOURCE_FILES=("Grammar.v"
+	      "ExampleGrammars.v"
+	      "ParseTable.v"
+	      "ParseTree.v"
+	      "Parser.v"
+	      #"ParserTests.v"
 	      "Derivation.v"
-	      "ParserTest.v"
-	      "DerivationTest.v"
+	      "DerivationTests.v"
 	     )
 
 

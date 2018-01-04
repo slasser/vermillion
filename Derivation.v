@@ -1,3 +1,6 @@
+Require Import GrammarSymbol.
+Require Import Grammar.
+Require Import ParseTree.
 Require Import List.
 Require Import String.
 Require Import Parser.
@@ -25,20 +28,20 @@ with derivesList2 {g : grammar} : list symbol -> list string -> Prop :=
              derivesList2 tlRoots suffix ->
              derivesList2 (hdRoot :: tlRoots) (prefix ++ suffix).
 
-Inductive derives {g : grammar} : symbol -> list string -> ast -> Prop :=
+Inductive derives {g : grammar} : symbol -> list string -> parse_tree -> Prop :=
 | derivesT  : forall (tName : string),
     derives (T tName)  [tName] (Leaf tName)
-| derivesNT : forall (ntName : string) (prod : production) (tokens : list string) (subtrees : list ast),
+| derivesNT : forall (ntName : string) (prod : production) (tokens : list string) (subtrees : list parse_tree),
     In prod g /\ derivesList (rhs prod) tokens subtrees /\ lhs prod = (NT ntName) ->
     derives (NT ntName) tokens (Node ntName subtrees)
 
-with derivesList {g : grammar} : list symbol -> list string -> list ast -> Prop :=
+with derivesList {g : grammar} : list symbol -> list string -> list parse_tree -> Prop :=
      | derivesNil  : derivesList nil nil nil
      | derivesCons :
-         forall (hdRoot : symbol) (prefix : list string) (hdSubtree : ast),                  
+         forall (hdRoot : symbol) (prefix : list string) (hdSubtree : parse_tree),                  
            derives hdRoot prefix hdSubtree ->
            
-           forall (tlRoots : list symbol) (suffix : list string) (tlSubtrees : list ast),
+           forall (tlRoots : list symbol) (suffix : list string) (tlSubtrees : list parse_tree),
              derivesList tlRoots suffix tlSubtrees ->
              
              derivesList (hdRoot :: tlRoots) (prefix ++ suffix) (hdSubtree :: tlSubtrees).
@@ -60,6 +63,4 @@ Proof.
         apply derivesT.
         apply derivesNil. }
     + reflexivity.
-Defined.                                
-       
-    
+Defined.

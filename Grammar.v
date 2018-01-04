@@ -1,18 +1,34 @@
-Require Import List.
-Require Import Parser.
+Require Import FMaps.
+Require Import MSets.
 Require Import String.
-Import ListNotations.
 
-Definition gSimple : grammar :=
-  [(NT "A", [T "a"; T "b"]);
-   (NT "X", [T "x"; T "y"])].
+Inductive symbol :=
+| EPS : symbol
+| T   : string -> symbol
+| NT  : string -> symbol.
 
-Definition g311 : grammar :=
-  [(NT "S", [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"]) ;
-   (NT "S", [T "begin" ; NT "S" ; NT "L"]) ;
-   (NT "S", [T "print" ; NT "E"]) ;
-  
-   (NT "L", [T "end"]) ;
-   (NT "L", [T ";" ; NT "S" ; NT "L"]) ;
-   
-   (NT "E", [T "num" ; T "==" ; T "num"])].
+Definition production := (symbol * list symbol)%type.
+Definition lhs (p : production) := fst p.
+Definition rhs (p : production) := snd p.
+
+Definition grammar := (list production)%type.
+
+(* Create a module for sets of grammar symbols
+   and a module for maps with grammar symbol keys *)
+
+Definition symbol_eq_dec : forall (sy sy2 : symbol),
+    {sy = sy2} + {~sy = sy2}.
+Proof.
+  intros. decide equality; apply String.string_dec.
+Defined.
+
+Module MDT_Symbol.
+  Definition t := symbol.
+  Definition eq_dec := symbol_eq_dec.
+End MDT_Symbol.
+
+Module SymbolAsDT := Make_UDT(MDT_Symbol).
+
+Module SymbolSet := MSetWeakList.Make SymbolAsDT.
+
+Module SymbolMap := FMapWeakList.Make SymbolAsDT.
