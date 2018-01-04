@@ -3,12 +3,15 @@
 
 SOURCE_FILES=("Grammar.v"
 	      "ExampleGrammars.v"
+	      "Derivation.v"
+	      "ParserTactics"
+	      "DerivationTests.v"
 	      "ParseTable.v"
+	      "ParseTableProofs.v"
 	      "ParseTree.v"
 	      "Parser.v"
-	      #"ParserTests.v"
-	      "Derivation.v"
-	      "DerivationTests.v"
+	      "ParserTests.v"
+	      "ParserCorrectnessProofs.v"	      
 	     )
 
 

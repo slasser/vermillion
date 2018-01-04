@@ -4,8 +4,9 @@ Import ListNotations.
 
 Definition parse_table := SymbolMap.t (SymbolMap.t (list production)).
 
-Definition parseTableLookup (nt : symbol) (t : symbol)
-           (pt : SymbolMap.t (SymbolMap.t (list production))) : option production :=
+Definition parseTableLookup (nt : symbol)
+                            (t : symbol)
+                            (pt : parse_table) : option production :=
   match SymbolMap.find nt pt with
   | None    => None
   | Some ma => match SymbolMap.find t ma with

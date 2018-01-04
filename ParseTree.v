@@ -1,4 +1,4 @@
-Require Import GrammarSymbol.
+Require Import Grammar.
 
 Inductive parse_tree {A} :=
 | Node : A -> list parse_tree -> parse_tree

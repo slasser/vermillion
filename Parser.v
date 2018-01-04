@@ -1,4 +1,3 @@
-Require Import GrammarSymbol.
 Require Import Grammar.
 Require Import ParseTable.
 Require Import ParseTree.
