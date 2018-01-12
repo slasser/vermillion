@@ -3,7 +3,6 @@ Require Import MSets.
 Require Import String.
 
 Inductive symbol :=
-| EPS : symbol
 | T   : string -> symbol
 | NT  : string -> symbol.
 

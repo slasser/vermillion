@@ -2,17 +2,17 @@ Require Import ExampleGrammars.
 Require Import Grammar.
 Require Import List.
 Require Import MSets.
-Require Import Parser.
 Require Import ParserTactics.
 Require Import ParseTable.
 Require Import String.
 Import ListNotations.
+Open Scope string_scope.
 
 (* Tests use Grammar 3.12, shown here:
 
      Z -> d
      Z -> X Y Z
-     Y -> EPS
+     Y -> []
      Y -> c
      X -> Y
      X -> a
@@ -50,7 +50,7 @@ Proof.
               { inv H. inv H0. }
               { inv H. }}}}
   - unfold nSetMinimal. intros. inv H.
-    + subst. unfold g312. exists [EPS]. split.
+    + subst. unfold g312. exists nil. split.
       * compute. repeat (try (left; reflexivity); right).
       * reflexivity.
     + (* Not exactly sure how to use InA, but this works. *)

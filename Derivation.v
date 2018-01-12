@@ -26,7 +26,6 @@ with derivesList {g : grammar} : list symbol -> list string -> list parse_tree -
 
 (* Binary version of the derives relation *)
 Inductive derives2 {g : grammar} : symbol -> list string -> Prop :=
-| derivesEPS2 : derives2 EPS []
 | derivesT2  : forall (tName : string),
     derives2 (T tName)  [tName]
 | derivesNT2 : forall (ntName : string) (prod : production) (tokens : list string),

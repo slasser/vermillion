@@ -18,7 +18,7 @@ Definition g311 : grammar :=
 Definition g312 : grammar :=
   [(NT "Z", [T "d"]); 
    (NT "Z", [NT "X"; NT "Y"; NT "Z"]);
-   (NT "Y", [EPS]);
+   (NT "Y", []);
    (NT "Y", [T "c"]);
    (NT "X", [NT "Y"]);
    (NT "X", [T "a"])].

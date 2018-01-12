@@ -2,14 +2,12 @@ Require Import Grammar.
 
 Definition nullable nSet sym :=
   match sym with
-  | EPS  => true
   | T _  => false
   | NT _ => SymbolSet.mem sym nSet
   end.
 
 Definition first fi sym :=
   match sym with
-  | EPS  => SymbolSet.empty
   | T _  => SymbolSet.singleton sym
   | NT _ => match SymbolMap.find sym fi with
             | Some se => se

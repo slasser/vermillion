@@ -24,7 +24,6 @@ Definition mkFirstSet g nu fuel :=
       let fix helper x ys fi :=
           match ys with
           | nil => fi
-          | EPS :: ys'  => helper x ys' fi
           | T s :: ys'  => SymbolMap.add x (SymbolSet.add (T s) (getOrEmpty x fi)) fi 
           | NT s :: ys' =>
             let vx := SymbolSet.union (getOrEmpty x fi) (getOrEmpty (NT s) fi) in
@@ -128,7 +127,6 @@ Fixpoint parseLoop (pt : SymbolMap.t (SymbolMap.t (list production)))
       | false => false
       end
     | (T _ :: _, nil) => false
-    | (EPS :: stack', _)   => parseLoop pt stack' input n
     end
   end.
 

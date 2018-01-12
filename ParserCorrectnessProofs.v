@@ -10,6 +10,8 @@ Require Import ParserUtils.
 Import ListNotations.
 Open Scope string_scope.
 
+(* NOT NEEDED NOW THAT EPSILON IS NO LONGER A GRAMMAR SYMBOL *)
+(* 
 Lemma epsilon_step :
   forall (pt : parse_table)
          (stack : list symbol)
@@ -22,7 +24,7 @@ Proof.
   - intros. simpl. assumption.
   - intros. simpl in H. assumption.
 Defined.
-
+*)
 
 Lemma terminal_step :
   forall (pt : parse_table)
@@ -90,11 +92,6 @@ Proof.
     + destruct stack.
       * reflexivity.
       * destruct s.
-        (* epsilon case *)
-        { rewrite <- epsilon_step in *.
-          apply IHn.
-          { assumption. }
-          { omega. }}
         (* terminal case *)
         { destruct tokens.
           { inv H. }
@@ -160,9 +157,6 @@ Proof.
     + destruct a eqn:Hsym.
       * simpl in H. exists nil, input. split.
         { reflexivity. }
-        { apply derivesCons2
-            with (hdRoot := EPS) (prefix := []).
-          { apply derivesEPS2. }
 Abort.
 
 
@@ -184,14 +178,4 @@ Proof.
     (* epsilon case *)
     + exists nil, input. simpl. split.
       * reflexivity.
-      * apply derivesEPS2.
-    (* terminal case *)    
-    + destruct input.
-      * inv H.
-      * exists [s0], input. simpl. split.
-        { reflexivity. }
-        { assert (s = s0).
-          { unfold parseLoop in H.
-            unfold cmpSymbol in H.
-            destruct (SymbolAsDT.eq_dec (T s) (T s0)).
 Abort.
