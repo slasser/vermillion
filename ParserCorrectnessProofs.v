@@ -6,6 +6,7 @@ Require Import ParserTactics.
 Require Import ParseTable.
 Require Import String.
 Require Import Omega.
+Require Import ParserUtils.
 Import ListNotations.
 Open Scope string_scope.
 

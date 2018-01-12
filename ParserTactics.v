@@ -23,5 +23,5 @@ Ltac crush :=
          | |- derivesList [] _ _ => apply derivesNil
          | |- derivesList2 [] _  => apply derivesNil2
          | |- ?P = ?P => reflexivity
-         | |- _ => simpl
+         | |- _ => simpl in *
          end.

@@ -30,5 +30,7 @@ End MDT_Symbol.
 Module SymbolAsDT := Make_UDT(MDT_Symbol).
 
 Module SymbolSet := MSetWeakList.Make SymbolAsDT.
+Module SymbolSetFacts := WFactsOn SymbolAsDT SymbolSet.
 
 Module SymbolMap := FMapWeakList.Make SymbolAsDT.
+Module SymbolMapFacts := WFacts_fun SymbolAsDT SymbolMap.
