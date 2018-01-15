@@ -80,30 +80,47 @@ Definition OLD_isFirstSetFor fi g nu : Prop :=
 
 (* Definition of the FOLLOW set for a given grammar *)
 
+(* To do: figure out whether any of these clauses need
+   "A <> B" constraints *)
 Inductive pairInFollowSet
           {g : grammar}
           {nu : SymbolSet.t}
           {fi : SymbolMap.t SymbolSet.t} :
           symbol -> symbol -> Prop :=
-| followRight : forall (X1 X2 y : string)
-                       (prefix infix suffix : list symbol)
-                       (sym : symbol),
-    In (NT X1, prefix ++ (NT X2) :: infix ++ sym :: suffix) g ->
+| followRightT : forall (A B y : string)
+                        (prefix infix suffix : list symbol),
+    In (NT A, prefix ++ NT B :: infix ++ T y :: suffix) g ->
     isFirstSetFor fi g nu ->
     forallb (nullable nu) infix = true ->
-    SymbolSet.In (T y) (first fi sym) ->
-    pairInFollowSet (NT X2) (T y)
-| followLeft : forall (X1 X2 y : string)
-                      (prefix suffix : list symbol),
-    In (NT X1, prefix ++ (NT X2) :: suffix) g ->
+    pairInFollowSet (NT B) (T y)
+| followRightNT : forall (A B C y : string)
+                         (firstC  : SymbolSet.t)
+                         (prefix infix suffix : list symbol),
+    In (NT A, prefix ++ NT B :: infix ++ NT C :: suffix) g ->
     isFirstSetFor fi g nu ->
+    forallb (nullable nu) infix = true ->
+    SymbolMap.find (NT C) fi = Some firstC ->
+    SymbolSet.In (T y) firstC ->
+    pairInFollowSet (NT B) (T y)
+| followLeftNT : forall (A B y : string)
+                        (prefix suffix : list symbol),
+    In (NT A, prefix ++ NT B :: suffix) g ->
     forallb (nullable nu) suffix = true ->
-    pairInFollowSet (NT X1) (T y) ->
-    pairInFollowSet (NT X2) (T y).
+    pairInFollowSet (NT A) (T y) ->
+    pairInFollowSet (NT B) (T y).
+
+Definition followSetComplete fo g nu fi : Prop :=
+  forall X y,
+    (@pairInFollowSet g nu fi) (NT X) (T y) ->
+    exists followX,
+      SymbolMap.find (NT X) fo = Some followX /\
+      SymbolSet.In (T y) followX.
+
+Definition followSetMinimal fo g nu fi : Prop :=
+  forall X followX y,
+    SymbolMap.find (NT X) fo = Some followX ->
+    SymbolSet.In (T y) followX ->
+    (@pairInFollowSet g nu fi) (NT X) (T y).
 
 Definition isFollowSetFor fo g nu fi : Prop :=
-  forall X followX,
-    SymbolMap.find (NT X) fo = Some followX ->
-    forall y,
-      SymbolSet.In (T y) followX ->
-      (@pairInFollowSet g nu fi) (NT X) (T y).
+  followSetComplete fo g nu fi /\ followSetMinimal fo g nu fi.
