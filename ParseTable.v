@@ -48,13 +48,31 @@ Inductive pairInFirstSet {g : grammar} {nu : SymbolSet.t} :
     pairInFirstSet (NT X) (T y)
 | firstNT : forall leftX rightX y prefix suffix,
     In (NT leftX, prefix ++ NT rightX :: suffix) g ->
-    isNullableSetFor nu g -> (* move to main theorem? *)
+    leftX <> rightX ->
     forallb (nullable nu) prefix = true ->
     pairInFirstSet (NT rightX) (T y) ->
     pairInFirstSet (NT leftX) (T y).
 
-(* Fatally flawed! *)
+Definition firstSetComplete fi g nu : Prop :=
+  forall X y,
+    (@pairInFirstSet g nu) (NT X) (T y) ->
+    exists firstX,
+      SymbolMap.find (NT X) fi = Some firstX /\
+      SymbolSet.In (T y) firstX.
+
+Definition firstSetMinimal fi g nu : Prop :=
+  forall X firstX y,
+    SymbolMap.find (NT X) fi = Some firstX ->
+    SymbolSet.In (T y) firstX ->
+    (@pairInFirstSet g nu) (NT X) (T y).
+
 Definition isFirstSetFor fi g nu : Prop :=
+  firstSetComplete fi g nu /\ firstSetMinimal fi g nu.
+
+(* Previous attempt -- could be used to prove the 
+   false statement that the empty SymbolMap is the
+   FIRST set for Grammar 3.12 *)
+Definition OLD_isFirstSetFor fi g nu : Prop :=
   forall X firstX y,
     SymbolMap.find (NT X) fi = Some firstX ->
     SymbolSet.In (T y) firstX <->
@@ -84,7 +102,8 @@ Inductive pairInFollowSet
     pairInFollowSet (NT X2) (T y).
 
 Definition isFollowSetFor fo g nu fi : Prop :=
-  forall X followX y,
+  forall X followX,
     SymbolMap.find (NT X) fo = Some followX ->
-    SymbolSet.In (T y) followX ->
-    (@pairInFollowSet g nu fi) (NT X) (T y).
+    forall y,
+      SymbolSet.In (T y) followX ->
+      (@pairInFollowSet g nu fi) (NT X) (T y).

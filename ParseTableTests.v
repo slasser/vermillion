@@ -67,6 +67,8 @@ Hint Resolve g312NullableSetCorrect.
 Ltac crush :=
   repeat match goal with
          | |- ?X = ?X => reflexivity
+         | H : [] = _ ++ (_ :: _) |- _ =>
+           apply app_cons_not_nil in H
          | H : false = true |- _ => inv H
          | H : False |- _ => inv H
          | H : SymbolMap.In _ _ |- _ => inv H
@@ -96,6 +98,11 @@ Ltac crush :=
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
          | _ => simpl in *
+         | |- _ /\ _ => split
+         | |- SymbolMap.find _ _ = Some _ =>
+           unfold SymbolMap.find; reflexivity
+         | |- (String _ _) <> (String _ _) =>
+           unfold not; intros
          end.
 
 (* FIRST sets for each nonterminal in Grammar 3.12 *)
@@ -136,6 +143,7 @@ Proof.
       (prefix := nil)
       (rightX := "Y")
       (suffix := nil); crush; auto with g312Hints.
+  unfold not; intros; inv H.
 Defined.
 Hint Resolve X_c_in_First : g312Hints.
 
@@ -146,7 +154,9 @@ Proof.
   apply firstNT with
       (rightX := "X")
       (prefix := nil)
-      (suffix := [NT "Y" ; NT "Z"]); crush; auto with g312Hints.
+      (suffix := [NT "Y" ; NT "Z"]);
+    crush; auto with g312Hints.
+  unfold not; intros; inv H.
 Defined.
 Hint Resolve Z_a_in_First : g312Hints.
 
@@ -158,6 +168,7 @@ Proof.
       (rightX := "Y")
       (prefix := [NT "X"])
       (suffix := [NT "Z"]); crush; auto with g312Hints.
+  unfold not; intros; inv H.
 Defined.
 Hint Resolve Z_c_in_First : g312Hints.
 
@@ -244,101 +255,171 @@ Proof.
   rewrite H0. rewrite in_app_iff.
   right. apply in_eq.
 Defined.
-  
+
+Ltac crushGoal :=
+  repeat match goal with
+         | |- SymbolMap.find _ _ = Some _ =>
+           unfold SymbolMap.find; reflexivity
+         | |- SymbolSet.In _ _ =>
+           subst;
+           repeat (try (apply InA_cons_hd; reflexivity);
+                   apply InA_cons_tl)
+         | |- forallb _ _ = true => compute; reflexivity
+         | |- In (String _ _) _ =>
+           repeat (try (left; reflexivity); right)
+         end.
+
+Ltac crushContra :=
+  repeat match goal with
+         | H : [NT _] = (_ ++ T _ :: _)%list |- ?G =>
+           match G with
+           | exists _, _ /\ _ =>
+             apply NT_list_neq_list_with_T in H; inv H; clear H
+           | SymbolSet.In _ _ =>
+             apply NT_list_neq_list_with_T in H; inv H; clear H
+           | _ => fail
+           end
+         | H : [T _] = (_ ++ NT _ :: _)%list |- ?G =>
+           match G with
+           | exists _, _ /\ _ =>
+             apply T_list_neq_list_with_NT in H;
+             inv H; clear H
+           | SymbolSet.In _ _ =>
+             apply T_list_neq_list_with_NT in H;
+             inv H; clear H
+           | _ => fail
+           end
+         | H : [] = (_ ++ _ :: _)%list |- _ =>
+           apply app_cons_not_nil in H; inv H
+         | H : (String _ _ <> String _ _) |- _ =>
+           exfalso; apply H; reflexivity
+         | H : In _ [] |- _ => inv H
+  end.
+
+Ltac proveTerminalVal :=
+  repeat match goal with
+         | H : [T ?X] = (?prefix ++ T ?Y :: ?suffix)%list |-
+           ?Y = ?X =>
+           destruct prefix; destruct suffix;
+           inv H; try reflexivity; crushContra
+         end.
+
+Ltac proveNonterminalVal :=
+  repeat match goal with
+         | H : [NT ?X] = (?prefix ++ NT ?Y :: ?suffix)%list |-
+           ?Y = ?X =>
+           destruct prefix; destruct suffix;
+           inv H; try reflexivity; crushContra
+  end.
+
+
+
 Example g312FirstSetCorrect :
   isFirstSetFor g312FirstSet g312 g312NullableSet.
 Proof.
   unfold isFirstSetFor. split.
-  - (* pair in finite map implies pair in relation *)
-    intros.
-    remember H as Hfind. clear HeqHfind.
-    apply find_In in H. crush.
-    + (* Prove that Z -> c is in FIRST *)
-      apply firstNT with
-          (prefix := [NT "X"])
-          (rightX := "Y")
-          (suffix := [NT "Z"]); crush; auto.
-      (* ...which involves proving that Y -> c is in FIRST *)
-      apply firstT with
-          (prefix := nil)
-          (y      := "c")
-          (suffix := nil); crush; auto.
-    + (* Prove that Z -> a is in FIRST *)
-      apply firstNT with
-          (prefix := nil)
-          (rightX := "X")
-          (suffix := [NT "Y"; NT "Z"]); crush; auto.
-      (* ...which involves proving that X -> a is in FIRST *)
-      apply firstT with
-          (prefix := nil)
-          (y      := "a")
-          (suffix := nil); crush; auto.
-    + (* Prove that Z -> d is in FIRST *)
-      apply firstT with
-          (prefix := nil)
-          (y      := "d")
-          (suffix := nil); crush; auto.
-    + (* Prove that Y -> c is in FIRST *)
-      apply firstT with
-          (prefix := nil)
-          (y      := "c")
-          (suffix := nil); crush; auto.
-    + (* Prove that X -> c is in FIRST *)
-      apply firstNT with
-          (prefix := nil)
-          (rightX := "Y")
-          (suffix := nil); crush; auto.
-      (* ...which involves proving that Y -> c is in FIRST *)
-      apply firstT with
-          (prefix := nil)
-          (y      := "c")
-          (suffix := nil); crush; auto.
-    + (* Prove that X -> a is in FIRST *)
-      apply firstT with
-          (prefix := nil)
-          (y      := "a")
-          (suffix := nil); crush; auto.
-  - (* pair in relation implies pair in finite set *)
-    intros.
-    remember H as Hfind. clear HeqHfind.
-    apply find_In in H. crush.
-    + (* If (pairInFirstSet Z y) for some y,
-         then y is in the set {a, c, d} *)
-      inv H0; crush.
-      * (* current production : Z -> d 
-           current pairInFirstSet constructor : firstT *)
-          assert (y = "d").
+  - (* firstSetComplete *)
+    unfold firstSetComplete. intros.
+    unfold g312FirstSet. inv H.
+    + (* firstT case -- for each production with this form:
+         NT X -> prefix ++ T y :: suffix
+         prove that (X, y) is in the FIRST finite map *)
+      crush.
+      * (* Z -> d has the right form *)
+        exists acdSet. split.
+        { unfold SymbolMap.find; reflexivity. }
+        { assert (y = "d").
           { destruct prefix; destruct suffix; crush. }
-          rewrite H. compute. crush.
-      * (* current production : Z -> X Y Z 
-           current pairInFirstSet constructor : firstT *)
-        apply NT_list_neq_list_with_T in H1; crush.
-      * (* current production : Z -> d 
-           current pairInFirstSet constructor : firstNT *)
-        apply T_list_neq_list_with_NT in H1; crush.
-      * (* current production : Z -> X Y Z 
-           current pairInFirstSet constructor : firstNT *)
-        destruct prefix.
-        { crush. inv H5.
-          { crush.
-            { apply NT_list_neq_list_with_T in H1; crush. }
-            { assert (y = "a").
-              { destruct prefix; destruct suffix; crush. }
-              rewrite H. compute. crush. }}
-          { crush.
-            { assert (rightX = "Y").
-              { destruct prefix; destruct suffix; crush.
-                { apply app_cons_not_nil in H5; crush. }
-                { apply app_cons_not_nil in H5; crush. }}
-              rewrite H in H7. inv H7. crush.
-Abort.
+          rewrite H. compute. crush. }
+      * (* Z -> X Y Z doesn't have the right form *)
+        apply NT_list_neq_list_with_T in H2; crush.
+      * (* Y -> [] doesn't have the right form *)
+        apply app_cons_not_nil in H2; crush.
+      * (* Y -> c has the right form *)
+        exists cSet. split.
+        { crushGoal. }
+        { assert (y = "c").
+          { destruct prefix; destruct suffix; crush. }
+          rewrite H. crushGoal. }
+      * (* X -> Y doesn't have the right form *)
+        crushContra; crushGoal.
+      * (* X -> a has the right form *)
+        exists acSet. split.
+        { crushGoal. }
+        { assert (y = "a").
+          { proveTerminalVal. }
+          crushGoal. }
+    + (* firstNT case -- for each production with this form:
+ 
+         NT A -> prefix ++ NT B :: suffix
+
+         ...prove that if (B, y) is in the FIRST finite map,
+         then (A, y) is in the FIRST finite map *)
+      crush.
+      * (* Z -> d doesn't have the right form *)
+        crushContra; crushGoal.
+      * (* Z -> X Y Z has the right form --
+           there are three possible bindings for B *)
+        exists acdSet. split.
+        { crushGoal. }
+        { assert (In rightX ["X"; "Y"; "Z"]).
+          { repeat match goal with
+                   | H : (NT _ :: _) = (?P ++ NT _ :: _)%list
+                     |- _ => destruct P; inv H;
+                             crushGoal; crushContra
+                   end. }
+          inv H.
+          { (* B := X *)
+            inv H5; crush.
+            { crushContra; crushGoal. }
+            { assert (y = "a"); proveTerminalVal; crushGoal. }
+            { assert (rightX = "Y"); proveNonterminalVal.
+              subst. inv H8; crush; crushContra.
+              { assert (y = "c"); proveTerminalVal;
+                  crushGoal. }
+              { crushGoal. }}
+            { crushContra; crushGoal. }}
+          inv H0.
+          { (* B := Y *)
+            inv H5; crush.
+            { crushContra; crushGoal. }
+            { assert (y = "c"); proveTerminalVal; crushGoal. }
+            { crushContra. }
+            { crushContra; crushGoal. }}
+          inv H.
+          { crushContra. }
+          { crushContra. }}
+      * (* Y -> [] has the wrong form *)
+        crushContra.
+      * (* Y -> c has the wrong form *)
+        crushContra. crushGoal.
+      * (* X -> Y has the right form, 
+           and the only possible binding for B is Y. *)
+        exists acSet. split.
+        { crushGoal. }
+        { assert (rightX = "Y"); proveNonterminalVal.
+          subst. inv H5; crush.
+          { crushContra. }
+          { assert (y = "c"); proveTerminalVal; crushGoal. }
+          { crushContra. }
+          { crushContra. crushGoal. }}
+      * (* X -> a has the wrong form *)
+        crushContra. crushGoal.
+  - (* firstSetMinimal *)
+    unfold firstSetMinimal. intros.
+    remember H as Hfind. clear HeqHfind.
+    apply find_In in H. crush; auto with g312Hints.
+Defined.
 
 (* This shouldn't work -- maybe an iff is needed *)
+(* Good news -- it doesn't work anymore! *)
 Example isFirstSetForFlawed :
   isFirstSetFor
     (SymbolMap.empty SymbolSet.t) g312 g312NullableSet.
 Proof.
-  unfold isFirstSetFor. intros.
-  remember H as Hfind. clear HeqHfind.
-  apply find_In in H. crush.
-Defined.
+  unfold isFirstSetFor. split.
+  - unfold firstSetComplete. intros.
+    inv H; crush.
+    + exists acdSet. split.
+      * unfold SymbolMap.find. simpl.
+Abort.
