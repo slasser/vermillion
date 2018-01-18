@@ -410,6 +410,8 @@ Proof.
     remember H as Hfind. clear HeqHfind.
     apply find_In in H. crush; auto with g312Hints.
 Defined.
+Hint Resolve g312FirstSetCorrect : g312Hints.
+
 
 (* This shouldn't work -- maybe an iff is needed *)
 (* Good news -- it doesn't work anymore! *)
@@ -422,4 +424,125 @@ Proof.
     inv H; crush.
     + exists acdSet. split.
       * unfold SymbolMap.find. simpl.
+Abort.
+
+(* Correct FOLLOW set for Grammar 3.12 *)
+Definition g312FollowSet :=
+  SymbolMap.add
+    (NT "X") acdSet
+    (SymbolMap.add
+       (NT "Y") acdSet
+       (SymbolMap.empty SymbolSet.t)).
+
+Example X_a_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "X") (T "a").
+Proof.
+  apply followRightNT with (A := "Z")
+                           (C := "Z")
+                           (firstC := acdSet)
+                           (prefix := nil)
+                           (infix := [NT "Y"])
+                           (suffix := nil).
+  - crush.
+  - apply g312FirstSetCorrect.
+  - crushGoal.
+  - crushGoal.
+  - crushGoal.
+Defined.
+
+Example X_c_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "X") (T "c").
+Proof.
+  apply followRightNT with
+      (A := "Z")
+      (C := "Y")
+      (firstC := cSet)
+      (prefix := nil)
+      (infix := nil)
+      (suffix := [NT "Z"]); crush; crushGoal; auto with g312Hints.
+Defined.
+
+Example X_d_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "X") (T "d").
+Proof.
+  apply followRightNT with
+      (A := "Z")
+      (C := "Z")
+      (firstC := acdSet)
+      (prefix := nil)
+      (infix := [NT "Y"])
+      (suffix := nil); crush; crushGoal; auto with g312Hints.
+Defined.
+
+Example Y_a_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "Y") (T "a").
+Proof.
+  apply followLeftNT with
+      (A := "X")
+      (prefix := nil)
+      (suffix := nil).
+  - crush.
+  - crushGoal.
+  - apply X_a_in_Follow.
+Defined.
+
+Example Y_a_in_Follow2 :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "Y") (T "a").
+Proof.
+  apply followRightNT with
+      (A := "Z")
+      (C := "Z")
+      (firstC := acdSet)
+      (prefix := [NT "X"])
+      (infix := nil)
+      (suffix := nil).
+  - crush.
+  - auto with g312Hints.
+  - crushGoal.
+  - crushGoal.
+  - crushGoal.
+Defined.
+
+Example Y_c_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "Y") (T "c").
+Proof.
+  apply followLeftNT with
+      (A := "X")
+      (prefix := nil)
+      (suffix := nil).
+  - crush.
+  - crushGoal.
+  - apply X_c_in_Follow.
+Defined.
+
+Example Y_d_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "Y") (T "d").
+Proof.
+  apply followLeftNT with
+      (A := "X")
+      (prefix := nil)
+      (suffix := nil).
+  - crush.
+  - crushGoal.
+  - apply X_d_in_Follow.
+Defined.
+
+(* This should fail, and it does *)
+Example Z_d_in_Follow :
+  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
+    (NT "Z") (T "d").
+Proof.
+  apply followLeftNT with
+      (A := "Z")
+      (prefix := [NT "X"; NT "Y"])
+      (suffix := nil).
+  - crush.
+  - crushGoal.
 Abort.
