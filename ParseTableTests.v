@@ -31,11 +31,12 @@ Definition g312NullableSet :=
                  (SymbolSet.add (NT "Y")
                                 SymbolSet.empty)).
 
+(* Proof using the non-relational version of isNullableSetFor *)
 Example g312NullableSetCorrect :
   isNullableSetFor g312NullableSet g312.
 Proof.
   unfold isNullableSetFor. split.
-  - unfold nSetComplete. intros. inv H.
+  - unfold nullableSetComplete. intros. inv H.
     + inv H1. inv H0.
     + inv H1.
       * inv H. inv H0.
@@ -49,7 +50,7 @@ Proof.
             { inv H1.
               { inv H. inv H0. }
               { inv H. }}}}
-  - unfold nSetMinimal. intros. inv H.
+  - unfold nullableSetMinimal. intros. inv H.
     + subst. unfold g312. exists nil. split.
       * compute. repeat (try (left; reflexivity); right).
       * reflexivity.
@@ -60,7 +61,201 @@ Proof.
       * reflexivity.
 Defined.
 
-Hint Resolve g312NullableSetCorrect.
+(* This example shows that the non-relational definition
+   of isNullableSetFor is flawed! *)
+Definition weirdGrammar :=
+  [(NT "X", [NT "Y"]);
+     (NT "Y", [NT "X"])].
+
+Example nullableDefinitionFlawed :
+  isNullableSetFor g312NullableSet weirdGrammar.
+Proof.
+  unfold isNullableSetFor. split.
+  - unfold nullableSetComplete. intros. crush. inv H.
+    + inv H1. rewrite <- SymbolSet.mem_spec.
+      compute; reflexivity.
+    + inv H1.
+      * inv H. rewrite <- SymbolSet.mem_spec.
+        compute; reflexivity.
+      * inv H.
+  - unfold nullableSetMinimal. intros. inv H.
+    + exists [NT "X"]. split.
+      * compute. right. left. reflexivity.
+      * reflexivity.
+    + apply InA_singleton in H1. subst.
+      exists [NT "Y"]. split.
+      * compute. left. reflexivity.
+      * reflexivity.
+Defined.
+
+(* We need a better definition of what it means for a symbol
+   to be nullable. Here's one approach: *)
+
+Example Y_nullable :
+  (@symInNullableSet g312) (NT "Y").
+Proof.
+  apply nullableProd with (gamma := nil).
+  - crush.
+  - intros. inv H.
+Defined.
+
+Example X_nullable :
+  (@symInNullableSet g312) (NT "X").
+Proof.
+  apply nullableProd with (gamma := [NT "Y"]).
+  - crush.
+  - intros. inv H.
+    + split.
+      * unfold not. intros. inv H.
+      * apply Y_nullable.
+    + inv H0.
+Defined.
+
+(* Shouldn't work *)
+Example Z_nullable :
+  (@symInNullableSet g312) (NT "Z").
+Proof.
+  apply nullableProd with (gamma := [NT "X"; NT "Y"; NT "Z"]).
+  - crush.
+  - intros. inv H.
+    + split.
+      * unfold not; intros; inv H.
+      * apply X_nullable.
+    + inv H0.
+      * split.
+        { unfold not; intros; inv H. }
+        { apply Y_nullable. }
+      * inv H.
+        { split.
+          { (* stuck *)
+Abort.
+
+(* This definition makes it harder to prove that a symbol is
+   NOT nullable, though: *)
+Example Z_not_nullable :
+  ~(@symInNullableSet g312) (NT "Z").
+Proof.
+  unfold not. intros. inv H. inv H1.
+  - inv H. specialize H2 with (sym := T "d").
+Abort.
+
+(* Here's another approach that looks more promising: *)
+
+Example Y_nullable' :
+  (@nullableSym g312) (NT "Y").
+Proof.
+  apply nullableNT with (gamma := nil).
+  - crush.
+  - intros. inv H.
+  - apply nullableNil.
+Defined.
+
+Example X_nullable' :
+  (@nullableSym g312) (NT "X").
+Proof.
+  apply nullableNT with (gamma := [NT "Y"]).
+  - crush.
+  - intros. inv H.
+    + unfold not; intros; inv H.
+    + inv H0.
+  - apply nullableCons.
+    + apply Y_nullable'.
+    + apply nullableNil.
+Defined.
+
+(* We still can't prove this false statement, which is good *)
+Example Z_nullable' :
+  (@nullableSym g312) (NT "Z").
+Proof.
+  apply nullableNT with (gamma := [NT "X"; NT "Y"; NT "Z"]).
+  - crush.
+  - intros. inv H.
+    + unfold not; intros; inv H.
+    + inv H0.
+      * unfold not; intros; inv H.
+      * inv H.
+        { (* stuck *)
+Abort.
+
+(* ...but now we can also prove that a symbol is NOT nullable *)
+Example Z_not_nullable' :
+  ~(@nullableSym g312) (NT "Z").
+Proof.
+  unfold not. intros. inv H.
+  inv H1.
+  - inv H. inv H3. inv H1.
+  - inv H.
+    + inv H0. specialize H2 with (sym := NT "Z").
+      apply H2.
+      * crush.
+      * reflexivity.
+    + inv H0.
+      { inv H. }
+      inv H.
+      { inv H0. }
+      inv H0.
+      { inv H. }
+      inv H.
+      { inv H0. }
+      inv H0.
+Defined.
+
+Example g312NullableSetCorrectRel :
+  isNullableSetForRel g312NullableSet g312.
+Proof.
+  unfold isNullableSetForRel. split.
+  - unfold nullableSetCompleteRel. intros.
+    inv H. inv H1.
+    + inv H. inv H3. inv H1.
+    + inv H.
+      * exfalso. inv H0.
+        specialize H2 with (sym := NT "Z").
+        apply H2.
+        { crush. }
+        { reflexivity. }
+      * inv H0.
+        { inv H. compute. apply InA_cons_hd. reflexivity. }
+        inv H.
+        { inv H0. compute. apply InA_cons_hd. reflexivity. }
+        inv H0.
+        { inv H. compute. apply InA_cons_tl.
+          apply InA_cons_hd. reflexivity. }
+        inv H.
+        { inv H0. compute. apply InA_cons_tl.
+          apply InA_cons_hd. reflexivity. }
+        inv H0.
+  - unfold nullableSetMinimalRel. intros.
+    inv H.
+    + rewrite H1. apply Y_nullable'.
+    + apply InA_singleton in H1. rewrite H1.
+      apply X_nullable'.
+Defined.
+
+Example g312NullableSetCorrectForWeirdGrammar :
+  isNullableSetForRel g312NullableSet weirdGrammar.
+Proof.
+  unfold isNullableSetForRel. split.
+  - unfold nullableSetCompleteRel. intros. inv H. inv H1.
+    + inv H. compute. apply InA_cons_tl.
+      apply InA_cons_hd. reflexivity.
+    + inv H.
+      * inv H0. compute. apply InA_cons_hd. reflexivity.
+      * inv H0.
+  - unfold nullableSetMinimalRel. intros. inv H.
+    + rewrite H1. apply nullableNT with (gamma := [NT "X"]).
+      * crush.
+      * intros. inv H.
+        { unfold not; intros. inv H. }
+        inv H0.
+      * apply nullableCons.
+        { apply nullableNT with (gamma := [NT "Y"]).
+          { crush. }
+          { intros. inv H.
+            { unfold not; intros. inv H. }
+            inv H0. }
+          apply nullableCons.
+          { (* This will just keep going on forever *)
+Abort.      
 
 (* Tests of FIRST set definitions *)
 
@@ -125,14 +320,14 @@ Create HintDb g312Hints.
 Example Y_c_in_First :
   (@pairInFirstSet g312 g312NullableSet) (NT "Y") (T "c").
 Proof.
-  apply firstT with (prefix := nil) (suffix := nil); crush; auto.
+  apply firstT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
 Defined.
 Hint Resolve Y_c_in_First : g312Hints.
 
 Example X_a_in_First :
   (@pairInFirstSet g312 g312NullableSet) (NT "X") (T "a").
 Proof.
-  apply firstT with (prefix := nil) (suffix := nil); crush; auto.
+  apply firstT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
 Defined.
 Hint Resolve X_a_in_First : g312Hints.
 
@@ -176,7 +371,7 @@ Example Z_d_in_First :
   (@pairInFirstSet g312 g312NullableSet)
     (NT "Z") (T "d").
 Proof.
-  apply firstT with (prefix := nil) (suffix := nil); crush; auto.
+  apply firstT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
 Defined.
 Hint Resolve Z_d_in_First : g312Hints.
 
@@ -312,16 +507,137 @@ Ltac proveNonterminalVal :=
            inv H; try reflexivity; crushContra
   end.
 
-
-
+(* Consider an "in subset implies in superset" lemma *)
 Example g312FirstSetCorrect :
   isFirstSetFor g312FirstSet g312 g312NullableSet.
 Proof.
   unfold isFirstSetFor. split.
+  - apply g312NullableSetCorrect.
+  - split.
+    + unfold firstSetComplete. intros. unfold g312FirstSet.
+      simpl in H. destruct H.
+      * inv H.
+        exists acdSet. split.
+        { compute; reflexivity. }
+        { assert (sym = T "d").
+          { destruct prefix; destruct suffix; crush. }
+          subst. compute; compute in H1.
+          apply InA_singleton in H1. rewrite H1.
+          apply InA_cons_tl. apply InA_cons_tl.
+          apply InA_cons_hd. reflexivity. }
+      * destruct H.
+        { inv H.
+          exists acdSet. split.
+          { compute; reflexivity. }
+          { destruct prefix.
+            { inv H4. inv H1.
+              { rewrite H2. rewrite <- SymbolSet.mem_spec.
+                compute. reflexivity. }
+              apply InA_singleton in H2.
+              rewrite H2. rewrite <- SymbolSet.mem_spec.
+              compute. reflexivity. }
+            { inv H4.
+              destruct prefix.
+              { inv H3. simpl in H1.
+                inv H1.
+                { rewrite H2. rewrite <- SymbolSet.mem_spec.
+                  compute. reflexivity. }
+                inv H2. }
+              { inv H3.
+                destruct prefix.
+                { inv H4. simpl in H1. assumption. }
+                { inv H4. apply app_cons_not_nil in H3. inv H3. }}}}}
+        { destruct H.
+          { inv H. apply app_cons_not_nil in H4. inv H4. }
+          { destruct H.
+            { inv H.
+              exists cSet. split.
+              { compute; reflexivity. }
+              { assert (sym = T "c").
+                { destruct prefix; inv H4; try reflexivity.
+                  inv H0. }
+                subst. simpl in H1. assumption. }}
+            { destruct H.
+              { inv H.
+                exists acSet. split.
+                { compute; reflexivity. }
+                { assert (sym = NT "Y").
+                  { destruct prefix; inv H4; try reflexivity.
+                    apply app_cons_not_nil in H3. inv H3. }
+                  subst. simpl. compute in H1.
+                  apply InA_singleton in H1. rewrite H1.
+                  rewrite <- SymbolSet.mem_spec.
+                  compute. reflexivity. }} 
+              destruct H.
+              { inv H.
+                exists acSet. split.
+                { compute; reflexivity. }
+                { assert (sym = T "a").
+                  { destruct prefix; inv H4; try reflexivity.
+                    inv H0. }
+                  subst. simpl. compute in H1.
+                  apply InA_singleton in H1. rewrite H1.
+                  rewrite <- SymbolSet.mem_spec.
+                  compute. reflexivity. }}
+              inv H. }}}
+    + unfold firstSetMinimal. intros.
+      destruct H.
+      remember H as Hfind. clear HeqHfind.
+      apply find_In in H. crush.
+      * exists [NT "X"]. exists (NT "Y"). exists [NT "Z"].
+        split.
+        { right. left. reflexivity. }
+        { split.
+          { simpl. reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute. reflexivity. }}
+      * exists nil. exists (NT "X"). exists [NT "Y"; NT "Z"].
+        split.
+        { right. left. reflexivity. }
+        { split.
+          { reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute. reflexivity. }}
+      * exists nil. exists (T "d"). exists nil.
+        split.
+        { left. reflexivity. }
+        { split.
+          { reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute. reflexivity. }}
+      * exists nil. exists (T "c"). exists nil.
+        split.
+        { right. right. right. left. reflexivity. }
+        { split.
+          { reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute. reflexivity. }}
+      * exists nil. exists (NT "Y"). exists nil.
+        split.
+        { right. right. right. right. left. reflexivity. }
+        { split.
+          { reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute. reflexivity. }}
+      * exists nil. exists (T "a"). exists nil.
+        split.
+        { right. right. right. right. right. left.
+          reflexivity. }
+        { split.
+          { reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute. reflexivity. }}
+Defined.
+        
+Example g312FirstSetCorrectRel :
+  isFirstSetForRel g312FirstSet g312 g312NullableSet.
+Proof.
+  unfold isFirstSetForRel. split.
   - (* firstSetComplete *)
-    unfold firstSetComplete. intros.
+    unfold firstSetCompleteRel. intros.
     unfold g312FirstSet. inv H.
     + (* firstT case -- for each production with this form:
+
          NT X -> prefix ++ T y :: suffix
          prove that (X, y) is in the FIRST finite map *)
       crush.
@@ -406,26 +722,121 @@ Proof.
       * (* X -> a has the wrong form *)
         crushContra. crushGoal.
   - (* firstSetMinimal *)
-    unfold firstSetMinimal. intros.
+    unfold firstSetMinimalRel. intros.
     remember H as Hfind. clear HeqHfind.
     apply find_In in H. crush; auto with g312Hints.
 Defined.
 Hint Resolve g312FirstSetCorrect : g312Hints.
 
-
-(* This shouldn't work -- maybe an iff is needed *)
-(* Good news -- it doesn't work anymore! *)
-Example isFirstSetForFlawed :
-  isFirstSetFor
+(* This example makes sure it's not possible to prove that
+   the empty set is the FIRST set for Grammar 3.12 *)
+Example isFirstSetForRelFlawed :
+  isFirstSetForRel
     (SymbolMap.empty SymbolSet.t) g312 g312NullableSet.
 Proof.
-  unfold isFirstSetFor. split.
-  - unfold firstSetComplete. intros.
+  unfold isFirstSetForRel. split.
+  - unfold firstSetCompleteRel. intros.
     inv H; crush.
     + exists acdSet. split.
       * unfold SymbolMap.find. simpl.
 Abort.
 
+(* This proof suggests that the non-relational version of 
+   isFirstSetFor is flawed! It says that this finite map:
+
+   X -> {c}
+   Y -> {c}
+
+   ...is the correct FIRST set for this grammar:
+
+   X -> []
+   X -> [Y]
+   Y -> []
+   Y -> [X]
+ *)
+Example isFirstSetForFlawed :
+  isFirstSetFor (SymbolMap.add
+                   (NT "X") cSet
+                   (SymbolMap.add
+                      (NT "Y") cSet
+                      (SymbolMap.empty SymbolSet.t)))
+                [(NT "X", []) ; (NT "X", [NT "Y"]) ;
+                 (NT "Y", []) ; (NT "Y", [NT "X"])]
+                g312NullableSet.
+Proof.
+  unfold isFirstSetFor. split.
+  - unfold isNullableSetFor. split.
+    + unfold nullableSetComplete. intros.
+      inv H.
+      * inv H1. compute. apply InA_cons_tl.
+        apply InA_cons_hd. reflexivity.
+      * inv H1.
+        { inv H. rewrite <- SymbolSet.mem_spec.
+          compute. reflexivity. }
+        inv H.
+        { inv H1. rewrite <- SymbolSet.mem_spec.
+          compute; reflexivity. }
+        inv H1.
+        { inv H. rewrite <- SymbolSet.mem_spec.
+          compute; reflexivity. }
+        inv H.
+    + unfold nullableSetMinimal. intros. inv H.
+      * exists nil. split.
+        { simpl. right. right. left. reflexivity. }
+        { reflexivity. }
+      * apply InA_singleton in H1. subst.
+        exists nil. split.
+        { left. reflexivity. }
+        { reflexivity. }
+  - split.
+    * unfold firstSetComplete. intros. crush.
+      { apply app_cons_not_nil in H4. inv H4. }
+      { assert (sym = NT "Y").
+        { destruct prefix; inv H4; try reflexivity.
+          apply app_cons_not_nil in H3. inv H3. }
+        subst. inv H2.
+        exists cSet. split.
+        { compute; reflexivity. }
+        { rewrite <- SymbolSet.mem_spec.
+          compute; reflexivity. }}
+      { apply app_cons_not_nil in H4; inv H4. }
+      { assert (sym = NT "X").
+        { destruct prefix; inv H4; try reflexivity.
+          apply app_cons_not_nil in H3; inv H3. }
+        subst. inv H2.
+        exists cSet. split.
+        { compute; reflexivity. }
+        { rewrite <- SymbolSet.mem_spec.
+          compute; reflexivity. }}
+      { apply app_cons_not_nil in H5; inv H5. }
+      { assert (sym = NT "Y").
+        { destruct prefix; inv H5; try reflexivity.
+          apply app_cons_not_nil in H4; inv H4. }
+        subst. inv H2. inv H3. }
+      { apply app_cons_not_nil in H5; inv H5. }
+      assert (sym = NT "X").
+      { destruct prefix; inv H5; try reflexivity.
+        apply app_cons_not_nil in H4; inv H4. }
+      subst. inv H2. inv H3.
+    * unfold firstSetMinimal. intros. destruct H.
+      remember H as Hfind. clear HeqHfind.
+      apply find_In in H. crush.
+      { exists nil. exists (NT "X"). exists nil.
+        split.
+        { right. right. right. left. reflexivity. }
+        { split.
+          { reflexivity. }
+          { simpl. rewrite <- SymbolSet.mem_spec.
+            compute; reflexivity. }}}
+      exists nil. exists (NT "Y"). exists nil.
+      split.
+      { right. left. reflexivity. }
+      { split.
+        { reflexivity. }
+        { rewrite <- SymbolSet.mem_spec.
+          compute; reflexivity. }}
+Defined.
+    
 (* Correct FOLLOW set for Grammar 3.12 *)
 Definition g312FollowSet :=
   SymbolMap.add
