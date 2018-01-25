@@ -4,6 +4,7 @@ Require Import List.
 Require Import MSets.
 Require Import ParserTactics.
 Require Import ParseTable.
+Require Import ParserUtils.
 Require Import String.
 Import ListNotations.
 Open Scope string_scope.
@@ -31,12 +32,13 @@ Definition g312NullableSet :=
                  (SymbolSet.add (NT "Y")
                                 SymbolSet.empty)).
 
-(* Proof using the non-relational version of isNullableSetFor *)
-Example g312NullableSetCorrect :
-  isNullableSetFor g312NullableSet g312.
+(* The flawed NULLABLE definition can be used to prove a true
+   statement... *)
+Example g312NullableSetCorrect_first_try :
+  flawedIsNullableSetFor g312NullableSet g312.
 Proof.
   unfold isNullableSetFor. split.
-  - unfold nullableSetComplete. intros. inv H.
+  - unfold flawedNullableSetComplete. intros. inv H.
     + inv H1. inv H0.
     + inv H1.
       * inv H. inv H0.
@@ -50,7 +52,7 @@ Proof.
             { inv H1.
               { inv H. inv H0. }
               { inv H. }}}}
-  - unfold nullableSetMinimal. intros. inv H.
+  - unfold flawedNullableSetMinimal. intros. inv H.
     + subst. unfold g312. exists nil. split.
       * compute. repeat (try (left; reflexivity); right).
       * reflexivity.
@@ -61,38 +63,33 @@ Proof.
       * reflexivity.
 Defined.
 
-(* This example shows that the non-relational definition
-   of isNullableSetFor is flawed! *)
+(* ...but this example shows that the non-relational 
+   definition of NULLABLE is flawed *)
 Definition weirdGrammar :=
   [(NT "X", [NT "Y"]);
      (NT "Y", [NT "X"])].
 
+(* The NULLABLE set for this grammar should be empty, 
+   but our NULLABLE definition lets us prove that it's not *)
 Example nullableDefinitionFlawed :
-  isNullableSetFor g312NullableSet weirdGrammar.
+  flawedIsNullableSetFor g312NullableSet weirdGrammar.
 Proof.
-  unfold isNullableSetFor. split.
-  - unfold nullableSetComplete. intros. crush. inv H.
-    + inv H1. rewrite <- SymbolSet.mem_spec.
-      compute; reflexivity.
-    + inv H1.
-      * inv H. rewrite <- SymbolSet.mem_spec.
-        compute; reflexivity.
-      * inv H.
-  - unfold nullableSetMinimal. intros. inv H.
+  unfold flawedIsNullableSetFor. split.
+  - unfold flawedNullableSetComplete. intros. crush.
+  - unfold flawedNullableSetMinimal. intros. crush.
     + exists [NT "X"]. split.
-      * compute. right. left. reflexivity.
-      * reflexivity.
-    + apply InA_singleton in H1. subst.
-      exists [NT "Y"]. split.
-      * compute. left. reflexivity.
-      * reflexivity.
+      * crush.
+      * compute; reflexivity.
+    + exists [NT "Y"]. split.
+      * crush.
+      * simpl; reflexivity.
 Defined.
 
 (* We need a better definition of what it means for a symbol
    to be nullable. Here's one approach: *)
 
 Example Y_nullable :
-  (@symInNullableSet g312) (NT "Y").
+  (@flawedSymInNullableSet g312) (NT "Y").
 Proof.
   apply nullableProd with (gamma := nil).
   - crush.
@@ -100,7 +97,7 @@ Proof.
 Defined.
 
 Example X_nullable :
-  (@symInNullableSet g312) (NT "X").
+  (@flawedSymInNullableSet g312) (NT "X").
 Proof.
   apply nullableProd with (gamma := [NT "Y"]).
   - crush.
@@ -113,7 +110,7 @@ Defined.
 
 (* Shouldn't work *)
 Example Z_nullable :
-  (@symInNullableSet g312) (NT "Z").
+  (@flawedSymInNullableSet g312) (NT "Z").
 Proof.
   apply nullableProd with (gamma := [NT "X"; NT "Y"; NT "Z"]).
   - crush.
@@ -133,41 +130,41 @@ Abort.
 (* This definition makes it harder to prove that a symbol is
    NOT nullable, though: *)
 Example Z_not_nullable :
-  ~(@symInNullableSet g312) (NT "Z").
+  ~(@flawedSymInNullableSet g312) (NT "Z").
 Proof.
   unfold not. intros. inv H. inv H1.
   - inv H. specialize H2 with (sym := T "d").
 Abort.
 
-(* Here's another approach that looks more promising: *)
+(* Here's a better approach: *)
 
 Example Y_nullable' :
   (@nullableSym g312) (NT "Y").
 Proof.
-  apply nullableNT with (gamma := nil).
+  apply nullable_nt with (gamma := nil).
   - crush.
   - intros. inv H.
-  - apply nullableNil.
+  - apply nullable_nil.
 Defined.
 
 Example X_nullable' :
   (@nullableSym g312) (NT "X").
 Proof.
-  apply nullableNT with (gamma := [NT "Y"]).
+  apply nullable_nt with (gamma := [NT "Y"]).
   - crush.
   - intros. inv H.
     + unfold not; intros; inv H.
     + inv H0.
-  - apply nullableCons.
+  - apply nullable_cons.
     + apply Y_nullable'.
-    + apply nullableNil.
+    + apply nullable_nil.
 Defined.
 
 (* We still can't prove this false statement, which is good *)
 Example Z_nullable' :
   (@nullableSym g312) (NT "Z").
 Proof.
-  apply nullableNT with (gamma := [NT "X"; NT "Y"; NT "Z"]).
+  apply nullable_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]).
   - crush.
   - intros. inv H.
     + unfold not; intros; inv H.
@@ -200,11 +197,13 @@ Proof.
       inv H0.
 Defined.
 
-Example g312NullableSetCorrectRel :
-  isNullableSetForRel g312NullableSet g312.
+(* Now we're ready to prove that the Grammar 3.12 NULLABLE set
+   is correct *)
+Example g312NullableSetCorrect :
+  isNullableSetFor g312NullableSet g312.
 Proof.
-  unfold isNullableSetForRel. split.
-  - unfold nullableSetCompleteRel. intros.
+  unfold isNullableSetFor. split.
+  - unfold nullableSetComplete. intros.
     inv H. inv H1.
     + inv H. inv H3. inv H1.
     + inv H.
@@ -224,81 +223,42 @@ Proof.
         { inv H0. compute. apply InA_cons_tl.
           apply InA_cons_hd. reflexivity. }
         inv H0.
-  - unfold nullableSetMinimalRel. intros.
+  - unfold nullableSetMinimal. intros.
     inv H.
     + rewrite H1. apply Y_nullable'.
     + apply InA_singleton in H1. rewrite H1.
       apply X_nullable'.
 Defined.
 
+(* And now we can't prove that the NULLABLE set for the 
+   weird grammar is non-empty, which is good *)
 Example g312NullableSetCorrectForWeirdGrammar :
-  isNullableSetForRel g312NullableSet weirdGrammar.
+  isNullableSetFor g312NullableSet weirdGrammar.
 Proof.
-  unfold isNullableSetForRel. split.
-  - unfold nullableSetCompleteRel. intros. inv H. inv H1.
+  unfold isNullableSetFor. split.
+  - unfold nullableSetComplete. intros. inv H. inv H1.
     + inv H. compute. apply InA_cons_tl.
       apply InA_cons_hd. reflexivity.
     + inv H.
       * inv H0. compute. apply InA_cons_hd. reflexivity.
       * inv H0.
-  - unfold nullableSetMinimalRel. intros. inv H.
-    + rewrite H1. apply nullableNT with (gamma := [NT "X"]).
+  - unfold nullableSetMinimal. intros. inv H.
+    + rewrite H1. apply nullable_nt with (gamma := [NT "X"]).
       * crush.
       * intros. inv H.
         { unfold not; intros. inv H. }
         inv H0.
-      * apply nullableCons.
-        { apply nullableNT with (gamma := [NT "Y"]).
+      * apply nullable_cons.
+        { apply nullable_nt with (gamma := [NT "Y"]).
           { crush. }
           { intros. inv H.
             { unfold not; intros. inv H. }
             inv H0. }
-          apply nullableCons.
+          apply nullable_cons.
           { (* This will just keep going on forever *)
 Abort.      
 
 (* Tests of FIRST set definitions *)
-
-Ltac crush :=
-  repeat match goal with
-         | |- ?X = ?X => reflexivity
-         | H : [] = _ ++ (_ :: _) |- _ =>
-           apply app_cons_not_nil in H
-         | H : false = true |- _ => inv H
-         | H : False |- _ => inv H
-         | H : SymbolMap.In _ _ |- _ => inv H
-         | H : SymbolMap.Raw.PX.MapsTo _ _ _ |- _ => inv H
-         | H : SymbolMap.Raw.PX.eqke _ _ |- _ => inv H
-         | H : NT _ = NT _ |- _ => inv H
-         | H : T _ = T _ |- _ => inv H
-           (* Good approach? *)
-         | H : SymbolMap.find (NT ?X) _ = Some _ |- _ =>
-           match X with
-           | String _ _ => inv H
-           | _          => fail
-           end
-         | H : SymbolSet.In (T _) _ |- _ => inv H
-         | H : _ :: _ = _ :: _ |- _ => inv H
-         | |- List.In _ _ =>
-           repeat (try (left; reflexivity); right)
-         | |- forallb _ _ = true => reflexivity
-         | H : InA _ _ (T _ :: _) |- _ => inv H
-         | H : InA _ _ nil |- _ => inv H
-         | H : InA _ (pair _ _) (pair _ _ :: _) |- _ =>
-           inv H
-         | H : _ \/ _ |- _ => inv H
-         | H : pair (NT _) _ = pair (NT _) _ |- _ =>
-           inv H
-         | |- InA _ _ (_ :: _) =>
-           repeat (try (apply InA_cons_hd; reflexivity);
-                   apply InA_cons_tl)
-         | _ => simpl in *
-         | |- _ /\ _ => split
-         | |- SymbolMap.find _ _ = Some _ =>
-           unfold SymbolMap.find; reflexivity
-         | |- (String _ _) <> (String _ _) =>
-           unfold not; intros
-         end.
 
 (* FIRST sets for each nonterminal in Grammar 3.12 *)
 Definition cSet   := SymbolSet.add (T "c") SymbolSet.empty.
@@ -318,62 +278,84 @@ Definition g312FirstSet :=
 Create HintDb g312Hints.
 
 Example Y_c_in_First :
-  (@pairInFirstSet g312 g312NullableSet) (NT "Y") (T "c").
+  (@firstSym g312) (NT "Y") (T "c").
 Proof.
-  apply firstT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
+  apply fi_nt with (gamma := [T "c"]).
+  - crush.
+  - apply fg_t. reflexivity.
 Defined.
-Hint Resolve Y_c_in_First : g312Hints.
 
 Example X_a_in_First :
-  (@pairInFirstSet g312 g312NullableSet) (NT "X") (T "a").
+  (@firstSym g312) (NT "X") (T "a").
 Proof.
-  apply firstT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
+  apply fi_nt with (gamma := [T "a"]).
+  - crush.
+  - apply fg_t. reflexivity. 
 Defined.
-Hint Resolve X_a_in_First : g312Hints.
 
 Example X_c_in_First :
-  (@pairInFirstSet g312 g312NullableSet) (NT "X") (T "c").
+  (@firstSym g312) (NT "X") (T "c").
 Proof.
-  apply firstNT with
-      (prefix := nil)
-      (rightX := "Y")
-      (suffix := nil); crush; auto with g312Hints.
-  unfold not; intros; inv H.
+  apply fi_nt with (gamma := [NT "Y"]).
+  - crush.
+  - apply fg_nt_hd.
+    + reflexivity.
+    + unfold not; intros; inv H.
+    + apply Y_c_in_First.
 Defined.
-Hint Resolve X_c_in_First : g312Hints.
+
+Ltac provePairNotInFirst :=
+  repeat match goal with
+         | H : In (NT (String _ _), _) g312 |- _ => inv H
+         | H : In (NT _, _) (_::_) |- _ => inv H
+         | H : (NT (String _ _), _) = (NT (String _ _), _) |- _ => inv H
+         | H : firstSym (NT (String _ _)) (T (String _ _)) |- _ => inv H
+         | H : firstGamma _ (_::_) (T (String _ _)) |- _ => inv H
+         | H : firstGamma _ nil _ |- _ => inv H
+         | H : ParserUtils.isNT (T _) = true |- _ => inv H
+         | H : In _ [] |- _ => inv H
+         end.
+
+(* Make sure we can also prove that a pair is not in FIRST *)
+Example X_d_not_in_First :
+  ~(@firstSym g312) (NT "X") (T "d").
+Proof.
+  unfold not. intros.
+  provePairNotInFirst.
+Defined.
 
 Example Z_a_in_First :
-  (@pairInFirstSet g312 g312NullableSet)
-    (NT "Z") (T "a").
+  (@firstSym g312) (NT "Z") (T "a").
 Proof.
-  apply firstNT with
-      (rightX := "X")
-      (prefix := nil)
-      (suffix := [NT "Y" ; NT "Z"]);
-    crush; auto with g312Hints.
-  unfold not; intros; inv H.
+  apply fi_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]).
+  - crush.
+  - apply fg_nt_hd.
+    + reflexivity.
+    + unfold not; intros; inv H.
+    + apply X_a_in_First.
 Defined.
-Hint Resolve Z_a_in_First : g312Hints.
 
 Example Z_c_in_First :
-  (@pairInFirstSet g312 g312NullableSet)
-    (NT "Z") (T "c").
+  (@firstSym g312) (NT "Z") (T "c").
 Proof.
-  apply firstNT with
-      (rightX := "Y")
-      (prefix := [NT "X"])
-      (suffix := [NT "Z"]); crush; auto with g312Hints.
-  unfold not; intros; inv H.
+  apply fi_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]).
+  - crush.
+  - apply fg_nt_tl.
+    + reflexivity.
+    + apply X_nullable'.
+    + apply fg_nt_hd.
+      * reflexivity.
+      * unfold not; intros; inv H.
+      * apply Y_c_in_First.
 Defined.
-Hint Resolve Z_c_in_First : g312Hints.
 
 Example Z_d_in_First :
-  (@pairInFirstSet g312 g312NullableSet)
-    (NT "Z") (T "d").
+  (@firstSym g312) (NT "Z") (T "d").
 Proof.
-  apply firstT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
+  apply fi_nt with (gamma := [T "d"]).
+  - crush.
+  - apply fg_t. reflexivity.
 Defined.
-Hint Resolve Z_d_in_First : g312Hints.
 
 Lemma find_In : forall k vT (v : vT) m,
     SymbolMap.find k m = Some v ->
@@ -384,15 +366,83 @@ Proof.
   intros. inv H0.
 Defined.
 
-Definition isNT sym := match sym with
-                      | NT _ => true
-                      | _    => false
-                       end.
+(* Much nicer than the proof of the same proposition below! *)
+Example g312FirstSetCorrect :
+  isFirstSetFor g312FirstSet g312.
+Proof.
+  unfold isFirstSetFor. split.
+  - unfold firstSetComplete. intros. inv H. crush.
+    + exists acdSet. crush.
+    + exists acdSet. crush.
+    + exists acdSet. crush.
+    + exists cSet. crush.
+    + exists acSet. crush.
+    + exists acSet. crush.
+  - unfold firstSetMinimal. intros.
+    remember H as Hfind. clear HeqHfind.
+    apply find_In in H. inv H.
+    crush.
+    + apply Z_c_in_First.
+    + apply Z_a_in_First.
+    + apply Z_d_in_First.
+    + apply Y_c_in_First.
+    + apply X_c_in_First.
+    + apply X_a_in_First.
+Defined.
+    
+Example old_Y_c_in_First :
+  (@pairInFirstSet g312 g312NullableSet) (NT "Y") (T "c").
+Proof.
+  apply firstPairT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
+Defined.
 
-Definition isT sym := match sym with
-                      | T _ => true
-                      | _   => false
-                      end.
+Example old_X_a_in_First :
+  (@pairInFirstSet g312 g312NullableSet) (NT "X") (T "a").
+Proof.
+  apply firstPairT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
+Defined.
+
+Example old_X_c_in_First :
+  (@pairInFirstSet g312 g312NullableSet) (NT "X") (T "c").
+Proof.
+  apply firstPairNT with
+      (prefix := nil)
+      (rightX := "Y")
+      (suffix := nil); crush; auto with g312Hints.
+  unfold not; intros; inv H. apply old_Y_c_in_First.
+Defined.
+
+Example old_Z_a_in_First :
+  (@pairInFirstSet g312 g312NullableSet)
+    (NT "Z") (T "a").
+Proof.
+  apply firstPairNT with
+      (rightX := "X")
+      (prefix := nil)
+      (suffix := [NT "Y" ; NT "Z"]);
+    crush; auto with g312Hints.
+  unfold not; intros; inv H.
+  apply old_X_a_in_First.
+Defined.
+
+Example old_Z_c_in_First :
+  (@pairInFirstSet g312 g312NullableSet)
+    (NT "Z") (T "c").
+Proof.
+  apply firstPairNT with
+      (rightX := "Y")
+      (prefix := [NT "X"])
+      (suffix := [NT "Z"]); crush; auto with g312Hints.
+  unfold not; intros; inv H.
+  apply old_Y_c_in_First.
+Defined.
+
+Example old_Z_d_in_First :
+  (@pairInFirstSet g312 g312NullableSet)
+    (NT "Z") (T "d").
+Proof.
+  apply firstPairT with (prefix := nil) (suffix := nil); crush; auto. apply g312NullableSetCorrect.
+Defined.
 
 Lemma T_not_in_NT_list :
   forall (gamma : list symbol) (y : string),
@@ -507,336 +557,8 @@ Ltac proveNonterminalVal :=
            inv H; try reflexivity; crushContra
   end.
 
-(* Consider an "in subset implies in superset" lemma *)
-Example g312FirstSetCorrect :
-  isFirstSetFor g312FirstSet g312 g312NullableSet.
-Proof.
-  unfold isFirstSetFor. split.
-  - apply g312NullableSetCorrect.
-  - split.
-    + unfold firstSetComplete. intros. unfold g312FirstSet.
-      simpl in H. destruct H.
-      * inv H.
-        exists acdSet. split.
-        { compute; reflexivity. }
-        { assert (sym = T "d").
-          { destruct prefix; destruct suffix; crush. }
-          subst. compute; compute in H1.
-          apply InA_singleton in H1. rewrite H1.
-          apply InA_cons_tl. apply InA_cons_tl.
-          apply InA_cons_hd. reflexivity. }
-      * destruct H.
-        { inv H.
-          exists acdSet. split.
-          { compute; reflexivity. }
-          { destruct prefix.
-            { inv H4. inv H1.
-              { rewrite H2. rewrite <- SymbolSet.mem_spec.
-                compute. reflexivity. }
-              apply InA_singleton in H2.
-              rewrite H2. rewrite <- SymbolSet.mem_spec.
-              compute. reflexivity. }
-            { inv H4.
-              destruct prefix.
-              { inv H3. simpl in H1.
-                inv H1.
-                { rewrite H2. rewrite <- SymbolSet.mem_spec.
-                  compute. reflexivity. }
-                inv H2. }
-              { inv H3.
-                destruct prefix.
-                { inv H4. simpl in H1. assumption. }
-                { inv H4. apply app_cons_not_nil in H3. inv H3. }}}}}
-        { destruct H.
-          { inv H. apply app_cons_not_nil in H4. inv H4. }
-          { destruct H.
-            { inv H.
-              exists cSet. split.
-              { compute; reflexivity. }
-              { assert (sym = T "c").
-                { destruct prefix; inv H4; try reflexivity.
-                  inv H0. }
-                subst. simpl in H1. assumption. }}
-            { destruct H.
-              { inv H.
-                exists acSet. split.
-                { compute; reflexivity. }
-                { assert (sym = NT "Y").
-                  { destruct prefix; inv H4; try reflexivity.
-                    apply app_cons_not_nil in H3. inv H3. }
-                  subst. simpl. compute in H1.
-                  apply InA_singleton in H1. rewrite H1.
-                  rewrite <- SymbolSet.mem_spec.
-                  compute. reflexivity. }} 
-              destruct H.
-              { inv H.
-                exists acSet. split.
-                { compute; reflexivity. }
-                { assert (sym = T "a").
-                  { destruct prefix; inv H4; try reflexivity.
-                    inv H0. }
-                  subst. simpl. compute in H1.
-                  apply InA_singleton in H1. rewrite H1.
-                  rewrite <- SymbolSet.mem_spec.
-                  compute. reflexivity. }}
-              inv H. }}}
-    + unfold firstSetMinimal. intros.
-      destruct H.
-      remember H as Hfind. clear HeqHfind.
-      apply find_In in H. crush.
-      * exists [NT "X"]. exists (NT "Y"). exists [NT "Z"].
-        split.
-        { right. left. reflexivity. }
-        { split.
-          { simpl. reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute. reflexivity. }}
-      * exists nil. exists (NT "X"). exists [NT "Y"; NT "Z"].
-        split.
-        { right. left. reflexivity. }
-        { split.
-          { reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute. reflexivity. }}
-      * exists nil. exists (T "d"). exists nil.
-        split.
-        { left. reflexivity. }
-        { split.
-          { reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute. reflexivity. }}
-      * exists nil. exists (T "c"). exists nil.
-        split.
-        { right. right. right. left. reflexivity. }
-        { split.
-          { reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute. reflexivity. }}
-      * exists nil. exists (NT "Y"). exists nil.
-        split.
-        { right. right. right. right. left. reflexivity. }
-        { split.
-          { reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute. reflexivity. }}
-      * exists nil. exists (T "a"). exists nil.
-        split.
-        { right. right. right. right. right. left.
-          reflexivity. }
-        { split.
-          { reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute. reflexivity. }}
-Defined.
-        
-Example g312FirstSetCorrectRel :
-  isFirstSetForRel g312FirstSet g312 g312NullableSet.
-Proof.
-  unfold isFirstSetForRel. split.
-  - (* firstSetComplete *)
-    unfold firstSetCompleteRel. intros.
-    unfold g312FirstSet. inv H.
-    + (* firstT case -- for each production with this form:
+(* tests of FOLLOW definitions *)
 
-         NT X -> prefix ++ T y :: suffix
-         prove that (X, y) is in the FIRST finite map *)
-      crush.
-      * (* Z -> d has the right form *)
-        exists acdSet. split.
-        { unfold SymbolMap.find; reflexivity. }
-        { assert (y = "d").
-          { destruct prefix; destruct suffix; crush. }
-          rewrite H. compute. crush. }
-      * (* Z -> X Y Z doesn't have the right form *)
-        apply NT_list_neq_list_with_T in H2; crush.
-      * (* Y -> [] doesn't have the right form *)
-        apply app_cons_not_nil in H2; crush.
-      * (* Y -> c has the right form *)
-        exists cSet. split.
-        { crushGoal. }
-        { assert (y = "c").
-          { destruct prefix; destruct suffix; crush. }
-          rewrite H. crushGoal. }
-      * (* X -> Y doesn't have the right form *)
-        crushContra; crushGoal.
-      * (* X -> a has the right form *)
-        exists acSet. split.
-        { crushGoal. }
-        { assert (y = "a").
-          { proveTerminalVal. }
-          crushGoal. }
-    + (* firstNT case -- for each production with this form:
- 
-         NT A -> prefix ++ NT B :: suffix
-
-         ...prove that if (B, y) is in the FIRST finite map,
-         then (A, y) is in the FIRST finite map *)
-      crush.
-      * (* Z -> d doesn't have the right form *)
-        crushContra; crushGoal.
-      * (* Z -> X Y Z has the right form --
-           there are three possible bindings for B *)
-        exists acdSet. split.
-        { crushGoal. }
-        { assert (In rightX ["X"; "Y"; "Z"]).
-          { repeat match goal with
-                   | H : (NT _ :: _) = (?P ++ NT _ :: _)%list
-                     |- _ => destruct P; inv H;
-                             crushGoal; crushContra
-                   end. }
-          inv H.
-          { (* B := X *)
-            inv H5; crush.
-            { crushContra; crushGoal. }
-            { assert (y = "a"); proveTerminalVal; crushGoal. }
-            { assert (rightX = "Y"); proveNonterminalVal.
-              subst. inv H8; crush; crushContra.
-              { assert (y = "c"); proveTerminalVal;
-                  crushGoal. }
-              { crushGoal. }}
-            { crushContra; crushGoal. }}
-          inv H0.
-          { (* B := Y *)
-            inv H5; crush.
-            { crushContra; crushGoal. }
-            { assert (y = "c"); proveTerminalVal; crushGoal. }
-            { crushContra. }
-            { crushContra; crushGoal. }}
-          inv H.
-          { crushContra. }
-          { crushContra. }}
-      * (* Y -> [] has the wrong form *)
-        crushContra.
-      * (* Y -> c has the wrong form *)
-        crushContra. crushGoal.
-      * (* X -> Y has the right form, 
-           and the only possible binding for B is Y. *)
-        exists acSet. split.
-        { crushGoal. }
-        { assert (rightX = "Y"); proveNonterminalVal.
-          subst. inv H5; crush.
-          { crushContra. }
-          { assert (y = "c"); proveTerminalVal; crushGoal. }
-          { crushContra. }
-          { crushContra. crushGoal. }}
-      * (* X -> a has the wrong form *)
-        crushContra. crushGoal.
-  - (* firstSetMinimal *)
-    unfold firstSetMinimalRel. intros.
-    remember H as Hfind. clear HeqHfind.
-    apply find_In in H. crush; auto with g312Hints.
-Defined.
-Hint Resolve g312FirstSetCorrect : g312Hints.
-
-(* This example makes sure it's not possible to prove that
-   the empty set is the FIRST set for Grammar 3.12 *)
-Example isFirstSetForRelFlawed :
-  isFirstSetForRel
-    (SymbolMap.empty SymbolSet.t) g312 g312NullableSet.
-Proof.
-  unfold isFirstSetForRel. split.
-  - unfold firstSetCompleteRel. intros.
-    inv H; crush.
-    + exists acdSet. split.
-      * unfold SymbolMap.find. simpl.
-Abort.
-
-(* This proof suggests that the non-relational version of 
-   isFirstSetFor is flawed! It says that this finite map:
-
-   X -> {c}
-   Y -> {c}
-
-   ...is the correct FIRST set for this grammar:
-
-   X -> []
-   X -> [Y]
-   Y -> []
-   Y -> [X]
- *)
-Example isFirstSetForFlawed :
-  isFirstSetFor (SymbolMap.add
-                   (NT "X") cSet
-                   (SymbolMap.add
-                      (NT "Y") cSet
-                      (SymbolMap.empty SymbolSet.t)))
-                [(NT "X", []) ; (NT "X", [NT "Y"]) ;
-                 (NT "Y", []) ; (NT "Y", [NT "X"])]
-                g312NullableSet.
-Proof.
-  unfold isFirstSetFor. split.
-  - unfold isNullableSetFor. split.
-    + unfold nullableSetComplete. intros.
-      inv H.
-      * inv H1. compute. apply InA_cons_tl.
-        apply InA_cons_hd. reflexivity.
-      * inv H1.
-        { inv H. rewrite <- SymbolSet.mem_spec.
-          compute. reflexivity. }
-        inv H.
-        { inv H1. rewrite <- SymbolSet.mem_spec.
-          compute; reflexivity. }
-        inv H1.
-        { inv H. rewrite <- SymbolSet.mem_spec.
-          compute; reflexivity. }
-        inv H.
-    + unfold nullableSetMinimal. intros. inv H.
-      * exists nil. split.
-        { simpl. right. right. left. reflexivity. }
-        { reflexivity. }
-      * apply InA_singleton in H1. subst.
-        exists nil. split.
-        { left. reflexivity. }
-        { reflexivity. }
-  - split.
-    * unfold firstSetComplete. intros. crush.
-      { apply app_cons_not_nil in H4. inv H4. }
-      { assert (sym = NT "Y").
-        { destruct prefix; inv H4; try reflexivity.
-          apply app_cons_not_nil in H3. inv H3. }
-        subst. inv H2.
-        exists cSet. split.
-        { compute; reflexivity. }
-        { rewrite <- SymbolSet.mem_spec.
-          compute; reflexivity. }}
-      { apply app_cons_not_nil in H4; inv H4. }
-      { assert (sym = NT "X").
-        { destruct prefix; inv H4; try reflexivity.
-          apply app_cons_not_nil in H3; inv H3. }
-        subst. inv H2.
-        exists cSet. split.
-        { compute; reflexivity. }
-        { rewrite <- SymbolSet.mem_spec.
-          compute; reflexivity. }}
-      { apply app_cons_not_nil in H5; inv H5. }
-      { assert (sym = NT "Y").
-        { destruct prefix; inv H5; try reflexivity.
-          apply app_cons_not_nil in H4; inv H4. }
-        subst. inv H2. inv H3. }
-      { apply app_cons_not_nil in H5; inv H5. }
-      assert (sym = NT "X").
-      { destruct prefix; inv H5; try reflexivity.
-        apply app_cons_not_nil in H4; inv H4. }
-      subst. inv H2. inv H3.
-    * unfold firstSetMinimal. intros. destruct H.
-      remember H as Hfind. clear HeqHfind.
-      apply find_In in H. crush.
-      { exists nil. exists (NT "X"). exists nil.
-        split.
-        { right. right. right. left. reflexivity. }
-        { split.
-          { reflexivity. }
-          { simpl. rewrite <- SymbolSet.mem_spec.
-            compute; reflexivity. }}}
-      exists nil. exists (NT "Y"). exists nil.
-      split.
-      { right. left. reflexivity. }
-      { split.
-        { reflexivity. }
-        { rewrite <- SymbolSet.mem_spec.
-          compute; reflexivity. }}
-Defined.
-    
 (* Correct FOLLOW set for Grammar 3.12 *)
 Definition g312FollowSet :=
   SymbolMap.add
@@ -844,116 +566,3 @@ Definition g312FollowSet :=
     (SymbolMap.add
        (NT "Y") acdSet
        (SymbolMap.empty SymbolSet.t)).
-
-Example X_a_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "X") (T "a").
-Proof.
-  apply followRightNT with (A := "Z")
-                           (C := "Z")
-                           (firstC := acdSet)
-                           (prefix := nil)
-                           (infix := [NT "Y"])
-                           (suffix := nil).
-  - crush.
-  - apply g312FirstSetCorrect.
-  - crushGoal.
-  - crushGoal.
-  - crushGoal.
-Defined.
-
-Example X_c_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "X") (T "c").
-Proof.
-  apply followRightNT with
-      (A := "Z")
-      (C := "Y")
-      (firstC := cSet)
-      (prefix := nil)
-      (infix := nil)
-      (suffix := [NT "Z"]); crush; crushGoal; auto with g312Hints.
-Defined.
-
-Example X_d_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "X") (T "d").
-Proof.
-  apply followRightNT with
-      (A := "Z")
-      (C := "Z")
-      (firstC := acdSet)
-      (prefix := nil)
-      (infix := [NT "Y"])
-      (suffix := nil); crush; crushGoal; auto with g312Hints.
-Defined.
-
-Example Y_a_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "Y") (T "a").
-Proof.
-  apply followLeftNT with
-      (A := "X")
-      (prefix := nil)
-      (suffix := nil).
-  - crush.
-  - crushGoal.
-  - apply X_a_in_Follow.
-Defined.
-
-Example Y_a_in_Follow2 :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "Y") (T "a").
-Proof.
-  apply followRightNT with
-      (A := "Z")
-      (C := "Z")
-      (firstC := acdSet)
-      (prefix := [NT "X"])
-      (infix := nil)
-      (suffix := nil).
-  - crush.
-  - auto with g312Hints.
-  - crushGoal.
-  - crushGoal.
-  - crushGoal.
-Defined.
-
-Example Y_c_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "Y") (T "c").
-Proof.
-  apply followLeftNT with
-      (A := "X")
-      (prefix := nil)
-      (suffix := nil).
-  - crush.
-  - crushGoal.
-  - apply X_c_in_Follow.
-Defined.
-
-Example Y_d_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "Y") (T "d").
-Proof.
-  apply followLeftNT with
-      (A := "X")
-      (prefix := nil)
-      (suffix := nil).
-  - crush.
-  - crushGoal.
-  - apply X_d_in_Follow.
-Defined.
-
-(* This should fail, and it does *)
-Example Z_d_in_Follow :
-  (@pairInFollowSet g312 g312NullableSet g312FirstSet)
-    (NT "Z") (T "d").
-Proof.
-  apply followLeftNT with
-      (A := "Z")
-      (prefix := [NT "X"; NT "Y"])
-      (suffix := nil).
-  - crush.
-  - crushGoal.
-Abort.

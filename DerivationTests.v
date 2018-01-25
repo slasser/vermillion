@@ -94,22 +94,22 @@ Defined.
 Example derivesTest2 :
   (@derives g311) (NT "S") input1 parseTree1.
 Proof.
-  apply derivesNT with (prod := (NT "S", [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"])); crush.
+  apply derivesNT with (prod := (NT "S", [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"])); derCrush.
   apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
-  - apply derivesNT with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); crush.
-  - crush.
+  - apply derivesNT with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); derCrush.
+  - derCrush.
     apply derivesCons with (prefix := ["print" ; "num" ; "==" ; "num"]).
-    + apply derivesNT with (prod := (NT "S", [T "print" ; NT "E"])); crush.
+    + apply derivesNT with (prod := (NT "S", [T "print" ; NT "E"])); derCrush.
       apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
-      * apply derivesNT with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); crush.
-      * crush.
-    + crush.
+      * apply derivesNT with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); derCrush.
+      * derCrush.
+    + derCrush.
       apply derivesCons with (prefix := ["print" ; "num" ; "==" ; "num"]).
-      * apply derivesNT with (prod := (NT "S", [T "print" ; NT "E"])); crush.
+      * apply derivesNT with (prod := (NT "S", [T "print" ; NT "E"])); derCrush.
         apply derivesCons with (prefix := ["num"; "=="; "num"]).
-        { apply derivesNT with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); crush. }
-        { crush. }
-      * crush.
+        { apply derivesNT with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); derCrush. }
+        { derCrush. }
+      * derCrush.
 Defined.
 
 (* Proof using the binary derivation relation, which doesn't include the notion
@@ -117,20 +117,20 @@ Defined.
 Example derives2Test : (@derives2 g311) (NT "S") input1.
 Proof.
   unfold input1.
-  apply derivesNT2 with (prod := (NT "S", [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"])); crush.
+  apply derivesNT2 with (prod := (NT "S", [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"])); derCrush.
   apply derivesCons2 with (prefix := ["num" ; "==" ; "num"]).
-  - apply derivesNT2 with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); crush.
-  - crush.
+  - apply derivesNT2 with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); derCrush.
+  - derCrush.
     apply derivesCons2 with (prefix := ["print" ; "num" ; "==" ; "num"]).
-    + apply derivesNT2 with (prod := (NT "S", [T "print" ; NT "E"])); crush.
+    + apply derivesNT2 with (prod := (NT "S", [T "print" ; NT "E"])); derCrush.
       apply derivesCons2 with (prefix := ["num" ; "==" ; "num"]).
-      * apply derivesNT2 with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); crush.
-      * crush.
-    + crush.
+      * apply derivesNT2 with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); derCrush.
+      * derCrush.
+    + derCrush.
       apply derivesCons2 with (prefix := ["print" ; "num" ; "==" ; "num"]).
-      * apply derivesNT2 with (prod := (NT "S", [T "print" ; NT "E"])); crush.
+      * apply derivesNT2 with (prod := (NT "S", [T "print" ; NT "E"])); derCrush.
         apply derivesCons2 with (prefix := ["num"; "=="; "num"]).
-        { apply derivesNT2 with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); crush. }
-        { crush. }
-      * crush.
+        { apply derivesNT2 with (prod := (NT "E", [T "num" ; T "==" ; T "num"])); derCrush. }
+        { derCrush. }
+      * derCrush.
 Defined.

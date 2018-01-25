@@ -21,25 +21,14 @@ Definition parseTableLookup (nt : symbol)
 
 (* Definition of the NULLABLE set for a given grammar *)
 
-Definition nullableSetComplete (nu : SymbolSet.t) (g : grammar) : Prop :=
-  forall (x : symbol) (ys : list symbol),
-    In (x, ys) g ->
-    forallb (nullable nu) ys = true ->
-    SymbolSet.In x nu.
+(* This seems like the best NULLABLE definition so far *)
 
-Definition nullableSetMinimal (nu : SymbolSet.t) (g : grammar) : Prop :=
-  forall (x : symbol),
-    SymbolSet.In x nu ->
-    exists (ys : list symbol),
-      In (x, ys) g /\
-      forallb (nullable nu) ys = true.
+Definition All (A : Set) (f : A -> Prop) (l : list A) :=
+  forall a, In a l -> f a.
 
-Definition isNullableSetFor (nu : SymbolSet.t) (g : grammar) : Prop :=
-  nullableSetComplete nu g /\ nullableSetMinimal nu g.
-
-
+SearchAbout (forall (A : Set), (A -> Prop) -> list A -> Prop).
 Inductive nullableSym {g : grammar} : symbol -> Prop :=
-| nullableNT :
+| nullable_nt :
     forall x gamma,
       In (NT x, gamma) g ->
       (forall sym,
@@ -47,46 +36,141 @@ Inductive nullableSym {g : grammar} : symbol -> Prop :=
           sym <> NT x) ->
       nullableGamma gamma ->
       nullableSym (NT x)
-with nullableGamma {g : grammar} : list symbol -> Prop :=
-     | nullableNil :
+  with nullableGamma {g : grammar} : list symbol -> Prop :=
+     | nullable_nil :
          nullableGamma nil
-     | nullableCons :
+     | nullable_cons :
          forall hd tl,
            nullableSym hd ->
            nullableGamma tl ->
            nullableGamma (hd :: tl).
 
-(* One constructor seems like enough -- is distinguishing
-   between the nil and cons cases useful? *)
+(* Read about creating induction schemes *)
+Scheme foo := Induction for nullableSym Sort Prop
+  with bar := Induction for nullableGamma Sort Prop.
 
-Inductive symInNullableSet {g : grammar} : symbol -> Prop :=
+Definition nullableSetComplete (nu : SymbolSet.t)
+                               (g : grammar) : Prop :=
+  forall x,
+    (@nullableSym g) (NT x) ->
+    SymbolSet.In (NT x) nu.
+
+Definition nullableSetMinimal (nu : SymbolSet.t)
+                              (g  : grammar) : Prop :=
+  forall x,
+    SymbolSet.In (NT x) nu ->
+    (@nullableSym g) (NT x).
+
+Definition isNullableSetFor nu g : Prop :=
+  nullableSetComplete nu g /\ nullableSetMinimal nu g.
+
+(* For future reference, here are some alternative definitions
+   that didn't work out *)
+
+Definition flawedNullableSetComplete (nu : SymbolSet.t)
+                                     (g : grammar) : Prop :=
+  forall (x : symbol) (ys : list symbol),
+    In (x, ys) g ->
+    forallb (nullable nu) ys = true ->
+    SymbolSet.In x nu.
+
+Definition flawedNullableSetMinimal (nu : SymbolSet.t)
+                                    (g : grammar) : Prop :=
+  forall (x : symbol),
+    SymbolSet.In x nu ->
+    exists (ys : list symbol),
+      In (x, ys) g /\
+      forallb (nullable nu) ys = true.
+
+Definition flawedIsNullableSetFor (nu : SymbolSet.t)
+                                  (g : grammar) : Prop :=
+  flawedNullableSetComplete nu g /\
+  flawedNullableSetMinimal nu g.
+
+Inductive flawedSymInNullableSet {g : grammar} : symbol -> Prop :=
 | nullableProd :
     forall x gamma,
       In (NT x, gamma) g ->
       (forall sym, 
           In sym gamma ->
-          sym <> NT x /\ symInNullableSet sym) ->
-      symInNullableSet (NT x).
+          sym <> NT x /\ flawedSymInNullableSet sym) ->
+      flawedSymInNullableSet (NT x).
 
-Definition nullableSetCompleteRel (nu : SymbolSet.t)
-                                  (g : grammar) : Prop :=
-  forall x,
-    (@nullableSym g) (NT x) ->
-    SymbolSet.In (NT x) nu.
-
-Definition nullableSetMinimalRel (nu : SymbolSet.t)
-           (g  : grammar) : Prop :=
-  forall x,
-    SymbolSet.In (NT x) nu ->
-    (@nullableSym g) (NT x).
-
-Definition isNullableSetForRel nu g : Prop :=
-  nullableSetCompleteRel nu g /\ nullableSetMinimalRel nu g.
-  
 (* Definition of the FIRST set for a given grammar *)
 
-(* Removed the requirement that NT x <> sym *)
-Definition firstSetComplete fi g nu : Prop :=
+(* Might need to add a "left <> right" constraint somewhere *)
+Inductive firstSym {g : grammar} (x : symbol) :
+  symbol -> Prop :=
+| fi_nt : forall y gamma,
+    In (x, gamma) g ->
+      (@firstGamma g) x gamma y ->
+      firstSym x y
+with firstGamma {g : grammar} (x : symbol) :
+       list symbol -> symbol -> Prop :=
+     | fg_t : forall hd tl,
+         isT hd = true ->
+         firstGamma x (hd :: tl) hd
+     | fg_nt_hd : forall hd sym tl,
+         isNT hd = true ->
+         hd <> x ->
+         firstSym hd sym ->
+         firstGamma x (hd :: tl) sym
+     | fg_nt_tl : forall hd sym tl,
+         isNT hd = true ->
+         (@nullableSym g) hd ->
+         firstGamma x tl sym ->
+         firstGamma x (hd :: tl) sym.
+
+Definition firstSetComplete fi g : Prop :=
+  forall x y,
+    (@firstSym g) x y ->
+    exists xFirst,
+      SymbolMap.find x fi = Some xFirst /\
+      SymbolSet.In y xFirst.
+
+Definition firstSetMinimal fi g : Prop :=
+  forall x xFirst y,
+    SymbolMap.find x fi = Some xFirst ->
+    SymbolSet.In y xFirst ->
+    (@firstSym g) x y.
+
+Definition isFirstSetFor fi g : Prop :=
+  firstSetComplete fi g /\ firstSetMinimal fi g.
+
+(* A previous attempt at defining FIRST *)
+Inductive pairInFirstSet {g : grammar} {nu : SymbolSet.t} :
+  symbol -> symbol -> Prop :=    
+| firstPairT : forall X y prefix suffix,
+    In (NT X, prefix ++ T y :: suffix) g ->
+    isNullableSetFor nu g ->
+    forallb (nullable nu) prefix = true ->
+    pairInFirstSet (NT X) (T y)
+| firstPairNT : forall leftX rightX y prefix suffix,
+    In (NT leftX, prefix ++ NT rightX :: suffix) g ->
+    leftX <> rightX ->
+    forallb (nullable nu) prefix = true ->
+    pairInFirstSet (NT rightX) (T y) ->
+    pairInFirstSet (NT leftX) (T y).
+    
+Definition old_firstSetComplete fi g nu : Prop :=
+  forall X y,
+    (@pairInFirstSet g nu) (NT X) (T y) ->
+    exists firstX,
+      SymbolMap.find (NT X) fi = Some firstX /\
+      SymbolSet.In (T y) firstX.
+
+Definition old_firstSetMinimal fi g nu : Prop :=
+  forall X firstX y,
+    SymbolMap.find (NT X) fi = Some firstX ->
+    SymbolSet.In (T y) firstX ->
+    (@pairInFirstSet g nu) (NT X) (T y).
+
+Definition old_isFirstSetFor fi g nu : Prop :=
+  old_firstSetComplete fi g nu /\ old_firstSetMinimal fi g nu.
+
+(* Some flawed alternative approaches *)
+
+Definition flawedFirstSetComplete fi g nu : Prop :=
   forall x y sym prefix suffix,
     In (NT x, prefix ++ sym :: suffix) g ->
     forallb (nullable nu) prefix = true ->
@@ -95,8 +179,7 @@ Definition firstSetComplete fi g nu : Prop :=
       SymbolMap.find (NT x) fi = Some xFirst /\
       SymbolSet.In (T y) xFirst.
 
-(* Removed the requirement that NT x <> sym *)
-Definition firstSetMinimal fi g nu : Prop :=
+Definition flawedFirstSetMinimal fi g nu : Prop :=
   forall x xFirst y,
     SymbolMap.find (NT x) fi = Some xFirst /\
     SymbolSet.In (T y) xFirst ->
@@ -105,41 +188,10 @@ Definition firstSetMinimal fi g nu : Prop :=
       forallb (nullable nu) prefix = true /\
       SymbolSet.In (T y) (first fi sym).
 
-Definition isFirstSetFor fi g nu : Prop :=
+Definition flawedIsFirstSetFor fi g nu : Prop :=
   isNullableSetFor nu g    /\
-  firstSetComplete fi g nu /\
-  firstSetMinimal fi g nu.
-
-(* Previous approach, which uses a relational definition of FIRST *)
-Inductive pairInFirstSet {g : grammar} {nu : SymbolSet.t} :
-  symbol -> symbol -> Prop :=    
-| firstT : forall X y prefix suffix,
-    In (NT X, prefix ++ T y :: suffix) g ->
-    isNullableSetFor nu g ->
-    forallb (nullable nu) prefix = true ->
-    pairInFirstSet (NT X) (T y)
-| firstNT : forall leftX rightX y prefix suffix,
-    In (NT leftX, prefix ++ NT rightX :: suffix) g ->
-    leftX <> rightX ->
-    forallb (nullable nu) prefix = true ->
-    pairInFirstSet (NT rightX) (T y) ->
-    pairInFirstSet (NT leftX) (T y).
-    
-Definition firstSetCompleteRel fi g nu : Prop :=
-  forall X y,
-    (@pairInFirstSet g nu) (NT X) (T y) ->
-    exists firstX,
-      SymbolMap.find (NT X) fi = Some firstX /\
-      SymbolSet.In (T y) firstX.
-
-Definition firstSetMinimalRel fi g nu : Prop :=
-  forall X firstX y,
-    SymbolMap.find (NT X) fi = Some firstX ->
-    SymbolSet.In (T y) firstX ->
-    (@pairInFirstSet g nu) (NT X) (T y).
-
-Definition isFirstSetForRel fi g nu : Prop :=
-  firstSetCompleteRel fi g nu /\ firstSetMinimalRel fi g nu.
+  flawedFirstSetComplete fi g nu /\
+  flawedFirstSetMinimal fi g nu.
 
 (* Definition of the FOLLOW set for a given grammar *)
 
@@ -155,7 +207,7 @@ Inductive pairInFollowSet
            (prefix infix suffix : list symbol)
            (y z : symbol),
       In (NT A, prefix ++ NT B :: infix ++ y :: suffix) g ->
-      isFirstSetFor fi g nu ->
+      old_isFirstSetFor fi g nu ->
       forallb (nullable nu) infix = true ->
       SymbolSet.In z (first fi y) -> (* use the relational definition of FIRST here instead? *)
       pairInFollowSet (NT B) z
@@ -214,7 +266,7 @@ Definition firstGammaComplete
     prefix ++ y :: suffix = ys ->
     In (NT X, ys) g ->
     isNullableSetFor nu g ->
-    isFirstSetFor fi g nu ->
+    isFirstSetFor fi g ->
     forallb (nullable nu) prefix = true ->
     SymbolSet.In z (first fi y) ->
     SymbolSet.In z fg.

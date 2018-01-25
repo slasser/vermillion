@@ -1,5 +1,17 @@
 Require Import Grammar.
 
+Definition isNT sym :=
+  match sym with
+  | NT _ => true
+  | _    => false
+  end.
+
+Definition isT sym :=
+  match sym with
+  | T _ => true
+  | _   => false
+  end.
+
 Definition nullable nSet sym :=
   match sym with
   | T _  => false
