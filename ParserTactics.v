@@ -6,7 +6,7 @@ Require Import ParserUtils.
 Require Import ParseTable.
 Require Import String.
 Import ListNotations.
-
+Open Scope string_scope.
 Ltac inv H := inversion H; clear H; subst.
 
 (* Add this to crush *)
@@ -35,9 +35,16 @@ Ltac crush :=
            
          | |- ?X = ?X => reflexivity
 
+         | |- isNT (NT _) = true => reflexivity
+
+         | |- isT (T _) = true => reflexivity
+
+         | |- firstSym (T ?X) (T ?X) =>
+           apply first_t
+
          (* contradictions *)
-                           
-         | H : [] = _ ++ (_ :: _) |- _ =>
+                                            
+         | H : [] = (_ ++ _ :: _)%list |- _ =>
            apply app_cons_not_nil in H
                                        
          | H : false = true |- _ => inv H
@@ -48,12 +55,26 @@ Ltac crush :=
 
          | H : isT (NT _) = true |- _ => inv H
 
-         | H : firstGamma _ [] _ |- _ => inv H
+         | H : firstGamma _ [] |- _ => inv H
 
          | H : ?X <> ?X |- _ =>
            exfalso; apply H; reflexivity
 
          | H : InA _ _ [] |- _ => inv H
+
+         | |- NT _ <> T _ =>
+           let H := fresh "Hcontra" in
+           unfold not; intro H; inv H
+
+         | |- NT ?X <> NT ?Y =>
+              let H := fresh "Hcontra" in
+              unfold not; intro H; progress inv H
+
+         | H : (isNT ?x = true), H2 : (isT ?x = true) |- _ =>
+           destruct x
+
+         | H : firstProd _ _ [] |- _ =>
+           inv H
 
          (* unpacking assumptions *)
 
@@ -82,7 +103,7 @@ Ltac crush :=
          | H : SymbolMap.find (NT (String _ _)) _ = Some _
            |- _ => inv H
 
-         | H : firstGamma _ (_::_) _ |- _ =>
+         | H : firstGamma _ (_::_) |- _ =>
            idtac "inv firstGamma" ; inv H
 
          | H : In (_, _) _ |- _ =>
@@ -93,7 +114,27 @@ Ltac crush :=
          | H : InA _ _ (_::_) |- _ => inv H
 
          | H : _ = SymbolSet.this _ |- _ => inv H
-                                 
+
+         | H : firstProd _ (NT (String _ _)) (_ :: _) |- _ =>
+           inv H
+
+         | H : firstSym _ (T (String _ _)) |- _ =>
+           inv H
+
+         | H : firstSym _ (NT (String _ _)) |- _ =>
+           inv H
+(*
+         | H : (_::_) = (?prefix ++ _ :: _)%list |- _ =>
+           destruct prefix
+
+ *)
+
+         | H : (_::_) = ([] ++ _ :: _)%list |- _ =>
+           inv H
+
+         | H : (_::_) = ((_ :: _) ++ _ :: _)%list |- _ =>
+           inv H
+               
          (* lists, maps, and sets *)
                   
          | |- SymbolMap.find _ _ = Some _ =>

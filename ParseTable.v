@@ -98,32 +98,42 @@ Inductive flawedSymInNullableSet {g : grammar} : symbol -> Prop :=
 
 (* Definition of the FIRST set for a given grammar *)
 
-(* Might need to add a "left <> right" constraint somewhere *)
-Inductive firstSym {g : grammar} (x : symbol) :
-  symbol -> Prop :=
-| fi_nt : forall y gamma,
-    In (x, gamma) g ->
-      (@firstGamma g) x gamma y ->
-      firstSym x y
-with firstGamma {g : grammar} (x : symbol) :
-       list symbol -> symbol -> Prop :=
-     | fg_t : forall hd tl,
-         isT hd = true ->
-         firstGamma x (hd :: tl) hd
-     | fg_nt_hd : forall hd sym tl,
-         isNT hd = true ->
-         hd <> x ->
-         firstSym hd sym ->
-         firstGamma x (hd :: tl) sym
-     | fg_nt_tl : forall hd sym tl,
-         isNT hd = true ->
+
+Inductive firstSym {g : grammar} :
+  symbol -> symbol -> Prop :=
+| first_t : forall y,
+    isT y = true ->
+    firstSym y y
+| first_nt : forall x y ys,
+    isNT x = true -> (* needed? *)
+    In (x, ys) g ->
+      firstProd y x ys ->
+      firstSym y x
+with firstProd {g : grammar} :
+       symbol -> symbol -> list symbol -> Prop :=
+     | fprod_hd : forall y x hd tl,
+         x <> hd ->
+         firstSym y hd ->
+         firstProd y x (hd :: tl)
+     | fprod_tl : forall y x hd tl,
          (@nullableSym g) hd ->
-         firstGamma x tl sym ->
-         firstGamma x (hd :: tl) sym.
+         firstProd y x tl ->
+         firstProd y x (hd :: tl).
+
+Inductive firstGamma {g : grammar} :
+  symbol -> list symbol -> Prop :=
+| fgamma_hd : forall y hd tl,
+    (@firstSym g) y hd ->
+    firstGamma y (hd :: tl)
+| fgamma_tl : forall y hd tl,
+    (@nullableSym g) hd ->
+    firstGamma y tl ->
+    firstGamma y (hd :: tl).
 
 Definition firstSetComplete fi g : Prop :=
   forall x y,
-    (@firstSym g) x y ->
+    isNT x = true ->
+    (@firstSym g) y x ->
     exists xFirst,
       SymbolMap.find x fi = Some xFirst /\
       SymbolSet.In y xFirst.
@@ -132,7 +142,7 @@ Definition firstSetMinimal fi g : Prop :=
   forall x xFirst y,
     SymbolMap.find x fi = Some xFirst ->
     SymbolSet.In y xFirst ->
-    (@firstSym g) x y.
+    (@firstSym g) y x.
 
 Definition isFirstSetFor fi g : Prop :=
   firstSetComplete fi g /\ firstSetMinimal fi g.
@@ -195,6 +205,38 @@ Definition flawedIsFirstSetFor fi g nu : Prop :=
 
 (* Definition of the FOLLOW set for a given grammar *)
 
+Inductive followSym {g : grammar} : symbol -> symbol -> Prop :=
+| followRight :
+    forall lx rx prefix suffix y,
+      In (lx, prefix ++ rx :: suffix) g ->
+      isNT rx = true ->
+      (@firstGamma g) y suffix -> 
+      followSym y rx
+| followLeft :
+    forall lx rx prefix suffix y,
+      In (lx, prefix ++ rx :: suffix) g ->
+      isNT rx = true ->
+      lx <> rx -> (* Should this be in the definition? *)
+      (@nullableGamma g) suffix ->
+      followSym y lx ->
+      followSym y rx.
+
+Definition followSetComplete fo g : Prop :=
+  forall x y,
+    (@followSym g) y x ->
+    exists xFollow,
+      SymbolMap.find x fo = Some xFollow /\
+      SymbolSet.In y xFollow.
+
+Definition followSetMinimal fo g : Prop :=
+  forall x xFollow y,
+    SymbolMap.find x fo = Some xFollow ->
+    SymbolSet.In y xFollow ->
+    (@followSym g) y x.
+
+Definition isFollowSetFor fo g : Prop :=
+  followSetComplete fo g /\ followSetMinimal fo g.
+
 (* To do: figure out whether any of these clauses need
    "A <> B" constraints *)
 Inductive pairInFollowSet
@@ -202,7 +244,7 @@ Inductive pairInFollowSet
           {nu : SymbolSet.t}
           {fi : SymbolMap.t SymbolSet.t} :
   symbol -> symbol -> Prop :=
-| followRight :
+| old_followRight :
     forall (A B : string)
            (prefix infix suffix : list symbol)
            (y z : symbol),
@@ -211,7 +253,7 @@ Inductive pairInFollowSet
       forallb (nullable nu) infix = true ->
       SymbolSet.In z (first fi y) -> (* use the relational definition of FIRST here instead? *)
       pairInFollowSet (NT B) z
-| followLeft :
+| old_followLeft :
     forall (A B : string)
            (prefix suffix : list symbol)
            (y : symbol),
@@ -221,54 +263,49 @@ Inductive pairInFollowSet
       pairInFollowSet (NT A) y ->
       pairInFollowSet (NT B) y.
 
-(* 
-| followRightT : forall (A B y : string)
-                        (prefix infix suffix : list symbol),
-    In (NT A, prefix ++ NT B :: infix ++ T y :: suffix) g ->
-    isFirstSetFor fi g nu ->
-    forallb (nullable nu) infix = true ->
-    pairInFollowSet (NT B) (T y)
-| followRightNT : forall (A B C y : string)
-                         (firstC  : SymbolSet.t)
-                         (prefix infix suffix : list symbol),
-    In (NT A, prefix ++ NT B :: infix ++ NT C :: suffix) g ->
-    isFirstSetFor fi g nu ->
-    forallb (nullable nu) infix = true ->
-    SymbolMap.find (NT C) fi = Some firstC ->
-    SymbolSet.In (T y) firstC ->
-    pairInFollowSet (NT B) (T y)
-*)
-
-Definition followSetComplete fo g nu fi : Prop :=
+Definition old_followSetComplete fo g nu fi : Prop :=
   forall X y,
     (@pairInFollowSet g nu fi) (NT X) (T y) ->
     exists followX,
       SymbolMap.find (NT X) fo = Some followX /\
       SymbolSet.In (T y) followX.
 
-Definition followSetMinimal fo g nu fi : Prop :=
+Definition old_followSetMinimal fo g nu fi : Prop :=
   forall X followX y,
     SymbolMap.find (NT X) fo = Some followX ->
     SymbolSet.In (T y) followX ->
     (@pairInFollowSet g nu fi) (NT X) (T y).
 
-Definition isFollowSetFor fo g nu fi : Prop :=
-  followSetComplete fo g nu fi /\ followSetMinimal fo g nu fi.
+Definition old_isFollowSetFor fo g nu fi : Prop :=
+  old_followSetComplete fo g nu fi /\ old_followSetMinimal fo g nu fi.
 
-(* Definition of firstGamma for a production *)
+(* Definition of a valid parse table for a given grammar *)
 
-Definition firstGammaComplete
-           {g : grammar}
-           {nu : SymbolSet.t}
-           {fi : SymbolMap.t SymbolSet.t}
-           (fg : SymbolSet.t) X ys : Prop :=
-  forall prefix y z suffix,
-    prefix ++ y :: suffix = ys ->
-    In (NT X, ys) g ->
-    isNullableSetFor nu g ->
-    isFirstSetFor fi g ->
-    forallb (nullable nu) prefix = true ->
-    SymbolSet.In z (first fi y) ->
-    SymbolSet.In z fg.
+Definition ptCompleteFirst tbl g : Prop :=
+  forall x gamma y,
+    (@firstGamma g) y gamma ->
+    exists row,
+      SymbolMap.find x tbl = Some row  /\
+      SymbolMap.find y row = Some (x, gamma).
 
-(* To do : firstGammaMinimal *)
+Definition ptCompleteFollow tbl g : Prop :=
+  forall x gamma y,
+    (@nullableGamma g) gamma ->
+    (@followSym g) y x ->
+    exists row,
+      SymbolMap.find x tbl = Some row /\
+      SymbolMap.find y row = Some (x, gamma).
+
+Definition parseTableComplete tbl g : Prop :=
+  ptCompleteFirst tbl g /\ ptCompleteFollow tbl g.
+
+Definition parseTableMinimal tbl g : Prop :=
+  forall x row y gamma,
+    SymbolMap.find x tbl = Some row ->
+    SymbolMap.find y row = Some (x, gamma) ->
+    (@firstGamma g) y gamma \/
+    ( (@nullableGamma g) gamma /\ (@followSym g) y x ).
+
+Definition isParseTableFor tbl g : Prop :=
+  parseTableComplete tbl g /\ parseTableMinimal tbl g.
+    

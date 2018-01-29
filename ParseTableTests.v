@@ -277,31 +277,33 @@ Definition g312FirstSet :=
 
 Create HintDb g312Hints.
 
-Example Y_c_in_First :
-  (@firstSym g312) (NT "Y") (T "c").
+Example c_in_First_Y :
+  (@firstSym g312) (T "c") (NT "Y").
 Proof.
-  apply fi_nt with (gamma := [T "c"]).
+  apply first_nt with (ys := [T "c"]).
+  - reflexivity.
   - crush.
-  - apply fg_t. reflexivity.
-Defined.
-
-Example X_a_in_First :
-  (@firstSym g312) (NT "X") (T "a").
-Proof.
-  apply fi_nt with (gamma := [T "a"]).
-  - crush.
-  - apply fg_t. reflexivity. 
-Defined.
-
-Example X_c_in_First :
-  (@firstSym g312) (NT "X") (T "c").
-Proof.
-  apply fi_nt with (gamma := [NT "Y"]).
-  - crush.
-  - apply fg_nt_hd.
-    + reflexivity.
+  - apply fprod_hd.
     + unfold not; intros; inv H.
-    + apply Y_c_in_First.
+    + apply first_t. reflexivity.
+Defined.
+
+Example a_in_First_X :
+  (@firstSym g312) (T "a") (NT "X").
+Proof.
+  apply first_nt with (ys := [T "a"]); crush.
+  apply fprod_hd.
+  - crush.
+  - apply first_t. crush.
+Defined.
+
+Example c_in_First_X :
+  (@firstSym g312) (T "c") (NT "X").
+Proof.
+  apply first_nt with (ys := [NT "Y"]); crush.
+  apply fprod_hd.
+  - unfold not; intros; inv H.
+  - apply c_in_First_Y.
 Defined.
 
 Ltac provePairNotInFirst :=
@@ -309,61 +311,54 @@ Ltac provePairNotInFirst :=
          | H : In (NT (String _ _), _) g312 |- _ => inv H
          | H : In (NT _, _) (_::_) |- _ => inv H
          | H : (NT (String _ _), _) = (NT (String _ _), _) |- _ => inv H
-         | H : firstSym (NT (String _ _)) (T (String _ _)) |- _ => inv H
-         | H : firstGamma _ (_::_) (T (String _ _)) |- _ => inv H
-         | H : firstGamma _ nil _ |- _ => inv H
+         | H : firstSym (T (String _ _)) (NT (String _ _)) |- _ => inv H
+
+        | H : firstSym (T (String _ _)) (T (String _ _)) |- _ => inv H                                                               
+         | H : firstProd (T (String _ _)) _ (_::_)  |- _ => inv H
+         | H : firstProd _ _ nil |- _ => inv H
          | H : ParserUtils.isNT (T _) = true |- _ => inv H
          | H : In _ [] |- _ => inv H
          end.
 
 (* Make sure we can also prove that a pair is not in FIRST *)
-Example X_d_not_in_First :
-  ~(@firstSym g312) (NT "X") (T "d").
+Example d_not_in_First_X :
+  ~(@firstSym g312) (T "d") (NT "X").
 Proof.
   unfold not. intros.
   provePairNotInFirst.
 Defined.
 
-Example Z_a_in_First :
-  (@firstSym g312) (NT "Z") (T "a").
+Example a_in_First_Z :
+  (@firstSym g312) (T "a") (NT "Z").
 Proof.
-  apply fi_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]).
-  - crush.
-  - apply fg_nt_hd.
-    + reflexivity.
-    + unfold not; intros; inv H.
-    + apply X_a_in_First.
+  apply first_nt with (ys := [NT "X"; NT "Y"; NT "Z"]); crush.
+  apply fprod_hd; crush.
+  apply a_in_First_X.
 Defined.
 
-Example Z_c_in_First :
-  (@firstSym g312) (NT "Z") (T "c").
+Example c_in_First_Z :
+  (@firstSym g312) (T "c") (NT "Z").
 Proof.
-  apply fi_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]).
-  - crush.
-  - apply fg_nt_tl.
-    + reflexivity.
-    + apply X_nullable'.
-    + apply fg_nt_hd.
-      * reflexivity.
-      * unfold not; intros; inv H.
-      * apply Y_c_in_First.
+  apply first_nt with (ys := [NT "X"; NT "Y"; NT "Z"]); crush.
+  apply fprod_tl.
+  - apply X_nullable'.
+  - apply fprod_hd; crush.
+    apply c_in_First_Y.
 Defined.
-
-Example Z_d_in_First :
-  (@firstSym g312) (NT "Z") (T "d").
+  
+Example d_in_First_Z :
+  (@firstSym g312) (T "d") (NT "Z").
 Proof.
-  apply fi_nt with (gamma := [T "d"]).
-  - crush.
-  - apply fg_t. reflexivity.
+  apply first_nt with (ys := [T "d"]); crush.
+  apply fprod_hd; crush.
 Defined.
 
 Lemma find_In : forall k vT (v : vT) m,
     SymbolMap.find k m = Some v ->
     SymbolMap.In k m.
 Proof.
-  intros. rewrite SymbolMapFacts.in_find_iff.
-  rewrite H. unfold not.
-  intros. inv H0.
+  intros. rewrite SymbolMapFacts.in_find_iff. rewrite H.
+  unfold not. intro Hcontra. inv Hcontra.
 Defined.
 
 (* Much nicer than the proof of the same proposition below! *)
@@ -371,23 +366,27 @@ Example g312FirstSetCorrect :
   isFirstSetFor g312FirstSet g312.
 Proof.
   unfold isFirstSetFor. split.
-  - unfold firstSetComplete. intros. inv H. crush.
-    + exists acdSet. crush.
-    + exists acdSet. crush.
-    + exists acdSet. crush.
-    + exists cSet. crush.
-    + exists acSet. crush.
-    + exists acSet. crush.
-  - unfold firstSetMinimal. intros.
+  - unfold firstSetComplete. intros. inv H0.
+    + crush. (* x can't be both NT and T *)
+    + crush.
+      * exists acdSet. crush.
+      * exists acdSet. crush.
+      * exists acdSet. crush.
+      (* Why do I have to prove this twice? *)
+      * exists acdSet. crush.
+      * exists cSet. crush.
+      * exists acSet. crush.
+      * exists acSet. crush.
+  - unfold firstSetMinimal. intros. 
     remember H as Hfind. clear HeqHfind.
     apply find_In in H. inv H.
     crush.
-    + apply Z_c_in_First.
-    + apply Z_a_in_First.
-    + apply Z_d_in_First.
-    + apply Y_c_in_First.
-    + apply X_c_in_First.
-    + apply X_a_in_First.
+    + apply c_in_First_Z.
+    + apply a_in_First_Z.
+    + apply d_in_First_Z.
+    + apply c_in_First_Y.
+    + apply c_in_First_X.
+    + apply a_in_First_X.
 Defined.
     
 Example old_Y_c_in_First :
@@ -566,3 +565,127 @@ Definition g312FollowSet :=
     (SymbolMap.add
        (NT "Y") acdSet
        (SymbolMap.empty SymbolSet.t)).
+
+Ltac proveTerminalBinding :=
+  match goal with
+  | H : [?X] = (?prefix ++ ?Y :: ?suffix)%list |-
+    ?Y = ?X =>
+    destruct prefix; inv H
+  end.
+
+Example finiteFollowCorrect :
+  isFollowSetFor g312FollowSet g312.
+Proof.
+  unfold isFollowSetFor. split.
+  - unfold followSetComplete. intros. inv H.
+    + crush.
+      * assert (x = T "d").
+        { proveTerminalBinding; crush. }
+        subst. crush.
+      * destruct prefix; crush; exists acdSet; crush.
+        { destruct prefix; crush.
+          assert (suffix = nil).
+          { destruct prefix.
+            { inv H4. crush. }
+            inv H4. crush. }
+          subst. crush. }
+        destruct prefix; crush.
+        assert (suffix = nil).
+          { destruct prefix.
+            { inv H4. crush. }
+            inv H4. crush. }
+          subst. crush.
+      * assert (x = T "c").
+        { proveTerminalBinding; crush. }
+        subst. crush.
+      * assert (suffix = nil).
+          { destruct prefix.
+            { inv H4. crush. }
+            inv H4. crush. }
+          subst. crush.
+      * assert (x = T "a").
+        { proveTerminalBinding; crush. }
+        subst; crush.
+    + crush.
+      * assert (x = T "d").
+        { proveTerminalBinding; crush. }
+        subst; crush.
+      * destruct prefix; crush.
+        { exfalso. inv H3. inv H6.
+          apply Z_not_nullable'. assumption. }
+        destruct prefix; crush.
+        { exfalso. inv H3. apply Z_not_nullable'. assumption. }
+        assert (x = NT "Z").
+        { proveTerminalBinding; crush. }
+        subst. crush.
+      * assert (x = T "c").
+        { proveTerminalBinding; crush. }
+        subst; crush.
+      * assert (x = NT "Y").
+        { proveTerminalBinding; crush. }
+        subst. exists acdSet. crush.
+        inv H4.
+        { crush.
+          { destruct prefix0; crush. }
+          destruct prefix0; crush.
+          { destruct prefix0; crush.
+            destruct prefix0; crush. }
+          destruct prefix0; crush. destruct prefix0; crush.
+          destruct prefix0; crush. }
+        inv H.
+        { crush. destruct prefix0; crush. }
+        crush.
+        { destruct prefix0; crush.
+          { inv H7. inv H10.
+            exfalso. apply Z_not_nullable'. assumption. }
+          destruct prefix0; crush. destruct prefix0; crush. }
+        destruct prefix0; crush.
+      * assert (x = T "a").
+        { proveTerminalBinding; crush. }
+        subst; crush.
+  - unfold followSetMinimal. intros.
+    remember H as Hfind. clear HeqHfind.
+    apply find_In in H. inv H.
+    crush.
+    + apply followRight with (lx := NT "Z")
+                             (prefix := [NT "X"])
+                             (suffix := [NT "Z"]).
+      * crush.
+      * crush.
+      * apply fgamma_hd. apply c_in_First_Z.
+    + apply followRight with
+          (lx := NT "Z")
+          (prefix := [NT "X"])
+          (suffix := [NT "Z"]); crush.
+      apply fgamma_hd. apply a_in_First_Z.
+    + apply followRight with
+          (lx := NT "Z")
+          (prefix := [NT "X"])
+          (suffix := [NT "Z"]); crush.
+      * apply fgamma_hd. apply d_in_First_Z.
+    + apply followRight with
+          (lx := NT "Z")
+          (prefix := nil)
+          (suffix := [NT "Y"; NT "Z"]); crush.
+      apply fgamma_hd. apply c_in_First_Y.
+    + apply followRight with
+          (lx := NT "Z")
+          (prefix := nil)
+          (suffix := [NT "Y"; NT "Z"]); crush.
+      apply fgamma_tl.
+      * apply Y_nullable'.
+      * apply fgamma_hd. apply a_in_First_Z.
+    + apply followRight with
+          (lx := NT "Z")
+          (prefix := nil)
+          (suffix := [NT "Y"; NT "Z"]); crush.
+      apply fgamma_tl.
+      * apply Y_nullable'.
+      * apply fgamma_hd. apply d_in_First_Z.
+Defined.
+
+
+
+
+           
+            
