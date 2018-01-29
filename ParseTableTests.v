@@ -230,6 +230,23 @@ Proof.
       apply X_nullable'.
 Defined.
 
+(* We can now prove that an incomplete nullable set is incorrect *)
+Example incompleteNullableSetIncorrect :
+  ~isNullableSetFor (SymbolSet.add (NT "X") SymbolSet.empty) g312.
+Proof.
+  unfold not. intros. inv H. clear H1.
+  unfold nullableSetComplete in H0.
+  specialize H0 with (x := "Y").
+  assert (~SymbolSet.In (NT "Y")
+           (SymbolSet.add (NT "X") SymbolSet.empty)).
+  { unfold not. intros. crush. inv H2. }
+  apply H. apply H0.
+  apply nullable_nt with (gamma := nil).
+  - crush.
+  - intros. inv H1.
+  - apply nullable_nil.
+Defined.
+
 (* And now we can't prove that the NULLABLE set for the 
    weird grammar is non-empty, which is good *)
 Example g312NullableSetCorrectForWeirdGrammar :
@@ -387,6 +404,33 @@ Proof.
     + apply c_in_First_Y.
     + apply c_in_First_X.
     + apply a_in_First_X.
+Defined.
+
+Definition g312FirstSetPlus :=
+  SymbolMap.add
+    (NT "X") acdSet (* d shouldn't be in there *)
+    (SymbolMap.add
+       (NT "Y") cSet
+       (SymbolMap.add
+          (NT "Z") acdSet
+          (SymbolMap.empty SymbolSet.t))).
+
+(* We can also prove that a FIRST set with extraneous elements
+   is not the correct FIRST set for Grammar 3.12 *)
+Example nonMinimalFirstSetIncorrect :
+  ~isFirstSetFor g312FirstSetPlus g312.
+Proof.
+  unfold not. intros. unfold isFirstSetFor in H. destruct H.
+  clear H. unfold firstSetMinimal in H0.
+  specialize H0 with (x := NT "X")
+                     (xFirst := acdSet)
+                     (y := T "d").
+  assert (~(@firstSym g312) (T "d") (NT "X")).
+  { unfold not. intros.
+    inv H. crush. }
+  apply H. apply H0.
+  - crush.
+  - crush.
 Defined.
     
 Example old_Y_c_in_First :
@@ -683,6 +727,7 @@ Proof.
       * apply Y_nullable'.
       * apply fgamma_hd. apply d_in_First_Z.
 Defined.
+
 
 
 
