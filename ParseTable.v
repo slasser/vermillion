@@ -283,6 +283,7 @@ Definition old_isFollowSetFor fo g nu fi : Prop :=
 
 Definition ptCompleteFirst tbl g : Prop :=
   forall x gamma y,
+    In (x, gamma) g ->
     (@firstGamma g) y gamma ->
     exists row,
       SymbolMap.find x tbl = Some row  /\
@@ -290,6 +291,7 @@ Definition ptCompleteFirst tbl g : Prop :=
 
 Definition ptCompleteFollow tbl g : Prop :=
   forall x gamma y,
+    In (x, gamma) g ->
     (@nullableGamma g) gamma ->
     (@followSym g) y x ->
     exists row,

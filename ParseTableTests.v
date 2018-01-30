@@ -728,6 +728,152 @@ Proof.
       * apply fgamma_hd. apply d_in_First_Z.
 Defined.
 
+(* The next tests use Grammar 3.11, shown here:
+
+   S -> if E then S else S
+   S -> begin S L
+   S -> print E
+
+   L -> end
+   L -> ; S L
+
+   E -> num = num
+
+ *)
+
+Definition S_map :=
+  SymbolMap.add
+    (T "if")
+    (NT "S", [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"])
+    (SymbolMap.add
+       (T "begin")
+       (NT "S", [T "begin"; NT "S"; NT "L"])
+       (SymbolMap.add
+          (T "print")
+          (NT "S", [T "print"; NT "E"])
+          (SymbolMap.empty (symbol * list symbol)))).
+
+Definition L_map :=
+  SymbolMap.add
+    (T "end")
+    (NT "L", [T "end"])
+    (SymbolMap.add
+       (T ";")
+       (NT "L", [T ";"; NT "S"; NT "L"])
+       (SymbolMap.empty (symbol * list symbol))).
+
+Definition E_map :=
+  SymbolMap.add
+    (T "num")
+    (NT "E", [T "num"; T "=="; T "num"])
+    (SymbolMap.empty (symbol * list symbol)).
+
+Definition g311ParseTable :=
+  SymbolMap.add
+    (NT "S") S_map
+    (SymbolMap.add
+       (NT "L") L_map
+       (SymbolMap.add
+          (NT "E") E_map
+          (SymbolMap.empty (SymbolMap.t (symbol * list symbol))))).
+
+Ltac copy_and_find_In H :=
+  let Hfind := fresh "Hfind" in
+  let Heq   := fresh "Heq" in 
+  remember H as Hfind eqn:Heq; clear Heq;
+  apply find_In in H.
+
+Example g311ParseTableCorrect :
+  isParseTableFor g311ParseTable g311.
+Proof.
+  unfold isParseTableFor. split.
+  - unfold parseTableComplete. split.
+    + unfold ptCompleteFirst. intros.
+      inv H.
+      * inv H1. exists S_map. split.
+        { compute. crush. }
+        inv H0.
+        { inv H2.
+          { compute. crush. }
+          crush. }
+        inv H3.
+      * inv H1.
+        { inv H. exists S_map. split.
+          { compute. crush. }
+          { inv H0.
+            { inv H2.
+              { crush. }
+              crush. }
+            inv H3. }}
+        inv H.
+        { inv H1. exists S_map. crush.
+          { split.
+            { crush. }
+            crush. }
+          { split.
+            { crush. }
+            inv H3. }
+          { inv H3. }
+          split.
+          { crush. }
+          inv H3. }
+        inv H1.
+        { inv H.
+          exists L_map. split.
+          { crush. }
+          crush. }
+        inv H.
+        { inv H1. exists L_map. split.
+          { compute. crush. }
+          inv H0.
+          { inv H2.
+            { crush. }
+            crush. }
+          inv H3. }
+        crush.
+        { exists E_map. split.
+          { compute; crush. }
+          crush. }
+        { inv H3. }
+        inv H3.
+    + unfold ptCompleteFollow. intros. inv H.
+      * inv H2. inv H0. inv H3.
+      * inv H2.
+        { inv H. inv H0. inv H3. }
+        inv H.
+        { inv H2. inv H0. inv H3. }
+        inv H2.
+        { inv H. inv H0. inv H3. }
+        inv H.
+        { inv H2. inv H0. inv H3. }
+        inv H2.
+        { inv H. inv H0. inv H3. }
+        inv H.
+  - unfold parseTableMinimal. intros.
+    remember H as Hfind. clear HeqHfind.
+    apply find_In in H. inv H. crush.
+    + remember H0 as Hfind. clear HeqHfind.
+      apply find_In in H0. inv H0. crush. inv Hfind.
+      left. apply fgamma_hd. apply first_t. reflexivity.
+    + copy_and_find_In H0. inv H0. crush.
+      * inv Hfind. left.
+        apply fgamma_hd. crush.
+      * inv Hfind. left.
+        apply fgamma_hd. crush.
+    + copy_and_find_In H0. inv H0. crush.
+      * inv Hfind. left.
+        apply fgamma_hd. crush.
+      * inv Hfind. left.
+        apply fgamma_hd. crush.
+      * inv Hfind. left.
+        apply fgamma_hd. crush.
+Defined.
+        
+        
+          
+          
+    
+
 
 
 
