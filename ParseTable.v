@@ -306,7 +306,8 @@ Definition parseTableMinimal tbl g : Prop :=
     SymbolMap.find x tbl = Some row ->
     SymbolMap.find y row = Some (x, gamma) ->
     (@firstGamma g) y gamma \/
-    ( (@nullableGamma g) gamma /\ (@followSym g) y x ).
+    (@nullableGamma g) gamma /\ (@followSym g) y x.
+Print parseTableMinimal.
 
 Definition isParseTableFor tbl g : Prop :=
   parseTableComplete tbl g /\ parseTableMinimal tbl g.

@@ -7,10 +7,18 @@ Require Import ParseTable.
 Require Import String.
 Import ListNotations.
 Open Scope string_scope.
+
 Ltac inv H := inversion H; clear H; subst.
 
 (* Add this to crush *)
-Ltac solveNotFalse := simpl; unfold not; intros; inversion H. 
+Ltac solveNotFalse := simpl; unfold not; intros; inversion H.
+
+Ltac proveSymBinding :=
+  match goal with
+  | H : [?X] = (?prefix ++ ?Y :: ?suffix)%list |-
+    ?Y = ?X =>
+    destruct prefix; inv H
+  end.
 
 Ltac derCrush :=
   repeat match goal with
