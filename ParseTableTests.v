@@ -299,80 +299,19 @@ Proof.
   unfold isFollowSetFor. split.
   - unfold followSetComplete. intros. inv H.
     + crush.
-      * assert (x = T "d").
-        { proveSymBinding; crush. }
-        subst. crush.
-      * destruct prefix; crush; exists acdSet; crush.
-        { destruct prefix; crush.
-          assert (suffix = nil).
-          { destruct prefix.
-            { inv H4. crush. }
-            inv H4. crush. }
-          subst. crush. }
-        destruct prefix; crush.
-        assert (suffix = nil).
-          { destruct prefix.
-            { inv H4. crush. }
-            inv H4. crush. }
-          subst. crush.
-      * assert (x = T "c").
-        { proveSymBinding; crush. }
-        subst. crush.
-      * assert (suffix = nil).
-          { destruct prefix.
-            { inv H4. crush. }
-            inv H4. crush. }
-          subst. crush.
-      * assert (x = T "a").
-        { proveSymBinding; crush. }
-        subst; crush.
+      * exists acdSet. crush.
+      * exists acdSet. crush.
     + crush.
-      * assert (x = T "d").
-        { proveSymBinding; crush. }
-        subst; crush.
-      * destruct prefix; crush.
-        { exfalso. inv H3. inv H6.
-          apply Z_not_nullable. assumption. }
-        destruct prefix; crush.
-        { exfalso. inv H3. apply Z_not_nullable. assumption. }
-        assert (x = NT "Z").
-        { proveSymBinding; crush. }
-        subst. crush.
-      * assert (x = T "c").
-        { proveSymBinding; crush. }
-        subst; crush.
-      * assert (x = NT "Y").
-        { proveSymBinding; crush. }
-        subst. exists acdSet. crush.
-        inv H4.
-        { crush.
-          { destruct prefix0; crush. }
-          destruct prefix0; crush.
-          { destruct prefix0; crush.
-            destruct prefix0; crush. }
-          destruct prefix0; crush. destruct prefix0; crush.
-          destruct prefix0; crush. }
-        inv H.
-        { crush. destruct prefix0; crush. }
-        crush.
-        { destruct prefix0; crush.
-          { inv H7. inv H10.
-            exfalso. apply Z_not_nullable. assumption. }
-          destruct prefix0; crush. destruct prefix0; crush. }
-        destruct prefix0; crush.
-      * assert (x = T "a").
-        { proveSymBinding; crush. }
-        subst; crush.
+      * exfalso. apply Z_not_nullable. assumption.
+      * exfalso. apply Z_not_nullable. assumption.
+      * exists acdSet. crush.
   - unfold followSetMinimal. intros.
-    remember H as Hfind. clear HeqHfind.
-    apply find_In in H. inv H.
-    crush.
-    + apply followRight with (lx := NT "Z")
-                             (prefix := [NT "X"])
-                             (suffix := [NT "Z"]).
-      * crush.
-      * crush.
-      * apply fgamma_hd. apply c_in_First_Z.
+    copy_and_find_In H. inv H. crush.
+    + apply followRight with
+          (lx := NT "Z")
+          (prefix := [NT "X"])
+          (suffix := [NT "Z"]); crush.
+      apply fgamma_hd. apply c_in_First_Z.
     + apply followRight with
           (lx := NT "Z")
           (prefix := [NT "X"])
@@ -382,7 +321,7 @@ Proof.
           (lx := NT "Z")
           (prefix := [NT "X"])
           (suffix := [NT "Z"]); crush.
-      * apply fgamma_hd. apply d_in_First_Z.
+      apply fgamma_hd. apply d_in_First_Z.
     + apply followRight with
           (lx := NT "Z")
           (prefix := nil)
@@ -402,7 +341,8 @@ Proof.
       apply fgamma_tl.
       * apply Y_nullable.
       * apply fgamma_hd. apply d_in_First_Z.
-Defined.
+Defined.       
+        
 
 (* The next tests use Grammar 3.11, shown here:
 
@@ -420,29 +360,29 @@ Defined.
 Definition S_map :=
   SymbolMap.add
     (T "if")
-    (NT "S", [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"])
+    [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"]
     (SymbolMap.add
        (T "begin")
-       (NT "S", [T "begin"; NT "S"; NT "L"])
+       [T "begin"; NT "S"; NT "L"]
        (SymbolMap.add
           (T "print")
-          (NT "S", [T "print"; NT "E"])
-          (SymbolMap.empty (symbol * list symbol)))).
+          [T "print"; NT "E"]
+          (SymbolMap.empty (list symbol)))).
 
 Definition L_map :=
   SymbolMap.add
     (T "end")
-    (NT "L", [T "end"])
+    [T "end"]
     (SymbolMap.add
        (T ";")
-       (NT "L", [T ";"; NT "S"; NT "L"])
-       (SymbolMap.empty (symbol * list symbol))).
+       [T ";"; NT "S"; NT "L"]
+       (SymbolMap.empty (list symbol))).
 
 Definition E_map :=
   SymbolMap.add
     (T "num")
-    (NT "E", [T "num"; T "=="; T "num"])
-    (SymbolMap.empty (symbol * list symbol)).
+    [T "num"; T "=="; T "num"]
+    (SymbolMap.empty (list symbol)).
 
 Definition g311ParseTable :=
   SymbolMap.add
@@ -451,108 +391,32 @@ Definition g311ParseTable :=
        (NT "L") L_map
        (SymbolMap.add
           (NT "E") E_map
-          (SymbolMap.empty (SymbolMap.t (symbol * list symbol))))).
-
-Ltac copy_and_find_In H :=
-  let Hfind := fresh "Hfind" in
-  let Heq   := fresh "Heq" in 
-  remember H as Hfind eqn:Heq; clear Heq;
-  apply find_In in H.
+          (SymbolMap.empty (SymbolMap.t (list symbol))))).
 
 Example g311ParseTableCorrect :
   isParseTableFor g311ParseTable g311.
 Proof.
   unfold isParseTableFor. split.
   - unfold parseTableComplete. split.
-    + unfold ptCompleteFirst. intros.
-      inv H.
-      * inv H1. exists S_map. split.
-        { compute. crush. }
-        inv H0.
-        { inv H2.
-          { compute. crush. }
-          crush. }
-        inv H3.
-      * inv H1.
-        { inv H. exists S_map. split.
-          { compute. crush. }
-          { inv H0.
-            { inv H2.
-              { crush. }
-              crush. }
-            inv H3. }}
-        inv H.
-        { inv H1. exists S_map. crush.
-          { split.
-            { crush. }
-            crush. }
-          { split.
-            { crush. }
-            inv H3. }
-          { inv H3. }
-          split.
-          { crush. }
-          inv H3. }
-        inv H1.
-        { inv H.
-          exists L_map. split.
-          { crush. }
-          crush. }
-        inv H.
-        { inv H1. exists L_map. split.
-          { compute. crush. }
-          inv H0.
-          { inv H2.
-            { crush. }
-            crush. }
-          inv H3. }
-        crush.
-        { exists E_map. split.
-          { compute; crush. }
-          crush. }
-        { inv H3. }
-        inv H3.
-    + unfold ptCompleteFollow. intros. inv H.
-      * inv H2. inv H0. inv H3.
-      * inv H2.
-        { inv H. inv H0. inv H3. }
-        inv H.
-        { inv H2. inv H0. inv H3. }
-        inv H2.
-        { inv H. inv H0. inv H3. }
-        inv H.
-        { inv H2. inv H0. inv H3. }
-        inv H2.
-        { inv H. inv H0. inv H3. }
-        inv H.
-  - unfold parseTableMinimal. intros.
-    remember H as Hfind. clear HeqHfind.
-    apply find_In in H. inv H. crush.
-    + remember H0 as Hfind. clear HeqHfind.
-      apply find_In in H0. inv H0. crush. inv Hfind.
-      left. apply fgamma_hd. apply first_t. reflexivity.
-    + copy_and_find_In H0. inv H0. crush.
-      * inv Hfind. left.
-        apply fgamma_hd. crush.
-      * inv Hfind. left.
-        apply fgamma_hd. crush.
-    + copy_and_find_In H0. inv H0. crush.
-      * inv Hfind. left.
-        apply fgamma_hd. crush.
-      * inv Hfind. left.
-        apply fgamma_hd. crush.
-      * inv Hfind. left.
-        apply fgamma_hd. crush.
+    + unfold ptCompleteFirst. intros. crush.
+      * exists S_map. crush.
+      * exists S_map. crush.
+      * exists S_map. crush.
+      * exists L_map. crush.
+      * exists L_map. crush.
+      * exists E_map. crush.
+    + unfold ptCompleteFollow. intros. crush.
+  - unfold parseTableMinimal.
+    intros  x tMap y gamma H_outer_find H_inner_find.
+    copy_and_find_In H_outer_find.
+    inv H_outer_find. crush.
+    + copy_and_find_In H_inner_find.
+      inv H_inner_find. crush.
+      left. crush.
+    + copy_and_find_In H_inner_find.
+      inv H_inner_find. crush.
+      * left. crush.
+      * left. crush.
+    + copy_and_find_In H_inner_find.
+      inv H_inner_find. crush; left; crush.
 Defined.
-        
-        
-          
-          
-    
-
-
-
-
-
-           
-            

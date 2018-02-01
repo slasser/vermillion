@@ -154,26 +154,26 @@ Definition ptCompleteFirst tbl g : Prop :=
   forall x gamma y,
     In (x, gamma) g ->
     (@firstGamma g) y gamma ->
-    exists row,
-      SymbolMap.find x tbl = Some row  /\
-      SymbolMap.find y row = Some (x, gamma).
+    exists tMap,
+      SymbolMap.find x tbl = Some tMap  /\
+      SymbolMap.find y tMap = Some gamma.
 
 Definition ptCompleteFollow tbl g : Prop :=
   forall x gamma y,
     In (x, gamma) g ->
     (@nullableGamma g) gamma ->
     (@followSym g) y x ->
-    exists row,
-      SymbolMap.find x tbl = Some row /\
-      SymbolMap.find y row = Some (x, gamma).
+    exists tMap,
+      SymbolMap.find x tbl  = Some tMap /\
+      SymbolMap.find y tMap = Some gamma.
 
 Definition parseTableComplete tbl g : Prop :=
   ptCompleteFirst tbl g /\ ptCompleteFollow tbl g.
 
 Definition parseTableMinimal tbl g : Prop :=
-  forall x row y gamma,
-    SymbolMap.find x tbl = Some row ->
-    SymbolMap.find y row = Some (x, gamma) ->
+  forall x tMap y gamma,
+    SymbolMap.find x tbl = Some tMap ->
+    SymbolMap.find y tMap = Some gamma ->
     (@firstGamma g) y gamma \/
     (@nullableGamma g) gamma /\ (@followSym g) y x.
 

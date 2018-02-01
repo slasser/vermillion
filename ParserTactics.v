@@ -50,6 +50,9 @@ Ltac crush :=
          | |- firstSym (T ?X) (T ?X) =>
            apply first_t
 
+         | |- firstGamma (?x) (?x :: _) =>
+           apply fgamma_hd
+
          (* contradictions *)
                                             
          | H : [] = (_ ++ _ :: _)%list |- _ =>
@@ -63,7 +66,8 @@ Ltac crush :=
 
          | H : isT (NT _) = true |- _ => inv H
 
-         | H : firstGamma _ [] |- _ => inv H
+         | H : firstGamma _ [] |- _ =>
+           inv H
 
          | H : ?X <> ?X |- _ =>
            exfalso; apply H; reflexivity
@@ -84,16 +88,21 @@ Ltac crush :=
          | H : firstProd _ _ [] |- _ =>
            inv H
 
+         | H : isNT ?x = true, H2 : ?x = T _ |- _ =>
+           subst
+
+         | H : nullableSym (T _) |- _ =>
+           inv H
+
          (* unpacking assumptions *)
 
          | H : (_ :: _) = (_ :: _) |- _ =>
-           idtac "inv eq lists" ; inv H
+           inv H
 
          | H : pair (NT _) _ = pair _  _ |- _ =>
-           idtac "inv eq pairs" ; inv H
+           inv H
 
          | H : firstSym ?NT ?T |- SymbolSet.In ?T _ =>
-           idtac "firstSym |- SymbolSet.In";
            inv H
 
          | H : SymbolMap.Raw.PX.MapsTo _ _ _ |- _ =>
@@ -111,11 +120,19 @@ Ltac crush :=
          | H : SymbolMap.find (NT (String _ _)) _ = Some _
            |- _ => inv H
 
-         | H : firstGamma _ (_::_) |- _ =>
-           idtac "inv firstGamma" ; inv H
+         | H : SymbolMap.find (T (String _ _)) _ = Some _
+           |- _ => inv H
+
+         | H : firstGamma ?y (_::_) |-
+           SymbolMap.find ?y _ = Some _ =>
+           inv H
+
+         | H : firstGamma ?y (_::_) |-
+           SymbolSet.In ?y _  =>
+           inv H
 
          | H : In (_, _) _ |- _ =>
-           idtac "inv pair in list" ; destruct H
+           inv H
 
          | H : SymbolSet.In _ _ |- _ => inv H
 
@@ -131,11 +148,6 @@ Ltac crush :=
 
          | H : firstSym _ (NT (String _ _)) |- _ =>
            inv H
-(*
-         | H : (_::_) = (?prefix ++ _ :: _)%list |- _ =>
-           destruct prefix
-
- *)
 
          | H : (_::_) = ([] ++ _ :: _)%list |- _ =>
            inv H
@@ -143,29 +155,39 @@ Ltac crush :=
          | H : (_::_) = ((_ :: _) ++ _ :: _)%list |- _ =>
            inv H
                
+         | H : (_::_) = (?pre ++ _ :: _)%list |- _ =>
+           destruct pre
+
+         | H : nullableGamma (_::_) |- _ =>
+           inv H
+
+         | H : followSym ?y (NT _) |- SymbolSet.In ?y _ =>
+           inv H
+               
          (* lists, maps, and sets *)
                   
          | |- SymbolMap.find _ _ = Some _ =>
-           idtac "SymbolMap.find = Some";
            unfold SymbolMap.find; reflexivity
                                     
          | |- In _ _ =>
-           idtac "List.In";
            repeat (try (left; reflexivity); right)
 
          | |- SymbolSet.In (T (String _ _)) _ =>
-           idtac "SymbolSet.In T";
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
 
          | |- SymbolSet.In (NT (String _ _)) _ =>
-           idtac "SymbolSet.In NT";
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
 
          (* simplifying goals *)
                   
-         | |- SymbolMap.find _ _ = Some _  /\ SymbolSet.In _ _ =>
+         | |- SymbolMap.find _ _ = Some _  /\
+              SymbolSet.In _ _ =>
+           split
+
+         | |- SymbolMap.find _ _ = Some _  /\
+              SymbolMap.find _ _ = Some _ =>
            split 
 
          end.

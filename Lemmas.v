@@ -1,5 +1,4 @@
-Require Import Bool Grammar List ParserTactics
-               ParserUtils String.
+Require Import Bool Grammar List ParserTactics ParserUtils String.
 
 Lemma find_In : forall k vT (v : vT) m,
     SymbolMap.find k m = Some v ->
@@ -8,6 +7,12 @@ Proof.
   intros. rewrite SymbolMapFacts.in_find_iff. rewrite H.
   unfold not. intro Hcontra. inv Hcontra.
 Defined.
+
+Ltac copy_and_find_In H :=
+  let Hfind := fresh "Hfind" in
+  let Heq   := fresh "Heq" in 
+  remember H as Hfind eqn:Heq; clear Heq;
+  apply find_In in H.
 
 Lemma T_not_in_NT_list :
   forall (gamma : list symbol) (y : string),
