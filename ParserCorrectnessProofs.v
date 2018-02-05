@@ -1,64 +1,80 @@
 Require Import Derivation.
+Require Import ExampleGrammars.
 Require Import Grammar.
 Require Import List.
 Require Import Parser.
 Require Import ParserTactics.
 Require Import ParseTable.
+Require Import ParseTableTests.
+Require Import ParseTree.
 Require Import String.
 Require Import Omega.
 Require Import ParserUtils.
 Import ListNotations.
+Open Scope list_scope.
 Open Scope string_scope.
-
-(* NOT NEEDED NOW THAT EPSILON IS NO LONGER A GRAMMAR SYMBOL *)
-(* 
-Lemma epsilon_step :
-  forall (pt : parse_table)
-         (stack : list symbol)
-         (input : list string)
-         (fuel : nat),
-    parseLoop pt stack input fuel = true <->
-    parseLoop pt (EPS :: stack) input (S fuel) = true.
-Proof.
-  split.
-  - intros. simpl. assumption.
-  - intros. simpl in H. assumption.
-Defined.
-*)
-
+  
 Lemma terminal_step :
-  forall (pt : parse_table)
+  forall (tbl   : parse_table)
          (tName : string)
          (token : string)
-         (stack : list symbol)
+         (gramStack' : list stack_elt)
+         (semStack  : list parse_tree)
          (input : list string)
+         (tree : parse_tree)
          (fuel  : nat),
     cmpSymbol (T tName) (T token) = true ->
-    parseLoop pt stack input fuel = true <->
-    parseLoop pt (T tName :: stack) (token :: input) (S fuel) = true.
+    parseLoop tbl
+              (Sym (T tName) :: gramStack')
+              semStack
+              (token :: input)
+              (S fuel) = Accept tree
+    <->
+    parseLoop tbl
+              gramStack'
+              (Leaf tName :: semStack)
+              input
+              fuel = Accept tree.
 Proof.
   split.
+  - intros. simpl in H0.  rewrite H in H0. assumption.
   - intros. simpl. rewrite H. assumption.
-  - intros. simpl in H0. rewrite H in H0. assumption.
 Defined.
 
-
 Lemma nonterminal_step :
-  forall (pt : parse_table)
+  forall (tbl   : parse_table)
          (ntName : string)
-         (token  : string)
-         (x      : symbol)
-         (ys     : list symbol)
-         (stack  : list symbol)
-         (input  : list string)
-         (fuel   : nat),
-    parseTableLookup (NT ntName) (T token) pt = Some (x, ys) ->
-    parseLoop pt (ys ++ stack) (token :: input) fuel = true <->
-    parseLoop pt (NT ntName :: stack) (token :: input) (S fuel) = true.
+         (gamma : list symbol)
+         (gramStack' : list stack_elt)
+         (syms : list stack_elt)
+         (gammaLength : nat)
+         (semStack  : list parse_tree)
+         (token : string)
+         (input : list string)
+         (tree : parse_tree)
+         (fuel  : nat),
+    parseTableLookup (NT ntName) (T token) tbl = Some gamma ->
+    syms = map Sym gamma ->
+    gammaLength = List.length gamma ->
+    parseLoop tbl
+              (Sym (NT ntName) :: gramStack')
+              semStack
+              (token :: input)
+              (S fuel) = Accept tree
+    <->
+    parseLoop tbl
+              (syms ++ Sep ntName gammaLength :: gramStack')
+              semStack
+              (token :: input)
+              fuel = Accept tree.
 Proof.
   split.
-  - intros. simpl. rewrite H. apply H0.
-  - intros. simpl in H0. rewrite H in H0. apply H0.
+  - intros. simpl in H2.
+    rewrite H in H2. rewrite <- H0 in H2.
+    rewrite <- H1 in H2. assumption.
+  - intros. simpl.
+    rewrite H. rewrite <- H0.
+    rewrite <- H1. assumption.
 Defined.
 
 Lemma derives_singleton_list_of_NT_implies_derives_NT :
@@ -73,109 +89,21 @@ Proof.
 Defined.
 
 
-Theorem n_fuel_enough_implies_m_fuel_enough :
-  forall (pt : parse_table)
-         (stack : list symbol)
-         (tokens : list string)
-         (n m : nat),
-    parseLoop pt stack tokens n = true ->  n < m ->
-    parseLoop pt stack tokens m = true.
-Proof.
-  intros.
-  generalize dependent m.
-  generalize dependent tokens.
-  generalize dependent stack.
-  induction n.
-  - intros. inv H.
-  - intros. destruct m.
-    + inv H0.
-    + destruct stack.
-      * reflexivity.
-      * destruct s.
-        (* terminal case *)
-        { destruct tokens.
-          { inv H. }
-          { simpl in H.
-            destruct (cmpSymbol (T s) (T s0)) eqn:Hcmp.
-            { rewrite <- terminal_step.
-              { apply IHn.
-                { assumption. }
-                { omega. }}
-              { assumption. }}
-            { inv H. }}}
-        (* nonterminal case *)
-        { destruct tokens.
-          { inv H. }
-          { simpl in H.
-            destruct (parseTableLookup (NT s) (T s0) pt) eqn:Hpt.
-            { destruct p.
-              rewrite <- nonterminal_step.
-              { apply IHn.
-                { apply H. }
-                { omega. }}
-              { apply Hpt. }}
-            { inv H. }}}
-Defined.
-
-
-Lemma fuel_enough_implies_S_fuel_enough :
-  forall (pt : parse_table)
-         (stack : list symbol)
+Lemma parserCorrect :
+  forall (g     : grammar)
+         (tbl   : parse_table)
+         (start : string)
          (input : list string)
-         (fuel : nat),
-    parseLoop pt stack input fuel = true ->
-    parseLoop pt stack input (S fuel) = true.
-Proof.
-  intros.
-  apply n_fuel_enough_implies_m_fuel_enough
-    with (n := fuel) (m := S fuel).
-  - assumption.
-  - omega.
-Defined.
-
-
-(* Proofs below are still in progress *)
-
-
-Lemma parse_true_implies_derivesList :
-  forall (g : grammar)
-         (pt : parse_table)
-         (stack : list symbol)
-         (input : list string)
-         (fuel : nat),
-    parseLoop pt stack input fuel = true ->
-    exists (prefix suffix : list string),
+         (fuel  : nat)
+         (tree  : parse_tree),
+    isParseTableFor tbl g -> 
+    parse tbl start input fuel = Accept tree ->
+    exists prefix suffix,
       (prefix ++ suffix)%list = input /\
-      (@derivesList2 g) stack prefix.
+      (@derives g) (NT start) prefix tree.
 Proof.
   intros. destruct fuel.
-  - inv H.
-  - induction stack.
-    + exists nil, input. split.
-      * reflexivity.
-      * apply derivesNil2.
-    + destruct a eqn:Hsym.
-      * simpl in H. exists nil, input. split.
-        { reflexivity. }
-Abort.
-
-
-Theorem parseLoop_correct :
-  forall (g : grammar)
-         (startSym : symbol)
-         (input : list string)
-         (fuel : nat),
-    parseLoop (mkParseTable g fuel) [startSym] input fuel =
-    true ->
-    exists (prefix suffix : list string),
-      (prefix ++ suffix)%list = input /\
-      (@derives2 g) startSym prefix.
-Proof.
-  intros.
-  destruct fuel.
-  - inv H.
-  - destruct startSym.
-    (* epsilon case *)
-    + exists nil, input. simpl. split.
-      * reflexivity.
+  - unfold parse in H0. simpl in H0. inv H0.
+  - induction tree.
+    + unfold parse in H0. simpl in H0.
 Abort.
