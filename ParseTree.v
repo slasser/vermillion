@@ -1,8 +1,9 @@
 Require Import Grammar.
 
 Inductive parse_tree {A} :=
-| Node : A -> list parse_tree -> parse_tree
-| Leaf : A -> parse_tree.
+| Leaf : A -> parse_tree
+| Node : A -> list parse_tree -> parse_tree.
+
 
 Definition getRoot (tree : parse_tree) : symbol :=
   match tree with

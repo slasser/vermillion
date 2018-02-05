@@ -357,42 +357,6 @@ Defined.
 
  *)
 
-Definition S_map :=
-  SymbolMap.add
-    (T "if")
-    [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"]
-    (SymbolMap.add
-       (T "begin")
-       [T "begin"; NT "S"; NT "L"]
-       (SymbolMap.add
-          (T "print")
-          [T "print"; NT "E"]
-          (SymbolMap.empty (list symbol)))).
-
-Definition L_map :=
-  SymbolMap.add
-    (T "end")
-    [T "end"]
-    (SymbolMap.add
-       (T ";")
-       [T ";"; NT "S"; NT "L"]
-       (SymbolMap.empty (list symbol))).
-
-Definition E_map :=
-  SymbolMap.add
-    (T "num")
-    [T "num"; T "=="; T "num"]
-    (SymbolMap.empty (list symbol)).
-
-Definition g311ParseTable :=
-  SymbolMap.add
-    (NT "S") S_map
-    (SymbolMap.add
-       (NT "L") L_map
-       (SymbolMap.add
-          (NT "E") E_map
-          (SymbolMap.empty (SymbolMap.t (list symbol))))).
-
 Example g311ParseTableCorrect :
   isParseTableFor g311ParseTable g311.
 Proof.

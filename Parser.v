@@ -107,28 +107,53 @@ Definition mkParseTable g fuel :=
       end
   in  fold_right addProd (SymbolMap.empty (SymbolMap.t (list production))) g.
 
-Fixpoint parseLoop (pt : SymbolMap.t (SymbolMap.t (list production)))
-         (stack : list symbol)
-         (input : list string) (fuel : nat) : bool :=
+Inductive stack_elt :=
+| Sym : symbol -> stack_elt
+| Sep : string -> nat -> stack_elt.
+
+Print List.
+
+Inductive parse_result {A} :=
+| Accept     : (@parse_tree A) -> parse_result
+| Reject     : string -> parse_result
+| OutOfFuel  : parse_result
+| ParserBug  : string -> parse_result.
+
+Fixpoint parseLoop
+         (tbl       : parse_table)
+         (gramStack : list stack_elt)
+         (semStack  : list parse_tree)
+         (input     : list string)
+         (fuel      : nat) : parse_result :=
   match fuel with
-  | O   => false
+  | O   => OutOfFuel
   | S n =>
-    match (stack, input) with
-    | (nil, _) => true
-    | (NT ntName :: stack', token :: _) =>
-      match parseTableLookup (NT ntName) (T token) pt with
-      | None => false
-      | Some (x, ys) => parseLoop pt (app ys stack') input n
+    match (gramStack, input) with
+    | (nil, _) =>
+      match semStack with
+      | [tree] => Accept tree
+      | _      => ParserBug "non-singleton sem stack"
       end
-    | (NT _ :: _, nil) => false
-    | (T tName :: stack', token :: input') =>
-      match cmpSymbol (T tName) (T token) with
-      | true  => parseLoop pt stack' input' n
-      | false => false
+    | (Sym (NT x) :: stack', token :: _) =>
+      match parseTableLookup (NT x) (T token) tbl with
+      | None    => Reject "parse table lookup failed"
+      | Some ys =>
+        let syms := map Sym ys in
+        let sep  := Sep x (length ys) in
+        parseLoop tbl (syms ++ sep :: stack') semStack input n
       end
-    | (T _ :: _, nil) => false
+    | (Sym (T y) :: stack', token :: input') =>
+      match cmpSymbol (T y) (T token) with
+      | true  => parseLoop tbl stack' (Leaf y :: semStack) input' n
+      | false => Reject "token mismatch"
+      end
+    | (Sym _ :: _, nil) => Reject "no lookahead"
+    | (Sep x len :: stack', _) =>
+      let subtree := Node x (rev (firstn len semStack)) in
+      let semStack' := subtree :: (skipn len semStack)  in
+      parseLoop tbl stack' semStack' input n
     end
   end.
 
-Definition parse pt start input fuel :=
-  parseLoop pt [start] input fuel.
+Definition parse tbl start input fuel :=
+  parseLoop tbl [Sym (NT start)] nil input fuel.

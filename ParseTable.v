@@ -4,21 +4,18 @@ Require Import ParserUtils.
 Require Import String.
 Import ListNotations.
 
-Definition parse_table := SymbolMap.t (SymbolMap.t (list production)).
+Definition parse_table :=
+  SymbolMap.t (SymbolMap.t (list symbol)).
 
-Definition parseTableLookup (nt : symbol)
-           (t : symbol) (pt : parse_table) : option production :=
-  match SymbolMap.find nt pt with
-  | None    => None
-  | Some ma => match SymbolMap.find t ma with
-               | None                  => None
-               | Some nil              => None
-               | Some (p1 :: p2 :: ps) => None
-               | Some [p]              =>
-                 let (x, ys) := p in Some (x, ys)
-               end
+Definition parseTableLookup
+           (x : symbol)
+           (y : symbol)
+           (tbl : parse_table) : option (list symbol) :=
+  match SymbolMap.find x tbl with
+  | None      => None
+  | Some tMap => SymbolMap.find y tMap
   end.
-
+    
 (* Definition of the NULLABLE set for a given grammar *)
 
 Inductive nullableSym {g : grammar} : symbol -> Prop :=
