@@ -157,3 +157,53 @@ Fixpoint parseLoop
 
 Definition parse tbl start input fuel :=
   parseLoop tbl [Sym (NT start)] nil input fuel.
+
+
+
+Fixpoint mkTree (tbl : parse_table)
+                (sym : symbol)
+                (input : list string)
+                (fuel : nat) :
+                (option (parse_tree) * list string) :=
+  match fuel with
+  | O => (None, input)
+  | S n =>
+    match (sym, input) with
+    | (T y, token :: input') =>
+      if cmpSymbol (T y) (T token) then
+        (Some (Leaf y), input')
+      else
+        (None, input)
+    | (NT x, token :: _) =>
+      match parseTableLookup sym (T token) tbl with
+      | Some gamma =>
+        let (sub, input') := mkSubtrees tbl gamma input [] n in
+        match sub with
+        | Some subtrees => (Some (Node x subtrees), input')
+        | None          => (None, input')
+        end
+      | None => (None, input)
+      end
+    | (_, nil) => (None, nil)
+    end
+  end
+with mkSubtrees (tbl : parse_table)
+                (gamma : list symbol)
+                (input : list string)
+                (subtrees : list parse_tree)
+                (fuel : nat) :
+       (option (list parse_tree) * list string) :=
+       match fuel with
+       | O => (None, input)
+       | S n => 
+         match gamma with
+         | nil => (Some (rev subtrees), input)
+         | sym :: gamma' =>
+           let (sub, input') := mkTree tbl sym input n in
+           match sub with
+           | Some st =>
+             mkSubtrees tbl gamma' input' (st :: subtrees) n
+           | None => (None, input')
+           end
+         end
+       end.

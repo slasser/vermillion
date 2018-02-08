@@ -31,3 +31,9 @@ Definition parseTree1 :=
 Example test1 :
   parse g311ParseTable "S" input1 100 = Accept parseTree1.
 Proof. cbv. reflexivity. Defined.
+
+(* The new definition works, too! *)
+Example test2 :
+  mkTree g311ParseTable (NT "S") input1 100 =
+  (Some parseTree1, nil).
+Proof. simpl. reflexivity. Defined.

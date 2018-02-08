@@ -88,22 +88,94 @@ Proof.
   rewrite app_nil_r. assumption.
 Defined.
 
+(* Come back to this *)
+Lemma ptLookup_In :
+  forall tbl g x y ys,
+    isParseTableFor tbl g ->
+    parseTableLookup x y tbl = Some ys ->
+    In (x, ys) g.
+Proof.
+  intros tbl g x y ys Htbl Hlookup.
+  destruct Htbl as [Hcomplete Hminimal].
+  unfold parseTableMinimal in Hminimal.
+  unfold parseTableLookup in Hlookup.
+Abort.
+
+Lemma eq_sym_eq_T : forall s s2,
+    cmpSymbol (T s) (T s2) = true <->
+    s = s2.
+Proof.
+  split.
+  - intros. unfold cmpSymbol in H.
+    destruct (SymbolMapFacts.eq_dec (T s) (T s2)).
+    + inv e. reflexivity.
+    + inv H.
+  - intros. unfold cmpSymbol.
+    destruct (SymbolMapFacts.eq_dec (T s) (T s2)).
+    + reflexivity.
+    + exfalso. apply n. subst. reflexivity.
+Defined.
+
+Lemma nt_derives_node :
+  forall tbl x input fuel tree suffix,
+    mkTree tbl (NT x) input fuel = (Some tree, suffix) ->
+    isNode tree = true.
+Proof.
+  intros. destruct fuel.
+  - simpl in H. inv H.
+  - simpl in H. destruct input.
+    + inv H.
+    + destruct (parseTableLookup (NT x) (T s) tbl).
+      * destruct (mkSubtrees tbl l (s :: input) [] fuel) in H.
+        destruct o.
+        { inv H. simpl. reflexivity. }
+        inv H.
+      * inv H.
+Defined.
+
+Lemma t_derives_Leaf :
+  forall tbl y input fuel tree suffix,
+    mkTree tbl (T y) input fuel = (Some tree, suffix) ->
+    isLeaf tree = true.
+Proof.
+  intros. destruct fuel.
+  - inv H.
+  - simpl in H. destruct input.
+    + inv H.
+    + destruct (cmpSymbol (T y) (T s)).
+      * inv H. reflexivity.
+      * inv H.
+Defined.
+
+Lemma mkSubtreesCorrect :
+  forall (g     : grammar)
+         (tbl   : parse_table)
+         (gamma : list symbol)
+         (input : list string)
+         (fuel  : nat)
+         (acc   : list (@parse_tree string))
+         (subtrees  : list parse_tree)
+         (suffix : list string),
+    isParseTableFor tbl g -> 
+    mkSubtrees tbl gamma input acc fuel =
+    (Some subtrees, suffix) ->
+    exists prefix,
+      (prefix ++ suffix)%list = input /\
+      (@derivesList g) gamma prefix subtrees.
+Proof. Abort.  
 
 Lemma parserCorrect :
   forall (g     : grammar)
          (tbl   : parse_table)
-         (start : string)
+         (start : symbol)
          (input : list string)
          (fuel  : nat)
-         (tree  : parse_tree),
+         (tree  : parse_tree)
+         (suffix : list string),
     isParseTableFor tbl g -> 
-    parse tbl start input fuel = Accept tree ->
-    exists prefix suffix,
+    mkTree tbl start input fuel = (Some tree, suffix) ->
+    exists prefix,
       (prefix ++ suffix)%list = input /\
-      (@derives g) (NT start) prefix tree.
+      (@derives g) start prefix tree.
 Proof.
-  intros. destruct fuel.
-  - unfold parse in H0. simpl in H0. inv H0.
-  - induction tree.
-    + unfold parse in H0. simpl in H0.
-Abort.
+Admitted.
