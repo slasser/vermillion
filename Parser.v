@@ -158,7 +158,7 @@ Fixpoint parseLoop
 Definition parse tbl start input fuel :=
   parseLoop tbl [Sym (NT start)] nil input fuel.
 
-
+(*
 
 Fixpoint mkTree (tbl : parse_table)
                 (sym : symbol)
@@ -204,6 +204,84 @@ with mkSubtrees (tbl : parse_table)
            | Some st =>
              mkSubtrees tbl gamma' input' (st :: subtrees) n
            | None => (None, input')
+           end
+         end
+       end.
+*)
+
+(*
+Fixpoint mkTree (tbl : parse_table)
+                (sym : symbol)
+                (input : list string) :
+                (option tree * list string) :=
+  match (sym, input) with
+  | (T y, token :: input') =>
+    if cmpSymbol (T y) (T token) then
+      (Some (Lf y), input')
+    else
+      (None, input)
+  | (NT x, token :: _) =>
+    match parseTableLookup sym (T token) tbl with
+    | Some gamma => mkForest tbl x gamma input Fnil
+    | None => (None, input)
+    end
+  | (_, nil) => (None, nil)
+  end
+with mkForest tbl x gamma input acc : (option tree * list string) :=
+       match gamma with
+       | nil => (Some (Nd x acc), input)
+       | sym :: gamma' =>
+         match mkTree tbl sym input with
+         | (Some tr, input') =>
+           mkForest tbl x gamma' input' (Fcons tr acc)
+         | (None, _) => (None, input)
+         end
+       end.
+ *)
+
+
+Fixpoint mkTree (tbl : parse_table)
+                (sym : symbol)
+                (input : list string)
+                (fuel : nat) :
+  (option tree * list string) :=
+  match fuel with
+  | O => (None, input)
+  | S n => 
+    match (sym, input) with
+    | (_, nil) => (None, input)
+    | (T y, token :: input') =>
+      match cmpSymbol (T y) (T token) with
+      | false => (None, input)
+      | true => (Some (Lf y), input')
+      end
+    | (NT x, token :: _) =>
+      match parseTableLookup sym (T token) tbl with
+      | None => (None, input)
+      | Some gamma =>
+        match mkForest tbl gamma input n with
+        | (None, _) => (None, input)
+        | (Some sts, input') =>
+          (Some (Nd x sts), input')
+        end
+      end
+    end
+  end
+with mkForest tbl gamma input fuel :=
+       match fuel with
+       | O => (None, input)
+       | S n =>
+         match gamma with
+         | nil => (Some Fnil, input)
+         | sym :: gamma' =>
+           match mkTree tbl sym input n with
+           | (None, _) => (None, input)
+           | (Some lSib, input') =>
+             match mkForest tbl gamma' input' n with
+             | (None, _) => (None, input)
+             | (Some rSibs, input'') =>
+               (Some (Fcons lSib rSibs), input'')
+             end
            end
          end
        end.
