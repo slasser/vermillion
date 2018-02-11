@@ -1,6 +1,7 @@
 Require Import Derivation.
 Require Import ExampleGrammars.
 Require Import Grammar.
+Require Import Lemmas.
 Require Import List.
 Require Import Parser.
 Require Import ParserTactics.
@@ -157,10 +158,33 @@ Proof.
       * inv H.
 Defined.
 
-(* Get rid of this and infer membership from isParseTableFor *)
-Lemma silly_In_Grammar : forall (g :grammar) x gamma,
+Lemma lookup_tbl_in_grammar : forall g x y tbl gamma,
+    isParseTableFor tbl g ->
+    parseTableLookup (NT x) (T y) tbl = Some gamma ->
     In (NT x, gamma) g.
-Proof. Admitted.
+Proof.
+  intros.
+  unfold isParseTableFor in H. destruct H.
+  unfold parseTableComplete in H. destruct H.
+  unfold parseTableMinimal in H1.
+  unfold parseTableLookup in H0.
+  destruct (SymbolMap.find (NT x) tbl) eqn:Hnt.
+  - destruct (SymbolMap.find (T y) t) eqn:Ht.
+    + inv H0.
+      specialize H1 with
+          (x := NT x)
+          (tMap := t)
+          (y := T y)
+          (gamma := gamma).
+      apply H1 in Hnt. clear H1.
+      * destruct Hnt.
+        { inv H0. assumption. }
+        destruct H0. inv H0.
+        { assumption. }
+      * assumption.
+    + inv H0.
+  - inv H0.
+Defined.
 
 
 Theorem parse_correct : forall tbl g sym input tr suffix fuel,
@@ -219,10 +243,14 @@ Proof.
               { assumption. }
               inv H1.
               { apply derNT with (gamma := nil).
-                { apply silly_In_Grammar. }
+                { apply lookup_tbl_in_grammar with (g := g)
+                    in Htbl.
+                  { assumption. }
+                  assumption. }
                 apply derFnil. }
               apply derNT with (gamma := (hdRoot :: tlRoots)).
-              { apply silly_In_Grammar. }
+              { apply lookup_tbl_in_grammar with (g := g)
+                  in Htbl; assumption. }
               apply derFcons.
               { assumption. }
               assumption. }

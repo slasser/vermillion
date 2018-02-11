@@ -39,8 +39,8 @@ Example Y_nullable :
   (@nullableSym g312) (NT "Y").
 Proof.
   apply nullable_nt with (gamma := nil).
-  - crush.
-  - intros. inv H.
+  crush.
+  - intros. crush.
   - apply nullable_nil.
 Defined.
 
@@ -48,10 +48,10 @@ Example X_nullable :
   (@nullableSym g312) (NT "X").
 Proof.
   apply nullable_nt with (gamma := [NT "Y"]).
-  - crush.
+  crush.
   - intros. inv H.
-    + unfold not; intros; inv H.
-    + inv H0.
+    + discriminate. 
+    + crush.
   - apply nullable_cons.
     + apply Y_nullable.
     + apply nullable_nil.
@@ -61,8 +61,7 @@ Defined.
 Example Z_nullable :
   (@nullableSym g312) (NT "Z").
 Proof.
-  apply nullable_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]).
-  - crush.
+  apply nullable_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]). crush.
   - intros. inv H.
     + unfold not; intros; inv H.
     + inv H0.
@@ -76,22 +75,11 @@ Example Z_not_nullable :
   ~(@nullableSym g312) (NT "Z").
 Proof.
   unfold not. intros. inv H.
-  inv H1.
-  - inv H. inv H3. inv H1.
-  - inv H.
-    + inv H0. specialize H2 with (sym := NT "Z").
-      apply H2.
-      * crush.
-      * reflexivity.
-    + inv H0.
-      { inv H. }
-      inv H.
-      { inv H0. }
-      inv H0.
-      { inv H. }
-      inv H.
-      { inv H0. }
-      inv H0.
+  inv H1. crush. 
+  specialize H2 with (sym := NT "Z").
+  apply H2.
+  - crush.
+  - crush.
 Defined.
 
 (* Now we're ready to prove that the Grammar 3.12 NULLABLE set
@@ -101,25 +89,10 @@ Example g312NullableSetCorrect :
 Proof.
   unfold isNullableSetFor. split.
   - unfold nullableSetComplete. intros.
-    inv H. inv H1.
-    + inv H. inv H3. inv H1.
-    + inv H.
-      * exfalso. inv H0.
-        specialize H2 with (sym := NT "Z").
-        apply H2.
-        { crush. }
-        { reflexivity. }
-      * inv H0.
-        { inv H. compute. apply InA_cons_hd. reflexivity. }
-        inv H.
-        { inv H0. compute. apply InA_cons_hd. reflexivity. }
-        inv H0.
-        { inv H. compute. apply InA_cons_tl.
-          apply InA_cons_hd. reflexivity. }
-        inv H.
-        { inv H0. compute. apply InA_cons_tl.
-          apply InA_cons_hd. reflexivity. }
-        inv H0.
+    inv H. inv H1. crush.
+    exfalso. 
+    specialize H2 with (sym := NT "Z").
+    apply H2; crush.
   - unfold nullableSetMinimal. intros.
     inv H.
     + rewrite H1. apply Y_nullable.
@@ -143,8 +116,7 @@ Proof.
   apply H. apply H0.
   apply nullable_nt with (gamma := nil).
   - crush.
-  - intros. inv H1.
-  - apply nullable_nil.
+    intros. inv H1. apply nullable_nil.
 Defined.
 
 
@@ -171,28 +143,21 @@ Example c_in_First_Y :
 Proof.
   apply first_nt with (ys := [T "c"]).
   - reflexivity.
-  - crush.
-  - apply fprod_hd.
-    + unfold not; intros; inv H.
-    + apply first_t. reflexivity.
+  - crush. 
 Defined.
 
 Example a_in_First_X :
   (@firstSym g312) (T "a") (NT "X").
 Proof.
   apply first_nt with (ys := [T "a"]); crush.
-  apply fprod_hd.
-  - crush.
-  - apply first_t. crush.
 Defined.
 
 Example c_in_First_X :
   (@firstSym g312) (T "c") (NT "X").
 Proof.
   apply first_nt with (ys := [NT "Y"]); crush.
-  apply fprod_hd.
-  - unfold not; intros; inv H.
-  - apply c_in_First_Y.
+  apply fprod_hd; crush. 
+  apply first_nt with (ys := [T "c"]); crush.
 Defined.
 
 (* We can also prove that a pair is not in FIRST *)
@@ -205,7 +170,8 @@ Defined.
 Example a_in_First_Z :
   (@firstSym g312) (T "a") (NT "Z").
 Proof.
-  apply first_nt with (ys := [NT "X"; NT "Y"; NT "Z"]); crush.
+  apply first_nt with (ys := [NT "X"; NT "Y"; NT "Z"]);
+  crush.
   apply fprod_hd; crush.
   apply a_in_First_X.
 Defined.
@@ -224,7 +190,6 @@ Example d_in_First_Z :
   (@firstSym g312) (T "d") (NT "Z").
 Proof.
   apply first_nt with (ys := [T "d"]); crush.
-  apply fprod_hd; crush.
 Defined.
 
 (* Much nicer than the proof of the same proposition below! *)

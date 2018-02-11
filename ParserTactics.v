@@ -88,11 +88,16 @@ Ltac crush :=
          | H : firstProd _ _ [] |- _ =>
            inv H
 
+         | H : firstProd' _ _ [] |- _ =>
+           inv H
+
          | H : isNT ?x = true, H2 : ?x = T _ |- _ =>
            subst
 
          | H : nullableSym (T _) |- _ =>
            inv H
+
+         | H : In _ [] |- _ => inv H
 
          (* unpacking assumptions *)
 
@@ -139,10 +144,19 @@ Ltac crush :=
          | H : InA _ _ (_::_) |- _ => inv H
 
          | H : _ = SymbolSet.this _ |- _ => inv H
-
+(*
          | H : firstProd _ (NT (String _ _)) (_ :: _) |- _ =>
            inv H
 
+         | H : firstProd' _ (NT (String _ _)) (_ :: _) |- _ =>
+           inv H
+ *)
+         | H : firstProd _ _  _ |- _ =>
+           inv H
+
+         | H : firstProd' _ (NT (String _ _)) _ |- _ =>
+           inv H
+                                                
          | H : firstSym _ (T (String _ _)) |- _ =>
            inv H
 
@@ -188,6 +202,15 @@ Ltac crush :=
 
          | |- SymbolMap.find _ _ = Some _  /\
               SymbolMap.find _ _ = Some _ =>
-           split 
+           split
+
+         | |- nullableProd (NT _) _ =>
+           apply nprod
+
+         | |- firstProd _ _ _ =>
+           apply fprod
+
+         | |- firstProd' ?X (NT _) (?X :: _) =>
+           apply fprod_hd
 
          end.

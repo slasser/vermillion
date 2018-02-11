@@ -18,16 +18,22 @@ Definition parseTableLookup
     
 (* Definition of the NULLABLE set for a given grammar *)
 
+(* This can be simplified a little *)
 Inductive nullableSym {g : grammar} : symbol -> Prop :=
 | nullable_nt :
     forall x gamma,
-      In (NT x, gamma) g ->
-      (forall sym,
-          In sym gamma ->
-          sym <> NT x) ->
-      nullableGamma gamma ->
+      nullableProd (NT x) gamma ->
       nullableSym (NT x)
-  with nullableGamma {g : grammar} : list symbol -> Prop :=
+with nullableProd {g : grammar} : symbol -> list symbol -> Prop :=
+     | nprod :
+         forall x ys,
+           In (NT x, ys) g ->
+           (forall sym,
+               In sym ys ->
+               sym <> NT x) ->
+           nullableGamma ys ->
+           nullableProd (NT x) ys
+with nullableGamma {g : grammar} : list symbol -> Prop :=
      | nullable_nil :
          nullableGamma nil
      | nullable_cons :
@@ -35,10 +41,6 @@ Inductive nullableSym {g : grammar} : symbol -> Prop :=
            nullableSym hd ->
            nullableGamma tl ->
            nullableGamma (hd :: tl).
-
-(* Read about creating induction schemes *)
-Scheme foo := Induction for nullableSym   Sort Prop
-  with bar := Induction for nullableGamma Sort Prop.
 
 Definition nullableSetComplete (nu : SymbolSet.t)
                                (g : grammar) : Prop :=
@@ -66,19 +68,24 @@ Inductive firstSym {g : grammar} :
     firstSym y y
 | first_nt : forall x y ys,
     isNT x = true -> (* needed? *)
-    In (x, ys) g ->
-      firstProd y x ys ->
-      firstSym y x
+    firstProd y x ys ->
+    firstSym y x
 with firstProd {g : grammar} :
+       symbol -> symbol -> list symbol -> Prop :=
+     | fprod : forall y x ys,
+         In (x, ys) g ->
+         firstProd' y x ys ->
+         firstProd y x ys
+with firstProd' {g : grammar} :
        symbol -> symbol -> list symbol -> Prop :=
      | fprod_hd : forall y x hd tl,
          x <> hd ->
          firstSym y hd ->
-         firstProd y x (hd :: tl)
+         firstProd' y x (hd :: tl)
      | fprod_tl : forall y x hd tl,
          (@nullableSym g) hd ->
-         firstProd y x tl ->
-         firstProd y x (hd :: tl).
+         firstProd' y x tl ->
+         firstProd' y x (hd :: tl).
 
 Inductive firstGamma {g : grammar} :
   symbol -> list symbol -> Prop :=
@@ -171,8 +178,8 @@ Definition parseTableMinimal tbl g : Prop :=
   forall x tMap y gamma,
     SymbolMap.find x tbl = Some tMap ->
     SymbolMap.find y tMap = Some gamma ->
-    (@firstGamma g) y gamma \/
-    (@nullableGamma g) gamma /\ (@followSym g) y x.
+    (@firstProd g) y x gamma \/
+    (@nullableProd g) x gamma /\ (@followSym g) y x.
 
 Definition isParseTableFor tbl g : Prop :=
   parseTableComplete tbl g /\ parseTableMinimal tbl g.
