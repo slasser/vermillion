@@ -43,5 +43,4 @@ Definition getOrEmpty k m :=
   | None   => SymbolSet.empty
   end.
 
-(* There must be a way to avoid doing this. *)
-Definition cmpSymbol sy sy2 := if SymbolAsDT.eq_dec sy sy2 then true else false.
+Definition beqSym sy sy2 := if SymbolAsDT.eq_dec sy sy2 then true else false.

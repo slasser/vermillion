@@ -107,153 +107,21 @@ Definition mkParseTable g fuel :=
       end
   in  fold_right addProd (SymbolMap.empty (SymbolMap.t (list production))) g.
 
-Inductive stack_elt :=
-| Sym : symbol -> stack_elt
-| Sep : string -> nat -> stack_elt.
 
-Print List.
-
-Inductive parse_result {A} :=
-| Accept     : (@parse_tree A) -> parse_result
-| Reject     : string -> parse_result
-| OutOfFuel  : parse_result
-| ParserBug  : string -> parse_result.
-
-Fixpoint parseLoop
-         (tbl       : parse_table)
-         (gramStack : list stack_elt)
-         (semStack  : list parse_tree)
-         (input     : list string)
-         (fuel      : nat) : parse_result :=
-  match fuel with
-  | O   => OutOfFuel
-  | S n =>
-    match (gramStack, input) with
-    | (nil, _) =>
-      match semStack with
-      | [tree] => Accept tree
-      | _      => ParserBug "non-singleton sem stack"
-      end
-    | (Sym (NT x) :: stack', token :: _) =>
-      match parseTableLookup (NT x) (T token) tbl with
-      | None    => Reject "parse table lookup failed"
-      | Some ys =>
-        let syms := map Sym ys in
-        let sep  := Sep x (length ys) in
-        parseLoop tbl (syms ++ sep :: stack') semStack input n
-      end
-    | (Sym (T y) :: stack', token :: input') =>
-      match cmpSymbol (T y) (T token) with
-      | true  => parseLoop tbl stack' (Leaf y :: semStack) input' n
-      | false => Reject "token mismatch"
-      end
-    | (Sym _ :: _, nil) => Reject "no lookahead"
-    | (Sep x len :: stack', _) =>
-      let subtree := Node x (rev (firstn len semStack)) in
-      let semStack' := subtree :: (skipn len semStack)  in
-      parseLoop tbl stack' semStack' input n
-    end
-  end.
-
-Definition parse tbl start input fuel :=
-  parseLoop tbl [Sym (NT start)] nil input fuel.
-
-(*
-
-Fixpoint mkTree (tbl : parse_table)
-                (sym : symbol)
-                (input : list string)
-                (fuel : nat) :
-                (option (parse_tree) * list string) :=
-  match fuel with
-  | O => (None, input)
-  | S n =>
-    match (sym, input) with
-    | (T y, token :: input') =>
-      if cmpSymbol (T y) (T token) then
-        (Some (Leaf y), input')
-      else
-        (None, input)
-    | (NT x, token :: _) =>
-      match parseTableLookup sym (T token) tbl with
-      | Some gamma =>
-        let (sub, input') := mkSubtrees tbl gamma input [] n in
-        match sub with
-        | Some subtrees => (Some (Node x subtrees), input')
-        | None          => (None, input')
-        end
-      | None => (None, input)
-      end
-    | (_, nil) => (None, nil)
-    end
-  end
-with mkSubtrees (tbl : parse_table)
-                (gamma : list symbol)
-                (input : list string)
-                (subtrees : list parse_tree)
-                (fuel : nat) :
-       (option (list parse_tree) * list string) :=
-       match fuel with
-       | O => (None, input)
-       | S n => 
-         match gamma with
-         | nil => (Some (rev subtrees), input)
-         | sym :: gamma' =>
-           let (sub, input') := mkTree tbl sym input n in
-           match sub with
-           | Some st =>
-             mkSubtrees tbl gamma' input' (st :: subtrees) n
-           | None => (None, input')
-           end
-         end
-       end.
-*)
-
-(*
-Fixpoint mkTree (tbl : parse_table)
-                (sym : symbol)
-                (input : list string) :
-                (option tree * list string) :=
-  match (sym, input) with
-  | (T y, token :: input') =>
-    if cmpSymbol (T y) (T token) then
-      (Some (Lf y), input')
-    else
-      (None, input)
-  | (NT x, token :: _) =>
-    match parseTableLookup sym (T token) tbl with
-    | Some gamma => mkForest tbl x gamma input Fnil
-    | None => (None, input)
-    end
-  | (_, nil) => (None, nil)
-  end
-with mkForest tbl x gamma input acc : (option tree * list string) :=
-       match gamma with
-       | nil => (Some (Nd x acc), input)
-       | sym :: gamma' =>
-         match mkTree tbl sym input with
-         | (Some tr, input') =>
-           mkForest tbl x gamma' input' (Fcons tr acc)
-         | (None, _) => (None, input)
-         end
-       end.
- *)
-
-
-Fixpoint mkTree (tbl : parse_table)
-                (sym : symbol)
-                (input : list string)
-                (fuel : nat) :
-  (option tree * list string) :=
+Fixpoint mkTree 
+         (tbl : parse_table)
+         (sym : symbol)
+         (input : list string)
+         (fuel : nat) : (option tree * list string) :=
   match fuel with
   | O => (None, input)
   | S n => 
     match (sym, input) with
     | (_, nil) => (None, input)
     | (T y, token :: input') =>
-      match cmpSymbol (T y) (T token) with
+      match beqSym (T y) (T token) with
       | false => (None, input)
-      | true => (Some (Lf y), input')
+      | true => (Some (Leaf y), input')
       end
     | (NT x, token :: _) =>
       match parseTableLookup sym (T token) tbl with
@@ -262,12 +130,15 @@ Fixpoint mkTree (tbl : parse_table)
         match mkForest tbl gamma input n with
         | (None, _) => (None, input)
         | (Some sts, input') =>
-          (Some (Nd x sts), input')
+          (Some (Node x sts), input')
         end
       end
     end
   end
-with mkForest tbl gamma input fuel :=
+with mkForest (tbl : parse_table) 
+              (gamma : list symbol)
+              (input : list string)
+              (fuel : nat) : (option forest * list string) :=
        match fuel with
        | O => (None, input)
        | S n =>
