@@ -1,4 +1,5 @@
-Require Import Bool Grammar List ParserTactics ParserUtils String.
+Require Import Bool List String.
+Require Import Grammar ParserTactics ParserUtils.
 
 Lemma find_In : forall k vT (v : vT) m,
     SymbolMap.find k m = Some v ->
@@ -70,3 +71,4 @@ Proof.
   rewrite H0. rewrite in_app_iff.
   right. apply in_eq.
 Defined.
+

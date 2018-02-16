@@ -1,10 +1,5 @@
-Require Import Derivation.
-Require Import ExampleGrammars.
-Require Import Grammar.
-Require Import List.
-Require Import ParseTree.
-Require Import ParserTactics.
-Require Import String.
+Require Import List String.
+Require Import Derivation ExampleGrammars Grammar ParseTree ParserTactics.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -111,3 +106,4 @@ Proof.
         derCrush.
       * derCrush.
 Defined.
+

@@ -1,7 +1,5 @@
-Require Import Grammar.
-Require Import List.
-Require Import ParserUtils.
-Require Import String.
+Require Import List String.
+Require Import Grammar ParserUtils.
 Import ListNotations.
 
 Definition parse_table :=
@@ -183,3 +181,4 @@ Definition parseTableMinimal tbl g : Prop :=
 
 Definition isParseTableFor tbl g : Prop :=
   parseTableComplete tbl g /\ parseTableMinimal tbl g.
+

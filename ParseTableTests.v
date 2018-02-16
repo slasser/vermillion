@@ -1,12 +1,9 @@
 Require Import ExampleGrammars.
 Require Import Grammar.
 Require Import Lemmas.
-Require Import List.
-Require Import MSets.
-Require Import ParserTactics.
-Require Import ParseTable.
-Require Import ParserUtils.
-Require Import String.
+Require Import List MSets String.
+Require Import ExampleGrammars Grammar Lemmas
+               ParserTactics ParseTable ParserUtils.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -349,3 +346,4 @@ Proof.
     + copy_and_find_In H_inner_find.
       inv H_inner_find. crush; left; crush.
 Defined.
+

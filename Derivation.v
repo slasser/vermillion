@@ -1,8 +1,5 @@
-Require Import Grammar.
-Require Import ParseTree.
-Require Import List.
-Require Import String.
-Require Import Parser.
+Require Import List String.
+Require Import Grammar Parser ParseTree.
 Import ListNotations.
 
 Inductive derivesTree {g : grammar} : 
@@ -32,3 +29,4 @@ with derivesForest {g : grammar} :
          derivesForest (hdRoot :: tlRoots) 
                        (prefix ++ suffix) 
                        (Fcons hdTree tlTrees).
+

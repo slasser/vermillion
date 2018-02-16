@@ -1,10 +1,5 @@
-Require Import Grammar.
 Require Import String.
-(* Type variable seems to be cluttering up the definitions below. *)
-
-Section ParseTree.
-
-Variable A : Type.
+Require Import Grammar.
 
 Inductive tree :=
 | Leaf : string -> tree
@@ -25,4 +20,3 @@ Definition isLeaf (tr : tree) : bool :=
 Scheme tree_mutual_ind := Induction for tree Sort Prop
   with forest_mutual_ind := Induction for forest Sort Prop.
 
-End ParseTree.

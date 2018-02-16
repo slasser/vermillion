@@ -1,5 +1,5 @@
-Require Import Grammar ParseTree.
 Require Import List String.
+Require Import Grammar ParseTree.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -92,3 +92,4 @@ Definition g312 : grammar :=
    (NT "Y", [T "c"]);
    (NT "X", [NT "Y"]);
    (NT "X", [T "a"])].
+

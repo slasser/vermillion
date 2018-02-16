@@ -1,10 +1,5 @@
-Require Import Derivation.
-Require Import Grammar.
-Require Import List.
-Require Import MSets.
-Require Import ParserUtils.
-Require Import ParseTable.
-Require Import String.
+Require Import List MSets String.
+Require Import Derivation Grammar ParserUtils ParseTable.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -209,3 +204,4 @@ Ltac crush :=
            apply fprod_hd
 
          end.
+

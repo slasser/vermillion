@@ -1,6 +1,5 @@
-Require Import FMaps.
-Require Import MSets.
 Require Import String.
+Require Import FMaps MSets.
 
 Inductive symbol :=
 | T   : string -> symbol
@@ -33,3 +32,4 @@ Module SymbolSetFacts := WFactsOn SymbolAsDT SymbolSet.
 
 Module SymbolMap := FMapWeakList.Make SymbolAsDT.
 Module SymbolMapFacts := WFacts_fun SymbolAsDT SymbolMap.
+

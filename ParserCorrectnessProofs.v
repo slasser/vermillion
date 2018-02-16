@@ -1,16 +1,7 @@
-Require Import Derivation.
-Require Import ExampleGrammars.
-Require Import Grammar.
-Require Import Lemmas.
-Require Import List.
-Require Import Parser.
-Require Import ParserTactics.
-Require Import ParseTable.
-Require Import ParseTableTests.
-Require Import ParseTree.
-Require Import String.
-Require Import Omega.
-Require Import ParserUtils.
+Require Import List Omega String.
+Require Import Derivation ExampleGrammars Grammar
+               Lemmas Parser ParserTactics  ParseTable
+               ParseTree ParserUtils.
 Import ListNotations.
 Open Scope list_scope.
 Open Scope string_scope.
@@ -195,3 +186,4 @@ Proof.
           inv H0. }
         inv H0.
 Defined.
+

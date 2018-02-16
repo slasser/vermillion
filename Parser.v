@@ -1,15 +1,7 @@
-Require Import Grammar.
-Require Import ParseTable.
-Require Import ParseTree.
-Require Import String.
-Require Import ListSet.
-Require Import MSets.
-Require Import FMaps.
-Require Import List.
-Require Import ParserUtils.
+Require Import FMaps List MSets String.
+Require Import Grammar ParseTable ParseTree ParserUtils.
 Import ListNotations.
 Open Scope string_scope.
-
 
 Definition mkNullableSet g fuel :=
   let updateNu (prod : production) nSet :=
@@ -156,3 +148,4 @@ with mkForest (tbl : parse_table)
            end
          end
        end.
+
