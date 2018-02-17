@@ -1,5 +1,5 @@
 Require Import Bool List String.
-Require Import Grammar ParserTactics ParserUtils.
+Require Import Grammar Tactics Utils.
 
 Lemma find_In : forall k vT (v : vT) m,
     SymbolMap.find k m = Some v ->

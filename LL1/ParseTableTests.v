@@ -3,7 +3,7 @@ Require Import Grammar.
 Require Import Lemmas.
 Require Import List MSets String.
 Require Import ExampleGrammars Grammar Lemmas
-               ParserTactics ParseTable ParserUtils.
+               Tactics ParseTable Utils.
 Import ListNotations.
 Open Scope string_scope.
 

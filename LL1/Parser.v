@@ -1,5 +1,5 @@
 Require Import FMaps List MSets String.
-Require Import Grammar ParseTable ParseTree ParserUtils.
+Require Import Grammar ParseTable ParseTree Utils.
 Import ListNotations.
 Open Scope string_scope.
 

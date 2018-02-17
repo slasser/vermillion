@@ -101,19 +101,19 @@ endif
 #                    #
 ######################
 
-VFILES:=Derivation.v\
-  DerivationTests.v\
-  ExampleGrammars.v\
-  Grammar.v\
-  Lemmas.v\
-  Parser.v\
-  ParserTests.v\
-  ParseTable.v\
-  ParseTableTests.v\
-  ParserCorrectnessProofs.v\
-  ParserTactics.v\
-  ParseTree.v\
-  ParserUtils.v
+VFILES:=Lib/Derivation.v\
+  Lib/DerivationTests.v\
+  Lib/ExampleGrammars.v\
+  Lib/Grammar.v\
+  Lib/Lemmas.v\
+  Lib/Tactics.v\
+  Lib/ParseTree.v\
+  Lib/Utils.v\
+  LL1/Parser.v\
+  LL1/ParserTests.v\
+  LL1/ParseTable.v\
+  LL1/ParseTableTests.v\
+  LL1/CorrectnessProof.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))

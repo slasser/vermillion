@@ -1,5 +1,5 @@
 Require Import List String.
-Require Import Grammar ParserUtils.
+Require Import Grammar Utils.
 Import ListNotations.
 
 Definition parse_table :=
