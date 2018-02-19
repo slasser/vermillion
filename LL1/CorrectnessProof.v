@@ -23,7 +23,7 @@ Defined.
 
 Lemma nt_derives_Node :
   forall tbl x input fuel tree suffix,
-    mkTree tbl (NT x) input fuel = (Some tree, suffix) ->
+    parse tbl (NT x) input fuel = (Some tree, suffix) ->
     isNode tree = true.
 Proof.
   intros. destruct fuel.
@@ -31,7 +31,7 @@ Proof.
   - simpl in H. destruct input.
     + inv H.
     + destruct (parseTableLookup (NT x) (T s) tbl).
-      * destruct (mkForest tbl l (s :: input) fuel) in H.
+      * destruct (parseForest tbl l (s :: input) fuel) in H.
         destruct o.
         { inv H. simpl. reflexivity. }
         inv H.
@@ -40,7 +40,7 @@ Defined.
 
 Lemma t_derives_Leaf :
   forall tbl y input fuel tree suffix,
-    mkTree tbl (T y) input fuel = (Some tree, suffix) ->
+    parse tbl (T y) input fuel = (Some tree, suffix) ->
     isLeaf tree = true.
 Proof.
   intros. destruct fuel.
@@ -81,109 +81,140 @@ Proof.
 Defined.
 
 
-Theorem parse_correct : forall tbl g sym input tr suffix fuel,
+Theorem parse_correct :
+  forall (g   : grammar)
+         (tbl : parse_table),
     isParseTableFor tbl g ->
-    mkTree tbl sym input fuel = (Some tr, suffix) ->
-    exists prefix,
+    forall (tr     : tree)
+           (input  : list string)
+           (sym    : symbol)
+           (suffix : list string)
+           (fuel   : nat),
+      parse tbl sym input fuel = (Some tr, suffix) ->
+    exists (prefix : list string),
       (prefix ++ suffix)%list = input /\
       (@derivesTree g) sym prefix tr.
 Proof.
-  intros.
-  generalize dependent sym.
-  generalize dependent input.
-  generalize dependent suffix.
-  generalize dependent fuel. 
-  induction tr using tree_mutual_ind with
+  intros g tbl Htbl tr.
+  induction tr as [ s
+                  | s f IHparseForest
+                  |
+                  | tr IHparse f IHparseForest ]
+      using tree_mutual_ind with
       (P := fun tr =>
-              forall fuel suffix input sym,
-                mkTree tbl sym input fuel = (Some tr, suffix) ->
+              forall input sym suffix fuel,
+                parse tbl sym input fuel = (Some tr, suffix) ->
                 exists prefix,
                   (prefix ++ suffix)%list = input /\
                   (@derivesTree g) sym prefix tr)
       (P0 := fun subtrees =>
-               forall fuel suffix input gamma,
-                 mkForest tbl gamma input fuel = (Some subtrees, suffix) ->
+               forall input gamma suffix fuel,
+                 parseForest tbl gamma input fuel =
+                 (Some subtrees, suffix) ->
                  exists prefix,
                    (prefix ++ suffix)%list = input /\
                    (@derivesForest g) gamma prefix subtrees).
-  - intros. destruct fuel.
-    + inv H0.
-    + destruct sym.
-      * destruct input.
-        { inv H0. }
-        simpl in H0.
-        destruct (beqSym (T s0) (T s1)) eqn:Hcmp.
-        { inv H0. exists [s1]. split.
+  - intros input sym suffix fuel Hparse. 
+    destruct fuel as [| fuel].
+    + inv Hparse.
+    + destruct sym as [y | x].
+      * destruct input as [| token input].
+        { inv Hparse. }
+        simpl in Hparse.
+        destruct (beqSym (T y) (T token)) eqn:Hbeq.
+        { inv Hparse. exists [token]. split.
           { reflexivity. }
-          apply eq_sym_eq_T in Hcmp. subst.
+          apply eq_sym_eq_T in Hbeq. subst.
           apply derivesT. }
-        inv H0.
-      * apply nt_derives_Node in H0. inv H0.
-  - intros. destruct fuel.
-    + inv H0.
-    + destruct sym.
-      * apply t_derives_Leaf in H0. inv H0.
-      * destruct input.
-        { inv H0. }
-        simpl in H0.
-        destruct (parseTableLookup (NT s0) (T s1) tbl) eqn:Htbl.
-        { destruct (mkForest tbl l (s1 :: input) fuel)
-                   eqn:Hforest.
-          { destruct o.
-            { inv H0.
-              apply IHtr in Hforest.
-              destruct Hforest.
-              exists x. destruct H0. split.
+        inv Hparse.
+      * apply nt_derives_Node in Hparse. inv Hparse.
+  - intros input sym suffix fuel Hparse.
+    destruct fuel as [| fuel].
+    + inv Hparse.
+    + destruct sym as [y | x].
+      * apply t_derives_Leaf in Hparse. inv Hparse.
+      * destruct input as [| token input].
+        { inv Hparse. }
+        simpl in Hparse.
+        destruct (parseTableLookup (NT x) (T token) tbl)
+                 as [ys |] eqn:Hlookup.
+        { destruct (parseForest tbl ys (token :: input) fuel)
+                   as [subresult input'] eqn:Hforest.
+          { destruct subresult as [subtrees |].
+            { inv Hparse.
+              apply IHparseForest in Hforest.
+              destruct Hforest as [prefix Hforest].
+              exists prefix.
+              destruct Hforest as [Happ Hderives]. split.
               { assumption. }
-              inv H1.
+              inv Hderives.
               { apply derivesNT with (gamma := nil).
-                { apply lookup_tbl_in_grammar with (g := g)
-                    in Htbl.
+                { apply lookup_tbl_in_grammar with
+                      (g := g)
+                      (x := s)
+                      (y := token)
+                      (gamma:=nil) in Hlookup.
                   { assumption. }
                   assumption. }
                 apply derivesFnil. }
-              apply derivesNT with (gamma := (hdRoot :: tlRoots)).
-              { apply lookup_tbl_in_grammar with (g := g)
-                  in Htbl; assumption. }
+              apply derivesNT with
+                  (gamma := (hdRoot :: tlRoots)).
+              { apply lookup_tbl_in_grammar
+                  with (g := g)
+                       (x:=s)
+                       (y:= token)
+                       (gamma:=hdRoot::tlRoots) in Htbl;
+                  assumption. }
               apply derivesFcons.
               { assumption. }
               assumption. }
-            inv H0. }}
-        inv H0.
-  - intros. simpl in H0. destruct fuel.
-    + inv H0.
-    + destruct gamma.
-      * simpl in H0. inv H0.
+            inv Hparse. }}
+        inv Hparse.
+  - intros input gamma suffix fuel HparseForest.
+    destruct fuel as [| fuel].
+    + inv HparseForest.
+    + destruct gamma as [| sym gamma'].
+      * simpl in HparseForest. inv HparseForest.
         exists nil. split.
         { reflexivity. }
         apply derivesFnil.
       * exfalso.
-        simpl in H0.
-        destruct (mkTree tbl s input fuel).
-        destruct o.
-        { destruct (mkForest tbl gamma l fuel).
-          destruct o.
-          { inv H0. }
-          inv H0. }
-        inv H0.
-  - intros. destruct fuel.
-    + inv H0.
-    + destruct gamma.
-      * inv H0.
-      * simpl in H0. destruct (mkTree tbl s input fuel) eqn:Htree.
-        destruct o.
-        { destruct (mkForest tbl gamma l fuel) eqn:Hforest.
-          destruct o.
-          { inv H0.
-            apply IHtr in Htree. destruct Htree. destruct H0.
-            apply IHtr0 in Hforest. destruct Hforest.
-            destruct H2. subst.
-            exists (x ++ x0)%list. split.
-            { rewrite app_assoc. reflexivity. }
-            apply derivesFcons.
-            { assumption. }
-            assumption. }
-          inv H0. }
-        inv H0.
+        simpl in HparseForest.
+        destruct (parse tbl sym input fuel)
+          as [subresult input'].
+        destruct subresult as [lSib |].
+        { destruct (parseForest tbl gamma' input' fuel)
+            as [subresult input''].
+          destruct subresult as [rSibs |].
+          { inv HparseForest. }
+          inv HparseForest. }
+        inv HparseForest.
+  - intros input gamma suffix fuel HparseForest.
+    destruct fuel as [| fuel].
+    + inv HparseForest.
+    + destruct gamma as [| sym gamma'].
+      * inv HparseForest.
+      * simpl in HparseForest.
+        destruct (parse tbl sym input fuel)
+          as [subresult input'] eqn:Htree.
+        destruct subresult.
+        { destruct (parseForest tbl gamma' input' fuel)
+            as [subresult input''] eqn:Hforest.
+          destruct subresult as [rSibs |].
+          { inv HparseForest.
+            apply IHparse in Htree.
+            { destruct Htree as [treePrefix Htree].
+              destruct Htree as [HappTree HderivesTree].
+              apply IHparseForest in Hforest.
+              destruct Hforest as [forestPrefix Hforest].
+              destruct Hforest as [HappForest HderivesForest].
+              subst.
+              exists (treePrefix ++ forestPrefix)%list. split.
+              { rewrite app_assoc. reflexivity. }
+              apply derivesFcons.
+              { assumption. }
+              assumption. }}
+          inv HparseForest. }
+        inv HparseForest.
 Defined.
 
