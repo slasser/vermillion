@@ -1,4 +1,4 @@
-Require Import List String.
+Require Import Bool List String.
 Require Import Grammar Lib.Utils.
 Import ListNotations.
 
@@ -69,3 +69,60 @@ Definition startState g x input :=
   let xGammas := rhss g x in
   map (fun gamma =>
          mkSubparser nil gamma input gamma nil) xGammas.
+
+Definition target g sps :=
+  concat (map (moveSubparser g) sps).
+
+Definition elem {A : Type} (x : A) (l : list A) (cmp : A -> A -> bool) : bool :=
+            match find (cmp x) l with
+  | Some _ => true
+  | None   => false
+  end.
+
+Definition nub {A : Type} (xs : list A) (cmp : A -> A -> bool) : list A :=
+  fold_right (fun x acc => if elem x acc cmp then acc else x :: acc) nil xs.
+
+Fixpoint beqList (xs : list symbol) (ys : list symbol) : bool :=
+  match (xs, ys) with
+  | (nil, nil) => true
+  | (x :: xs', y :: ys') => if beqSym x y then beqList xs' ys' else false
+  | _ => false
+  end.
+
+Fixpoint beqStack (xss yss : list (list symbol)) : bool :=
+  match (xss, yss) with
+  | (nil, nil) => true
+  | (xs :: xss', ys :: yss') => if beqList xs ys then beqStack xss' yss' else false
+  | _ => false
+  end.
+
+Fixpoint conflict sps : bool :=
+  match sps with
+  | nil => false
+  | [sp] => false
+  | sp :: sps' => 
+    if existsb (fun sp2 => beqList sp.(syms) sp2.(syms) && beqStack sp.(stack) sp2.(stack)) sps' then
+      true
+    else 
+      conflict sps'
+  end.
+
+
+Fixpoint sllPredict g sps fuel :=
+  match fuel with
+  | O => None
+  | S n =>
+    let predictions := map prediction sps in
+    match nub predictions beqList with
+    | nil => None
+    | [p] => Some p
+    | _ => if conflict sps then
+             Some [T "conflict detected!"]
+           else 
+             sllPredict g (target g sps) n
+    end
+  end.
+
+Definition adaptivePredict g x input :=
+  sllPredict g (startState g x input) 100.
+             

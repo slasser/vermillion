@@ -1,5 +1,5 @@
 Require Import List String.
-Require Import Grammar Parser ParseTree.
+Require Import Grammar ParseTree.
 Import ListNotations.
 
 Inductive derivesTree {g : grammar} : 

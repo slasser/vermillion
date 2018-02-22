@@ -113,7 +113,9 @@ VFILES:=Lib/Derivation.v\
   LL1/ParserTests.v\
   LL1/ParseTable.v\
   LL1/ParseTableTests.v\
-  LL1/CorrectnessProof.v
+  LL1/CorrectnessProof.v\
+  AllStar/Parser.v\
+  AllStar/Subparser.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))
