@@ -1,45 +1,29 @@
 Require Import Bool List String.
+
 Require Import Grammar Lib.Utils.
 Import ListNotations.
+Open Scope string_scope.
 
 Record subparser :=
-  mkSubparser { busy       : list symbol ; (* should be set *)
-                syms       : list symbol ;
-                input      : list string ;
-                prediction : list symbol ;
-                stack      : list (list symbol) }.
-
-(* Maybe better to stick to lists of subparsers *)
-(*
-Definition subparser_eq_dec : forall (sub sub2 : subparser),
-    {sub = sub2} + {~sub = sub2}.
-Proof.
-  intros. repeat decide equality.
-Qed.
-
-Module MDT_Subparser.
-  Definition t := subparser.
-  Definition eq_dec := subparser_eq_dec.
-End MDT_Subparser.
-
-Module SubparserAsDT := Make_UDT(MDT_Subparser).
-
-Module SpSet := MSetWeakList.Make SubparserAsDT.
-Module SpSetFacts := WFactsOn SubparserAsDT SpSet.
-*)
+  mkSp { busy       : list symbol ; (* use a set instead? *)
+         syms       : list symbol ;
+         input      : list string ;
+         prediction : list symbol ;
+         stack      : list (list symbol) }.
 
 Definition rhss (g : grammar) (x : string) :=
   map snd (filter (fun prod => beqSym (fst prod) (NT x)) g).
 
-Definition moveSubparser (g : grammar)
+Definition moveSubparser (g  : grammar)
                          (sp : subparser) :
                          list subparser :=
   let (busy, syms, input, prediction, stack) := sp in
   match syms with
   | nil =>
-    match stack with
-    | nil => [sp]
-    | k :: stack' => [mkSubparser busy k input prediction stack']
+    match (stack, busy) with
+    | (nil, nil) => [sp]
+    | (k :: stack', b :: busy') => [mkSp busy' k input prediction stack']
+    | _ => [mkSp nil nil ["implementation error"] nil nil]
     end
   | T y :: syms' =>
     match input with
@@ -47,28 +31,27 @@ Definition moveSubparser (g : grammar)
     | token :: input' =>
       match beqSym (T y) (T token) with
       | false => nil
-      | true => [mkSubparser busy syms' input' prediction stack]
+      | true => [mkSp busy syms' input' prediction stack]
       end
     end
   | NT x :: k =>
     match find (beqSym (NT x)) busy with
-    | Some _ => [sp]
+    | Some _ => nil (* changed from [sp] *)
     | None =>
+      let mkSp' := fun gamma => mkSp (NT x :: busy) 
+                                     gamma 
+                                     input 
+                                     prediction 
+                                     (k :: stack) in
       let xGammas := rhss g x in
-      let sps := map (fun gamma =>
-                        mkSubparser (NT x :: busy)
-                                    gamma
-                                    input
-                                    prediction
-                                    (k :: stack)) xGammas
-      in  sps
+      map mkSp' xGammas
     end
   end.
 
 Definition startState g x input :=
   let xGammas := rhss g x in
   map (fun gamma =>
-         mkSubparser nil gamma input gamma nil) xGammas.
+         mkSp [NT x] gamma input gamma [[]]) xGammas.
 
 Definition target g sps :=
   concat (map (moveSubparser g) sps).
@@ -101,23 +84,29 @@ Fixpoint conflict sps : bool :=
   | nil => false
   | [sp] => false
   | sp :: sps' => 
-    if existsb (fun sp2 => beqList sp.(syms) sp2.(syms) && beqStack sp.(stack) sp2.(stack)) sps' then
-      true
-    else 
-      conflict sps'
+    if existsb (fun sp2 => 
+                  beqList sp.(syms) sp2.(syms) && 
+                  beqStack sp.(stack) sp2.(stack) &&
+                  negb (beqList sp.(prediction) sp2.(prediction))) sps'
+    then true
+    else conflict sps'
   end.
 
+Inductive sll_result := 
+| Choice   : list symbol -> sll_result
+| Conflict : list subparser -> sll_result
+| Fail     : sll_result.  
 
 Fixpoint sllPredict g sps fuel :=
   match fuel with
-  | O => None
+  | O => Fail
   | S n =>
     let predictions := map prediction sps in
     match nub predictions beqList with
-    | nil => None
-    | [p] => Some p
+    | nil => Fail
+    | [p] => Choice p
     | _ => if conflict sps then
-             Some [T "conflict detected!"]
+             Conflict sps
            else 
              sllPredict g (target g sps) n
     end

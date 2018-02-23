@@ -13,65 +13,23 @@ Print g312.
  (NT "X", [T "a"])]
 *)
 
-Compute adaptivePredict g312 "Z" ["a"; "b"; "c"].
+Example Z_abc : 
+  adaptivePredict g312 "Z" ["a"; "b"; "c"] = Choice [NT "X"; NT "Y"; NT "Z"].
+Proof. reflexivity. Qed.
 
-Compute adaptivePredict g312 "X" ["a"].
+Example Z_ababd :
+  adaptivePredict g312 "Z" ["a"; "b"; "a"; "b"; "d"] = 
+  Choice [NT "X"; NT "Y"; NT "Z"].
+Proof. reflexivity. Qed.
 
-Definition ss := startState g312 "X" ["a"].
-Definition t1 := target g312 ss.
-Definition t2 := target g312 t1.
-Definition t3 := target g312 t2.
+Example X_a : 
+  exists sps, adaptivePredict g312 "X" ["a"] = Conflict sps.
+Proof. 
+  eexists. reflexivity. Qed.
 
-Compute ss.
-(*
-[{|
-    busy := [];
-    syms := [NT "Y"];
-    input := ["a"];
-    prediction := [NT "Y"];
-    stack := [] |};
- {|
-   busy := [];
-   syms := [T "a"];
-   input := ["a"];
-   prediction := [T "a"];
-   stack := [] |}]
- *)
+(* Should this really be an unambiguous choice, 
+   or should we report a conflict? *)
+Example Z_d : 
+  adaptivePredict g312 "Z" ["d"] = Choice [T "d"].
+Proof. reflexivity. Qed.
 
-Compute t1.
-(*
-[{|
-    busy := [NT "Y"];
-    syms := [];
-    input := ["a"];
-    prediction := [NT "Y"];
-    stack := [[]] |};
- {|
-   busy := [NT "Y"];
-   syms := [T "c"];
-   input := ["a"];
-   prediction := [NT "Y"];
-   stack := [[]] |};
- {|
-   busy := [];
-   syms := [];
-   input := [];
-   prediction := [T "a"];
-   stack := [] |}]
-*)
-
-Compute t2.
-(*
-[{|
-    busy := [NT "Y"];
-    syms := [];
-    input := ["a"];
-    prediction := [NT "Y"];
-    stack := [] |};
- {|
-   busy := [];
-   syms := [];
-   input := [];
-   prediction := [T "a"];
-   stack := [] |}]
-*)
