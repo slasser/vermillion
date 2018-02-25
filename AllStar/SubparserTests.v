@@ -2,7 +2,6 @@ Require Import List String.
 Require Import ExampleGrammars Grammar Subparser.
 Import ListNotations.
 
-
 Print g312.
 (*
 [(NT "Z", [T "d"]); 
@@ -28,7 +27,8 @@ Proof.
   eexists. reflexivity. Qed.
 
 (* Should this really be an unambiguous choice, 
-   or should we report a conflict? *)
+   or should we report a conflict,
+   or reject the grammar altogether? *)
 Example Z_d : 
   adaptivePredict g312 "Z" ["d"] = Choice [T "d"].
 Proof. reflexivity. Qed.

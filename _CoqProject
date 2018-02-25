@@ -16,4 +16,6 @@ LL1/ParseTableTests.v
 LL1/CorrectnessProof.v
 
 AllStar/Parser.v
+AllStar/ParserTests.v
 AllStar/Subparser.v
+AllStar/SubparserTests.v

@@ -1,9 +1,6 @@
 Require Import List MSets MSetDecide String.
-Require Import Grammar ParseTree Vermillion.Lib.Utils.
+Require Import Grammar ParseTree Subparser Lib.Utils.
 Import ListNotations.
-
-Definition adaptivePredict (g : grammar) (sym : symbol) (input : list string) : option (list symbol) :=
-  Some [NT "foo"].
 
 Fixpoint parse (g : grammar)
                (sym : symbol)
@@ -21,9 +18,10 @@ Fixpoint parse (g : grammar)
       | true => (Some (Leaf y), input')
       end
     | (NT x, _) =>
-      match adaptivePredict g sym input with
-      | None => (None, input)
-      | Some gamma =>
+      match adaptivePredict g x input with
+      | Fail => (None, input)
+      | Conflict _ => (None, input) (* do something else *)
+      | Choice gamma => 
         match parseForest g gamma input n with
         | (None, _) => (None, input)
         | (Some sts, input') =>

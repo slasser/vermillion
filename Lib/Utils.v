@@ -1,4 +1,7 @@
+Require Import Ascii List String.
 Require Import Grammar.
+Import ListNotations.
+Open Scope string_scope.
 
 Definition isNT sym :=
   match sym with
@@ -45,3 +48,21 @@ Definition getOrEmpty k m :=
 
 Definition beqSym sy sy2 := if SymbolAsDT.eq_dec sy sy2 then true else false.
 
+Definition tokenize s :=
+  let singletonString (a : Ascii.ascii) :=
+      String a EmptyString
+  in
+  let fix tokenize' (s : string)
+                    (t : string)
+                    (ts : list string)
+                    : list string :=
+      match s with
+      | EmptyString => (ts ++ [t])%list
+      | String a s' =>
+        match nat_of_ascii a with
+        | 32 => (* space token *)
+          tokenize' s' "" (ts ++ [t])%list
+        | _   => tokenize' s' (t ++ singletonString a) ts
+        end
+      end
+  in  tokenize' s "" nil.

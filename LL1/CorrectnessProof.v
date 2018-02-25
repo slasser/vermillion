@@ -1,6 +1,6 @@
 Require Import List Omega String.
 Require Import Derivation ExampleGrammars Grammar
-               Lemmas Parser Tactics ParseTable
+               Lemmas LL1.Parser Tactics ParseTable
                ParseTree Utils.
 Import ListNotations.
 Open Scope list_scope.

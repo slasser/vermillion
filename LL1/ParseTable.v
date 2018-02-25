@@ -119,13 +119,13 @@ Definition isFirstSetFor fi g : Prop :=
 Inductive followSym {g : grammar} : symbol -> symbol -> Prop :=
 | followRight :
     forall lx rx prefix suffix y,
-      In (lx, prefix ++ rx :: suffix) g ->
+      In (lx, (prefix ++ rx :: suffix)%list) g ->
       isNT rx = true ->
       (@firstGamma g) y suffix -> 
       followSym y rx
 | followLeft :
     forall lx rx prefix suffix y,
-      In (lx, prefix ++ rx :: suffix) g ->
+      In (lx, (prefix ++ rx :: suffix)%list) g ->
       isNT rx = true ->
       lx <> rx -> (* Necessary? *)
       (@nullableGamma g) suffix ->

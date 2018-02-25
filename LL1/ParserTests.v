@@ -1,5 +1,5 @@
 Require Import List String.
-Require Import ExampleGrammars Grammar Parser ParseTree.
+Require Import ExampleGrammars Grammar LL1.Parser ParseTree.
 Import ListNotations.
 Open Scope string_scope.
 
