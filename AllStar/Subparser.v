@@ -31,7 +31,7 @@ Definition moveSubparser (g  : grammar)
     | token :: input' =>
       match beqSym (T y) (T token) with
       | false => nil
-      | true => [mkSp busy syms' input' prediction stack]
+      | true => [mkSp nil syms' input' prediction stack]
       end
     end
   | NT x :: k =>

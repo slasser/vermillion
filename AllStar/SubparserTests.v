@@ -29,7 +29,8 @@ Proof.
 (* Should this really be an unambiguous choice, 
    or should we report a conflict,
    or reject the grammar altogether? *)
+(* Wrong -- change back *)
 Example Z_d : 
-  adaptivePredict g312 "Z" ["d"] = Choice [T "d"].
-Proof. reflexivity. Qed.
+  adaptivePredict g312 "Z" ["d"] = Choice [].
+Proof. compute. reflexivity. Qed.
 
