@@ -56,9 +56,9 @@ with parseForest (g : grammar)
          end
        end.
 
-Fixpoint parse (g : grammar)
-               (sym : symbol)
-               (input : list string)
-               (fuel : nat) :
+Definition parse (g : grammar)
+                 (sym : symbol)
+                 (input : list string)
+                 (fuel : nat) :
   (option tree * list string) :=
   parse' g sym input nil fuel.
