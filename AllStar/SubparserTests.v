@@ -13,24 +13,25 @@ Print g312.
 *)
 
 Example Z_abc : 
-  adaptivePredict g312 "Z" ["a"; "b"; "c"] = Choice [NT "X"; NT "Y"; NT "Z"].
-Proof. reflexivity. Qed.
+  adaptivePredict g312 "Z" ["a"; "b"; "c"] nil =
+  Choice [NT "X"; NT "Y"; NT "Z"].
+Proof. compute. Abort.
 
 Example Z_ababd :
-  adaptivePredict g312 "Z" ["a"; "b"; "a"; "b"; "d"] = 
+  adaptivePredict g312 "Z" ["a"; "b"; "a"; "b"; "d"] nil = 
   Choice [NT "X"; NT "Y"; NT "Z"].
-Proof. reflexivity. Qed.
+Proof. compute. Abort.
 
 Example X_a : 
-  exists sps, adaptivePredict g312 "X" ["a"] = Conflict sps.
+  exists sps, adaptivePredict g312 "X" ["a"] nil =
+              Conflict sps.
 Proof. 
-  eexists. reflexivity. Qed.
+  eexists. compute. Abort.
 
 (* Should this really be an unambiguous choice, 
    or should we report a conflict,
    or reject the grammar altogether? *)
-(* Wrong -- change back *)
 Example Z_d : 
-  adaptivePredict g312 "Z" ["d"] = Choice [].
-Proof. compute. reflexivity. Qed.
+  adaptivePredict g312 "Z" ["d"] nil = Choice [].
+Proof. compute. Abort.
 

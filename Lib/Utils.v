@@ -66,3 +66,26 @@ Definition tokenize s :=
         end
       end
   in  tokenize' s "" nil.
+
+Fixpoint beqList (xs ys : list symbol) : bool :=
+  match (xs, ys) with
+  | (nil, nil) => true
+  | (x :: xs', y :: ys') =>
+    if beqSym x y then beqList xs' ys' else false
+  | _ => false
+  end.
+
+Definition elem {A : Type} (x : A)
+                           (l : list A)
+                           (cmp : A -> A -> bool)
+                           : bool :=
+  match find (cmp x) l with
+  | Some _ => true
+  | None   => false
+  end.
+
+Definition nub {A : Type} (xs : list A) (cmp : A -> A -> bool) : list A :=
+  fold_right (fun x acc => if elem x acc cmp then acc else x :: acc) nil xs.
+
+Definition rhss (g : grammar) (x : string) :=
+  map snd (filter (fun prod => beqSym (fst prod) (NT x)) g).

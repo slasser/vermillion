@@ -3,15 +3,6 @@ Require Import AllStar.Parser ExampleGrammars
                Grammar Subparser Lib.Utils.
 Import ListNotations.
 
-Print g311.
-(*
-[(NT "S", [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"]);
- (NT "S", [T "begin"; NT "S"; NT "L"]);
- (NT "S", [T "print"; NT "E"]); (NT "L", [T "end"]);
- (NT "L", [T ";"; NT "S"; NT "L"]);
- (NT "E", [T "num"; T "=="; T "num"])]
-*)
-
 Definition prog1 :=
   tokenize "if num == num then print num == num else print num == num".
 
@@ -55,15 +46,20 @@ Compute testProgram.
 (* The first thing that adaptivePredict does is call 
    startState, which compute the initial DFA state for 
    prediction. *)
-Definition dfaState0 := startState g311 "S" testProgram.
+Definition dfaState0 := startState g311 "S" nil.
 Compute dfaState0.
 
 (* Next, the target function advances all of the subparsers 
    by one step. *)
-Definition dfaState1 := target g311 dfaState0.
+Definition dfaState1 := target g311 dfaState0 "begin".
 Compute dfaState1.
 
+Definition dfaState2 := target g311 dfaState1 "print".
+Compute dfaState2.
+
 (* At this point, there's only one subparser, so
-   adaptivePredict should return the prediction associated with   that subparser. The adaptivePredict call below shows that
-   that's what it does. *)
-Compute adaptivePredict g311 "S" testProgram.
+   adaptivePredict should return the prediction associated 
+   with that subparser. The adaptivePredict call below shows 
+   that that's what it does. *)
+Compute adaptivePredict g311 "S" testProgram nil.
+

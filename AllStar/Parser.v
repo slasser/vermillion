@@ -1,12 +1,14 @@
 Require Import List MSets MSetDecide String.
 Require Import Grammar ParseTree Subparser Lib.Utils.
 Import ListNotations.
+  
 
-Fixpoint parse (g : grammar)
-               (sym : symbol)
-               (input : list string)
-               (fuel : nat) :
-               (option tree * list string) :=
+Fixpoint parse' (g : grammar)
+                (sym : symbol)
+                (input : list string)
+                (stack : list symbol)
+                (fuel : nat) :
+                (option tree * list string) :=
   match fuel with
   | O => (None, input)
   | S n => 
@@ -18,11 +20,11 @@ Fixpoint parse (g : grammar)
       | true => (Some (Leaf y), input')
       end
     | (NT x, _) =>
-      match adaptivePredict g x input with
+      match adaptivePredict g x input stack with
       | Fail => (None, input)
       | Conflict _ => (None, input) (* do something else *)
       | Choice gamma => 
-        match parseForest g gamma input n with
+        match parseForest g gamma input stack n with
         | (None, _) => (None, input)
         | (Some sts, input') =>
           (Some (Node x sts), input')
@@ -33,6 +35,7 @@ Fixpoint parse (g : grammar)
 with parseForest (g : grammar)
                  (gamma : list symbol)
                  (input : list string)
+                 (stack : list symbol)
                  (fuel : nat) :
                  (option forest * list string) :=
        match fuel with
@@ -41,10 +44,10 @@ with parseForest (g : grammar)
          match gamma with
          | nil => (Some Fnil, input)
          | sym :: gamma' =>
-           match parse g sym input n with
+           match parse' g sym input (gamma' ++ stack) n with
            | (None, _) => (None, input)
            | (Some lSib, input') =>
-             match parseForest g gamma' input' n with
+             match parseForest g gamma' input' stack n with
              | (None, _) => (None, input)
              | (Some rSibs, input'') =>
                (Some (Fcons lSib rSibs), input'')
@@ -52,3 +55,10 @@ with parseForest (g : grammar)
            end
          end
        end.
+
+Fixpoint parse (g : grammar)
+               (sym : symbol)
+               (input : list string)
+               (fuel : nat) :
+  (option tree * list string) :=
+  parse' g sym input nil fuel.
