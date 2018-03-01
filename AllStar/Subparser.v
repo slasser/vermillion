@@ -1,15 +1,16 @@
-Require Import Bool List Omega String.
+Require Import Bool List Omega String Program.Wf.
 Require Import Grammar Lib.Utils Lib.Tactics.
 Import ListNotations.
 Open Scope string_scope.
 
 Record subparser :=
-  mkSp { stack      : list symbol ;
-         prediction : list symbol }.
+  mkSp { stack: list symbol ;
+         pred : list symbol }.
 
+(* Two subparsers are equal if their stacks and predictions are equal. *)
 Definition beqSp sp sp2 :=
   beqList sp.(stack) sp2.(stack) &&
-  beqList sp.(prediction) sp2.(prediction).
+  beqList sp.(pred) sp2.(pred).
 
 Definition move (token : string)
                 (sps   : list subparser) 
@@ -20,7 +21,7 @@ Definition move (token : string)
       | NT _ :: _ => nil (* implementation error? *)
       | T y :: stack' =>
         if beqSym (T y) (T token) then 
-          [mkSp stack' sp.(prediction)] 
+          [mkSp stack' sp.(pred)] 
         else 
           nil
       end 
@@ -56,30 +57,26 @@ Proof.
       * inv H.
 Qed.
 
-(* Should be able to get rid of fuel because freeSyms is decreasing *)
-Fixpoint closure g freeSyms fuel sps :=
-  match fuel with 
-  | O => nil
-  | S n => concat (map (spClosure g freeSyms n) sps)
-  end
-with spClosure g freeSyms fuel sp :=
-       match fuel with 
-       | O => nil
-       | S n => 
-         match sp.(stack) with
-         | nil => [sp]
-         | T _ :: _ => [sp]
-         | NT x :: stack' => 
-           match removeOpt (NT x) freeSyms beqSym with
-           | None => nil (* recursion detected *)
-           | Some freeSyms' =>
-             let gammas := rhss g x in
-             let newSps := map (fun gamma => 
-                                  mkSp (gamma ++ stack') sp.(prediction)) gammas
-             in closure g freeSyms' n newSps
-           end
+Program Fixpoint spClosure (g : grammar)
+                           (freeSyms : list symbol)
+                           (sp : subparser) 
+                           {measure (List.length freeSyms)}
+                           : list subparser :=
+       match sp.(stack) with
+       | nil => [sp]
+       | T _ :: _ => [sp]
+       | NT x :: stack' => 
+         match removeOpt (NT x) freeSyms beqSym with
+         | None => nil (* recursion detected *)
+         | Some freeSyms' => 
+           concat (map (fun gamma => 
+                          spClosure g freeSyms' (mkSp (gamma ++ stack') sp.(pred)))
+                       (rhss g x))
          end
        end.
+Obligation 1.
+eapply removeOptDecreasing. symmetry. eassumption.
+Qed.
 
 Definition nonterminals g :=
   let prodNTs p :=
@@ -88,15 +85,20 @@ Definition nonterminals g :=
       end
   in  concat (map prodNTs g).
 
-(* Remove fuel from the call to closure! *)
+Definition closure (g : grammar) 
+                   (freeSyms : list symbol) 
+                   (sps : list subparser)
+                   : list subparser :=
+  concat (map (spClosure g freeSyms) sps).
+
+(* LL predict when stack0 is nil, SLL predict otherwise *)
 Definition startState g x stack0 :=
-  let gammas := rhss g x in
-  let sps    := map (fun gamma =>
-                       mkSp (gamma ++ stack0) gamma) gammas
-  in  closure g (nonterminals g) 100 sps.
+  let sps := map (fun gamma =>
+                    mkSp (gamma ++ stack0) gamma) (rhss g x)
+  in  closure g (nonterminals g) sps.
 
 Definition target g sps (token : string) :=
-  closure g (nonterminals g) 100 (move token sps).
+  closure g (nonterminals g) (move token sps).
 
 Fixpoint conflict sps : bool :=
   match sps with
@@ -105,22 +107,20 @@ Fixpoint conflict sps : bool :=
     if existsb
          (fun sp2 => 
             beqList sp.(stack) sp2.(stack) && 
-            negb (beqList sp.(prediction)                                                sp2.(prediction)))
+            negb (beqList sp.(pred) sp2.(pred)))
          sps'
     then true
     else conflict sps'
   end.
 
-Inductive prediction_result := 
-| Choice   : list symbol -> prediction_result
-| Conflict : list subparser -> prediction_result
-| Fail     : prediction_result.  
+Inductive pred_result := 
+| Choice   : list symbol -> pred_result
+| Conflict : list subparser -> pred_result
+| Fail     : pred_result.  
 
-(* LL predict when initial stacks are nil,
-   SLL predict otherwise *)
 Fixpoint predict g sps input :=
-  let predictions := map prediction sps in
-  match nub predictions beqList with
+  let preds := map pred sps in
+  match nub preds beqList with
   | nil => Fail
   | [p] => Choice p
   | _ => if conflict sps then
@@ -134,11 +134,34 @@ Fixpoint predict g sps input :=
   end.
 
 Definition adaptivePredict g x input stack0 :=
-  let sllPrediction :=
+  let sllPred :=
       predict g (startState g x nil) input
-  in  match sllPrediction with
+  in  match sllPred with
       | Conflict _ =>
         predict g (startState g x stack0) input
-      | _ => sllPrediction
+      | _ => sllPred
       end.
+
+
+Section lengthorder.
+  Variable A : Type.
+  
+  Definition lengthOrder (xs ys : list A) :=
+    List.length xs < List.length ys.
+  
+  Lemma lengthOrder_wf' : 
+    forall len ys, List.length ys <= len -> Acc lengthOrder ys.
+  Proof. 
+    induction len; intros ys H_length_ys; apply Acc_intro; intros xs H_xs_ys.
+    - unfold lengthOrder in H_xs_ys. omega.
+    - apply IHlen. unfold lengthOrder in H_xs_ys. omega.
+  Defined.
+  
+  Theorem lengthOrder_wf : well_founded lengthOrder.
+  Proof.
+    unfold well_founded. intro ys.
+    apply lengthOrder_wf' with (len := List.length ys). omega.
+  Defined.
+  
+End lengthorder.
 
