@@ -57,6 +57,26 @@ Proof.
       * inv H.
 Qed.
 
+(* Here's a better way to handle removing elements from the free set. *)
+
+Definition removeOpt' (x : symbol) (s : SymbolSet.t) :=
+  let s' := SymbolSet.remove x s in
+  if (SymbolSet.cardinal s') <? (SymbolSet.cardinal s) then
+    Some s'
+  else
+    None.
+
+Lemma removeOpt'Decreasing : forall (x : symbol) (ys zs : SymbolSet.t),
+    removeOpt' x ys = Some zs ->
+    SymbolSet.cardinal zs < SymbolSet.cardinal ys.
+Proof.
+  intros. unfold removeOpt' in H.
+  destruct (SymbolSet.cardinal (SymbolSet.remove x ys) <? SymbolSet.cardinal ys)
+           eqn:Heq.
+  - inv H. rewrite <- Nat.ltb_lt. assumption.
+  - inv H.
+Qed.
+
 Program Fixpoint spClosure (g : grammar)
                            (freeSyms : list symbol)
                            (sp : subparser) 
