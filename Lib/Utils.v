@@ -1,4 +1,4 @@
-Require Import Ascii List String.
+Require Import Ascii List Omega String.
 Require Import Grammar.
 Import ListNotations.
 Open Scope string_scope.
@@ -89,3 +89,22 @@ Definition nub {A : Type} (xs : list A) (cmp : A -> A -> bool) : list A :=
 
 Definition rhss (g : grammar) (x : string) :=
   map snd (filter (fun prod => beqSym (fst prod) (NT x)) g).
+
+Definition removeOpt (x : symbol) (s : SymbolSet.t) :=
+  if SymbolSet.mem x s then
+    Some (SymbolSet.remove x s)
+  else None.
+
+Definition addAll (xs : list symbol) : SymbolSet.t :=
+  fold_right SymbolSet.add SymbolSet.empty xs.
+
+Definition unionAll (ss : list SymbolSet.t) : SymbolSet.t :=
+  fold_right SymbolSet.union SymbolSet.empty ss.
+
+Definition nonterminals g :=
+  let prodNTs p :=
+      match p with
+      | (l, rs) =>
+        SymbolSet.add l (addAll (filter isNT rs))
+      end
+  in  unionAll (map prodNTs g).
