@@ -149,3 +149,20 @@ Proof.
     apply H in Hmem. omega.
   - inv H.
 Qed.
+
+Lemma eq_sym_eq_T : 
+  forall (s s2 : string),
+    beqSym (T s) (T s2) = true <-> s = s2.
+Proof.
+  split; intro H.
+  - unfold beqSym in H.
+    destruct (SymbolMapFacts.eq_dec (T s) (T s2))
+      as [Heq | Hneq].
+    + inv Heq; reflexivity.
+    + inv H.
+  - unfold beqSym.
+    destruct (SymbolMapFacts.eq_dec (T s) (T s2))
+      as [Heq | Hneq].
+    + reflexivity.
+    + exfalso. apply Hneq. subst. reflexivity.
+Qed.

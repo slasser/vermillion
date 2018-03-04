@@ -5,21 +5,6 @@ Require Import Derivation ExampleGrammars Grammar
 Import ListNotations.
 Open Scope list_scope.
 Open Scope string_scope.
-  
-Lemma eq_sym_eq_T : 
-  forall (s s2 : string),
-    beqSym (T s) (T s2) = true <-> s = s2.
-Proof.
-  split; intro H.
-  - unfold beqSym in H.
-    destruct (SymbolMapFacts.eq_dec (T s) (T s2)) as [Heq | Hneq].
-    + inv Heq; reflexivity.
-    + inv H.
-  - unfold beqSym.
-    destruct (SymbolMapFacts.eq_dec (T s) (T s2)) as [Heq | Hneq].
-    + reflexivity.
-    + exfalso. apply Hneq. subst. reflexivity.
-Defined.
 
 Lemma nt_derives_Node :
   forall tbl x input fuel tree suffix,
@@ -36,7 +21,7 @@ Proof.
         { inv H. simpl. reflexivity. }
         inv H.
       * inv H.
-Defined.
+Qed.
 
 Lemma t_derives_Leaf :
   forall tbl y input fuel tree suffix,
@@ -50,7 +35,7 @@ Proof.
     + destruct (beqSym (T y) (T s)).
       * inv H. reflexivity.
       * inv H.
-Defined.
+Qed.
 
 Lemma lookup_tbl_in_grammar : forall g x y tbl gamma,
     isParseTableFor tbl g ->
@@ -216,5 +201,5 @@ Proof.
               assumption. }}
           inv HparseForest. }
         inv HparseForest.
-Defined.
+Qed.
 
