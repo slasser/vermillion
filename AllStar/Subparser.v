@@ -8,13 +8,12 @@ Record subparser :=
          pred : list symbol }.
 
 (* Two subparsers are equal if their stacks and predictions are equal. *)
-Definition beqSp sp sp2 :=
+Definition beqSp (sp sp2 : subparser) : bool :=
   beqList sp.(stack) sp2.(stack) &&
   beqList sp.(pred) sp2.(pred).
 
-Definition move (token : string)
-                (sps   : list subparser) 
-                : list subparser :=
+Definition move (token : string) (sps : list subparser) :
+                list subparser :=
   let moveSp sp := 
       match sp.(stack) with
       | nil => [sp]
@@ -51,24 +50,24 @@ Obligation 1.
 eapply removeOptDecreasing. symmetry. eassumption.
 Qed.
 
-Definition closure
-           (g : grammar) (freeSyms : SymbolSet.t)
-           (sps : list subparser) : list subparser :=
+Definition closure (g : grammar) (freeSyms : SymbolSet.t)
+                   (sps : list subparser) : list subparser :=
   concat (map (spClosure g freeSyms) sps).
 
 (* LL predict when stack0 is nil, SLL predict otherwise *)
-Definition startState g x stack0 :=
+Definition startState (g : grammar) (x : string)
+                      (stack0 : list symbol) :
+                      list subparser :=
   let sps := map (fun gamma =>
                     mkSp (gamma ++ stack0) gamma)
                  (rhss g x)
   in  closure g (nonterminals g) sps.
 
-Definition target
-           (g : grammar) (sps : list subparser)
-           (token : string) : list subparser :=
+Definition target (g : grammar) (sps : list subparser)
+                  (token : string) : list subparser :=
   closure g (nonterminals g) (move token sps).
 
-Fixpoint conflict sps : bool :=
+Fixpoint conflict (sps : list subparser) : bool :=
   match sps with
   | nil => false
   | sp :: sps' => 
@@ -86,7 +85,8 @@ Inductive pred_result :=
 | Conflict : list subparser -> pred_result
 | Fail     : pred_result.  
 
-Fixpoint predict g sps input :=
+Fixpoint predict (g : grammar) (sps : list subparser)
+                 (input : list string) : pred_result :=
   let preds := map pred sps in
   match nub preds beqList with
   | nil => Fail
@@ -101,14 +101,30 @@ Fixpoint predict g sps input :=
            end
   end.
 
-Definition adaptivePredict g x input stack0 :=
-  let sllPred :=
-      predict g (startState g x nil) input
-  in  match sllPred with
-      | Conflict _ =>
-        predict g (startState g x stack0) input
-      | _ => sllPred
-      end.
+(* For now, the only difference between sllPredict and
+   llPredict is the "initial stack" argument that they pass to
+   startState. This will change when sllPredict starts using a 
+   cache. *)
+Definition sllPredict (g : grammar) (x : string)
+                      (input : list string) : pred_result :=
+  let state0 := startState g x nil in
+  predict g state0 input.
+
+Definition llPredict (g : grammar)  (x : string)
+                     (input : list string)
+                     (stack0 : list symbol) : pred_result :=
+  let state0 := startState g x stack0 in
+  predict g state0 input.
+
+Definition adaptivePredict (g : grammar) (x : string)
+                           (input : list string)
+                           (stack0 : list symbol) :
+                           pred_result :=
+  let sllPred := sllPredict g x input in
+  match sllPred with
+  | Conflict _ => llPredict g x input stack0
+  | _ => sllPred
+  end.
 
 (* Here's the beginning of another way to prove termination
    based on the length of a list *)
