@@ -37,6 +37,27 @@ Qed.
 Axiom silly_in_grammar : forall (g : grammar) x ys,
     In (x, ys) g.
 
+(* Here's the lemma we need to fill the only hole in the proof below. *)
+Lemma startState_in_grammar : forall g x stack0 sps sp ys,
+    startState g x stack0 = sps ->
+    In sp sps -> 
+    sp.(pred) = ys ->
+    In (NT x, ys) g.
+Proof.
+Abort.
+
+Lemma adaptivePredict_result_in_grammar :
+  forall g x input stack0 ys,
+    adaptivePredict g x input stack0 = Choice ys ->
+    In (NT x, ys) g.
+Proof.
+  intros. unfold adaptivePredict in H.
+  destruct (sllPredict g x input) eqn:Hsll.
+  - inv H. 
+    unfold sllPredict in Hsll. unfold startState in Hsll.
+    unfold rhss in Hsll. simpl.
+Abort.
+
 Theorem parse'_correct :
   forall (g      : grammar)
          (tr     : tree)
@@ -116,10 +137,7 @@ Proof.
           inv Hparse'. }
         { inv Hparse'. }
         inv Hparse'.
-Abort.
-
-(* stuff copied from the LL(1) correctness proof
-  - intros input gamma suffix fuel HparseForest.
+  - intros gamma input stack fuel suffix HparseForest.
     destruct fuel as [| fuel].
     + inv HparseForest.
     + destruct gamma as [| sym gamma'].
@@ -129,41 +147,56 @@ Abort.
         apply derivesFnil.
       * exfalso.
         simpl in HparseForest.
-        destruct (parse tbl sym input fuel)
+        destruct (parse' g sym input (gamma' ++ stack) fuel)
           as [subresult input'].
-        destruct subresult as [lSib |].
-        { destruct (parseForest tbl gamma' input' fuel)
-            as [subresult input''].
-          destruct subresult as [rSibs |].
-          { inv HparseForest. }
-          inv HparseForest. }
-        inv HparseForest.
-  - intros input gamma suffix fuel HparseForest.
+         destruct subresult as [lSib |].
+         { destruct (parseForest g gamma' input' stack fuel)
+             as [subresult input''].
+           destruct subresult as [rSibs |].
+           { inv HparseForest. }
+           inv HparseForest. }
+         inv HparseForest.
+  - intros gamma input stack fuel suffix HparseForest.
     destruct fuel as [| fuel].
     + inv HparseForest.
     + destruct gamma as [| sym gamma'].
       * inv HparseForest.
       * simpl in HparseForest.
-        destruct (parse tbl sym input fuel)
+        destruct (parse' g sym input (gamma' ++ stack) fuel)
           as [subresult input'] eqn:Htree.
         destruct subresult.
-        { destruct (parseForest tbl gamma' input' fuel)
+        { destruct (parseForest g gamma' input' stack fuel)
             as [subresult input''] eqn:Hforest.
           destruct subresult as [rSibs |].
           { inv HparseForest.
-            apply IHparse in Htree.
-            { destruct Htree as [treePrefix Htree].
-              destruct Htree as [HappTree HderivesTree].
-              apply IHparseForest in Hforest.
-              destruct Hforest as [forestPrefix Hforest].
-              destruct Hforest as [HappForest HderivesForest].
-              subst.
-              exists (treePrefix ++ forestPrefix)%list. split.
-              { rewrite app_assoc. reflexivity. }
-              apply derivesFcons.
-              { assumption. }
-              assumption. }}
+            apply IHparse in Htree. clear IHparse.
+            destruct Htree as [treePrefix Htree].
+            destruct Htree as [HappTree HderivesTree].
+            apply IHparseForest in Hforest. clear IHparseForest.
+            destruct Hforest as [forestPrefix Hforest].
+            destruct Hforest as [HappForest HderivesForest].
+            subst.
+            exists (treePrefix ++ forestPrefix)%list. split.
+            { rewrite app_assoc. reflexivity. }
+            apply derivesFcons.
+            { assumption. }
+            assumption. }
           inv HparseForest. }
         inv HparseForest.
-Defined.
-*)
+Qed.
+
+Theorem parse_correct :
+  forall (g      : grammar)
+         (tr     : tree)
+         (sym    : symbol)
+         (input  : list string)
+         (fuel   : nat)
+         (suffix : list string),
+    parse g sym input fuel = (Some tr, suffix) ->
+    exists (prefix : list string),
+      (prefix ++ suffix)%list = input /\
+      (@derivesTree g) sym prefix tr.
+Proof.
+  intros. eapply parse'_correct. eassumption.
+Qed.
+
