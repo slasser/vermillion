@@ -1,4 +1,4 @@
-Require Import Bool List Omega String Program.Wf.
+Require Import Bool FunctionalExtensionality List Omega String.
 Require Import Grammar Lib.Lemmas Lib.Tactics Lib.Utils.
 Import ListNotations.
 Open Scope string_scope.
@@ -7,10 +7,150 @@ Record subparser :=
   mkSp { stack: list symbol ;
          pred : list symbol }.
 
-(* Two subparsers are equal if their stacks and predictions are equal. *)
+(* Two subparsers are equal if their stacks 
+   and predictions are equal. *)
 Definition beqSp (sp sp2 : subparser) : bool :=
   beqList sp.(stack) sp2.(stack) &&
   beqList sp.(pred) sp2.(pred).
+
+Section spClosure.
+
+  Definition pairOrder (p1 p2 : SymbolSet.t * subparser) :=
+    match (p1, p2) with
+    | ((s1, _), (s2, _)) =>
+      SymbolSet.cardinal s1 < SymbolSet.cardinal s2
+    end.
+
+  Lemma pairOrder_wf' : forall card s2 sp2,
+      SymbolSet.cardinal s2 <= card ->
+      Acc pairOrder (s2, sp2).
+  Proof.
+    induction card as [| n]; intros; constructor;
+      intros pair1 Horder.
+    - destruct pair1 as (s1, sp1).
+      unfold pairOrder in Horder. omega.
+    - destruct pair1 as (s1, sp1).
+      apply IHn.
+      unfold pairOrder in Horder. omega.
+  Defined.
+
+  Lemma pairOrder_wf : well_founded pairOrder.
+  Proof.
+    red. intro pair.
+    destruct pair as [s sp].
+    apply pairOrder_wf' with (card := SymbolSet.cardinal s).
+    trivial.
+  Defined.
+
+(* Proving this arithmetic fact as a separate lemma 
+   might result in a smaller proof term -- I'm not sure. *)
+Lemma Sn_eq_n_lt : forall n m,
+    S n = m -> n < m.
+Proof.
+  intros. abstract omega.
+Qed.
+
+(* This fact appears in SymbolSetEqProps, but I'm proving
+   it again here and making the definition transparent. *)
+Lemma In_dec':
+  forall (x : SymbolSet.elt) (s : SymbolSet.t),
+    {SymbolSet.In x s} + {~ SymbolSet.In x s}.
+Proof.
+  intros. pose proof (SymbolSetFacts.mem_iff s x) as H_mem.
+  destruct (SymbolSet.mem x s).
+  - left. apply H_mem. trivial.
+  - right. unfold not; intros.
+    apply H_mem in H. inversion H.
+Defined.
+
+Lemma In_dec'':
+  forall (x : SymbolSet.elt) (s : SymbolSet.t),
+    {SymbolSet.In x s} + {~ SymbolSet.In x s}.
+Proof.
+  apply SymbolSetEqProps.MP.In_dec.
+Defined.
+
+Definition spClosure' (g : grammar) :
+      SymbolSet.t * subparser -> list subparser.
+      refine
+        (Fix
+           pairOrder_wf
+           (fun  _ => _)
+           (fun (pr : SymbolSet.t * subparser)
+                (spClosure' : forall pr',
+                    pairOrder pr' pr -> list subparser) =>
+              match (snd pr).(stack) with
+              | nil => [snd pr]
+              | T _ :: _ => [snd pr]
+              | NT x :: stack' =>
+                if (In_dec' (NT x) (fst pr)) then
+                  let newSps :=
+                      map (fun gamma =>
+                             {| stack := gamma ++ stack';
+                                pred  := (snd pr).(pred) |})
+                          (rhss g x)
+                  in  flat_map (fun sp =>
+                                  spClosure' ((SymbolSet.remove (NT x) (fst pr)), sp) _)
+                               newSps
+                else
+                  nil
+              end)).
+      (* We have one proof obligation: showing that the
+         "freeSyms" set is getting smaller *)
+      - unfold pairOrder. destruct pr as (freeSyms0, sp0).
+        simpl; simpl in i.
+        apply Sn_eq_n_lt.
+        apply (SymbolSetEqProps.remove_cardinal_1
+                 freeSyms0 (NT x)).
+        rewrite <- SymbolSet.mem_spec in i.
+        assumption.
+Defined.
+
+(* Lemma for unfolding spClosure' to get the expected body *)
+
+Lemma spClosure'Unfold : forall g pr,
+    spClosure' g pr =
+    match (snd pr).(stack) with
+              | nil => [snd pr]
+              | T _ :: _ => [snd pr]
+              | NT x :: stack' =>
+                if (In_dec' (NT x) (fst pr)) then
+                  let newSps :=
+                      map (fun gamma =>
+                             {| stack := gamma ++ stack';
+                                pred  := (snd pr).(pred) |})
+                          (rhss g x)
+                  in  flat_map (fun sp =>
+                                  spClosure' g ((SymbolSet.remove (NT x) (fst pr)), sp))
+                               newSps
+                else
+                  nil
+              end.
+Proof.
+  intros. unfold spClosure'. 
+  apply Fix_eq with (A := (SymbolSet.t * subparser)%type)
+                    (R := pairOrder)
+                    (Rwf := pairOrder_wf)
+                    (P := fun _ => list subparser).
+  intros. simpl.
+  destruct (stack (snd x)).
+  - reflexivity.
+  - destruct s as [tName | ntName].
+    + reflexivity.
+    + destruct (In_dec' (NT ntName) (fst x)).
+      * repeat f_equal.
+        apply functional_extensionality; intros.
+        repeat f_equal.
+        extensionality y. extensionality p.
+        apply H.
+      * reflexivity.
+Qed.
+
+(* Curried version of the function above *)
+Definition spClosure g freeSyms sp :=
+  spClosure' g (freeSyms, sp).
+
+End spClosure.
 
 Definition move (token : string) (sps : list subparser) :
                 list subparser :=
@@ -26,33 +166,9 @@ Definition move (token : string) (sps : list subparser) :
       end 
   in  concat (map moveSp sps).
 
-(* Advance a single subparser as far as possible without
-   consuming an input symbol *)
-Program Fixpoint spClosure
-        (g : grammar) (freeSyms : SymbolSet.t) (sp : subparser)
-        {measure (SymbolSet.cardinal freeSyms)}
-        : list subparser :=
-  match sp.(stack) with
-  | nil => [sp]
-  | T _ :: _ => [sp]
-  | NT x :: stack' => 
-    match removeOpt (NT x) freeSyms with
-    | None => nil (* recursion detected *)
-    | Some freeSyms' =>
-      let newSps :=
-          map (fun gamma => mkSp (gamma ++ stack') sp.(pred))
-              (rhss g x)
-      in  concat (map (fun sp => spClosure g freeSyms' sp)
-                      newSps)
-    end
-  end.
-Obligation 1.
-eapply removeOptDecreasing. symmetry. eassumption.
-Qed.
-
 Definition closure (g : grammar) (freeSyms : SymbolSet.t)
-                   (sps : list subparser) : list subparser :=
-  concat (map (spClosure g freeSyms) sps).
+           (sps : list subparser) : list subparser :=
+  flat_map (spClosure g freeSyms) sps.
 
 (* LL predict when stack0 is nil, SLL predict otherwise *)
 Definition startState (g : grammar) (x : string)
@@ -125,27 +241,3 @@ Definition adaptivePredict (g : grammar) (x : string)
   | Conflict _ => llPredict g x input stack0
   | _ => sllPred
   end.
-
-(* Here's the beginning of another way to prove termination
-   based on the length of a list *)
-Section lengthorder.
-  Variable A : Type.
-  
-  Definition lengthOrder (xs ys : list A) :=
-    List.length xs < List.length ys.
-  
-  Lemma lengthOrder_wf' : 
-    forall len ys, List.length ys <= len -> Acc lengthOrder ys.
-  Proof. 
-    induction len; intros ys H_length_ys; apply Acc_intro; intros xs H_xs_ys.
-    - unfold lengthOrder in H_xs_ys. omega.
-    - apply IHlen. unfold lengthOrder in H_xs_ys. omega.
-  Defined.
-  
-  Theorem lengthOrder_wf : well_founded lengthOrder.
-  Proof.
-    unfold well_founded. intro ys.
-    apply lengthOrder_wf' with (len := List.length ys). omega.
-  Defined.
-  
-End lengthorder.

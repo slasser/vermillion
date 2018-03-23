@@ -146,7 +146,7 @@ Proof.
   destruct (SymbolSet.mem x s) eqn:Hmem.
   - inv H.
     pose proof SymbolSetEqProps.remove_cardinal_1.
-    apply H in Hmem. omega.
+    apply H in Hmem. clear H. omega.
   - inv H.
 Qed.
 
