@@ -15,7 +15,7 @@ Definition beqSp (sp sp2 : subparser) : bool :=
 
 Section spClosure.
 
-  Definition pairOrder (p1 p2 : SymbolSet.t * subparser) :=
+  Definition pairOrder (p1 p2 : SymbolSet.t * list symbol) :=
     match (p1, p2) with
     | ((s1, _), (s2, _)) =>
       SymbolSet.cardinal s1 < SymbolSet.cardinal s2
@@ -70,6 +70,77 @@ Proof.
   apply SymbolSetEqProps.MP.In_dec.
 Defined.
 
+Definition gammaClosure (g : grammar) :
+  SymbolSet.t * list symbol -> list (list symbol).
+  refine
+    (Fix pairOrder_wf
+         (fun _ => _)
+         (fun (pr : SymbolSet.t * list symbol)
+              (gammaClosure : forall pr',
+                  pairOrder pr' pr -> list (list symbol)) =>
+            match snd pr with
+            | nil => [snd pr]
+            | T _ :: _ => [snd pr]
+            | NT x :: gamma' =>
+              if In_dec' (NT x) (fst pr) then
+                let newGammas :=
+                    map (fun rhs => app rhs gamma')
+                        (rhss g x)
+                in  flat_map
+                      (fun ng =>
+                         gammaClosure (SymbolSet.remove (NT x) (fst pr), ng) _)
+                      newGammas
+              else
+                nil
+            end)).
+  - unfold pairOrder.
+    destruct pr as (freeSyms0, gamma).
+    simpl; simpl in i.
+    apply Sn_eq_n_lt.
+    apply SymbolSetEqProps.remove_cardinal_1.
+    rewrite <- SymbolSet.mem_spec in i.
+    assumption.
+Defined.
+
+Lemma gammaClosureUnfold :
+  forall g pr,
+    gammaClosure g pr =
+    match snd pr with
+    | nil => [snd pr]
+    | T _ :: _ => [snd pr]
+    | NT x :: gamma' =>
+      if In_dec' (NT x) (fst pr) then
+        let newGammas :=
+            map (fun rhs => app rhs gamma')
+                (rhss g x)
+        in  flat_map
+              (fun ng =>
+                 gammaClosure g (SymbolSet.remove (NT x) (fst pr), ng))
+              newGammas
+      else
+        nil
+    end.
+Proof.
+  intros. unfold gammaClosure.
+  apply Fix_eq with (A := (SymbolSet.t * list symbol)%type)
+                    (R := pairOrder)
+                    (Rwf := pairOrder_wf)
+                    (P := fun _ => list (list symbol)).
+  intros; simpl.
+  destruct (snd x).
+  - reflexivity.
+  - destruct s as [tName | ntName].
+    + reflexivity.
+    + destruct (In_dec' (NT ntName) (fst x)).
+      * repeat f_equal.
+        apply functional_extensionality; intros.
+        repeat f_equal.
+        extensionality p; extensionality lt.
+        apply H.
+      * reflexivity.
+Qed.
+
+(*
 Definition spClosure' (g : grammar) :
       SymbolSet.t * subparser -> list subparser.
       refine
@@ -105,9 +176,11 @@ Definition spClosure' (g : grammar) :
         rewrite <- SymbolSet.mem_spec in i.
         assumption.
 Defined.
+ *)
 
 (* Lemma for unfolding spClosure' to get the expected body *)
 
+(*
 Lemma spClosure'Unfold : forall g pr,
     spClosure' g pr =
     match (snd pr).(stack) with
@@ -145,10 +218,11 @@ Proof.
         apply H.
       * reflexivity.
 Qed.
+*)
 
-(* Curried version of the function above *)
 Definition spClosure g freeSyms sp :=
-  spClosure' g (freeSyms, sp).
+  map (fun gamma => {| stack := gamma; pred := sp.(pred) |})
+      (gammaClosure g (freeSyms, sp.(stack))).
 
 End spClosure.
 
@@ -203,10 +277,10 @@ Inductive pred_result :=
 
 Fixpoint predict (g : grammar) (sps : list subparser)
                  (input : list string) : pred_result :=
-  let preds := map pred sps in
-  match nub preds beqList with
+  (*let preds := map pred sps in *)
+  match nub sps (fun sp sp2 => beqList sp.(pred) sp2.(pred)) with
   | nil => Fail
-  | [p] => Choice p
+  | [p] => Choice p.(pred)
   | _ => if conflict sps then
            Conflict sps
          else

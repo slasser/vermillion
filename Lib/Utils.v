@@ -87,8 +87,34 @@ Definition elem {A : Type} (x : A)
 Definition nub {A : Type} (xs : list A) (cmp : A -> A -> bool) : list A :=
   fold_right (fun x acc => if elem x acc cmp then acc else x :: acc) nil xs.
 
+Lemma beqSym_eq : forall x y,
+    beqSym x y = true <-> x = y.
+Proof.
+  intros; split; intros.
+  - unfold beqSym in H. destruct (SymbolMapFacts.eq_dec).
+    + subst; reflexivity.
+    + inversion H.
+  - unfold beqSym. destruct (SymbolMapFacts.eq_dec).
+    + reflexivity.
+    + exfalso. apply n. assumption.
+Qed.
+
 Definition rhss (g : grammar) (x : string) :=
   map snd (filter (fun prod => beqSym (fst prod) (NT x)) g).
+
+Lemma rhss_in_grammar : forall g x gammas gamma,
+    rhss g x = gammas ->
+    In gamma gammas ->
+    In (NT x, gamma) g.
+Proof.
+  intros. unfold rhss in H.
+  subst. rewrite in_map_iff in H0.
+  destruct H0 as [prod].
+  destruct prod as (l, r); simpl in H; destruct H.
+  rewrite filter_In in H0. destruct H0.
+  rewrite beqSym_eq in H1; simpl in H1.
+  subst. assumption.
+Qed.
 
 Definition removeOpt (x : symbol) (s : SymbolSet.t) :=
   if SymbolSet.mem x s then
