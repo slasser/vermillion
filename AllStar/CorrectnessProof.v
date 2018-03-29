@@ -364,7 +364,7 @@ Proof.
               eassumption. }
             eapply derivesFcons.
             { eassumption. }
-            eassumption. }
+            assumption. }
           inv Hparse'. }
         { inv Hparse'. }
         inv Hparse'.
