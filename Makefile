@@ -114,6 +114,7 @@ VFILES:=Lib/Derivation.v\
   LL1/ParseTable.v\
   LL1/ParseTableTests.v\
   LL1/CorrectnessProof.v\
+  LL1/CompletenessProof.v\
   AllStar/Parser.v\
   AllStar/ParserTests.v\
   AllStar/Subparser.v\

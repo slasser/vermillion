@@ -1,16 +1,16 @@
-Require Import List String.
-Require Import Derivation Grammar Lemmas ParseTable ParseTree LL1.Parser Lib.Tactics.
+Require Import List Omega String.
+Require Import Derivation Grammar Lemmas ParseTable
+        ParseTree LL1.Parser Lib.Tactics
+        LL1.CorrectnessProof.
 
-Conjecture pre_suf_nil : forall A (prefix suffix : list A),
-    (prefix ++ suffix)%list = suffix ->
-    prefix = nil.
-
-Lemma tree_forest_fuel :
+Lemma forest_fuel_tree_S_fuel :
   forall g tbl gamma input fuel suffix subtrees ntName,
-    isParseTableFor tbl g ->
-    In (NT ntName, gamma) g ->
-    parseForest tbl gamma input fuel = (Some subtrees, suffix) ->
-    parse tbl (NT ntName) input (S fuel) = (Some (Node ntName subtrees), suffix).
+    isParseTableFor tbl g
+    -> In (NT ntName, gamma) g
+    -> parseForest tbl gamma input fuel =
+       (Some subtrees, suffix)
+    -> parse tbl (NT ntName) input (S fuel) =
+       (Some (Node ntName subtrees), suffix).
 Proof.
   intros.
   destruct fuel as [| fuel].
@@ -27,19 +27,354 @@ Proof.
            problem for parse *)
 Abort.
       
-Conjecture forest_fuel_tree_fuel :
+Conjecture forest_fuel_tree_S_fuel :
   forall tbl gamma input fuel suffix subtrees ntName,
     parseForest tbl gamma input fuel =
-    (Some subtrees, suffix) ->
-    parse tbl (NT ntName) input (S fuel) =
-    (Some (Node ntName subtrees), suffix).
+    (Some subtrees, suffix)
+    -> parse tbl (NT ntName) input (S fuel) =
+       (Some (Node ntName subtrees), suffix).
 
-Conjecture hd_fuel_tl_fuel_forest_fuel :
-  forall tbl hdRoot tlRoots xs ys zs tr f fuel,
-    parse tbl hdRoot (app (app xs ys) zs) fuel =
-    (Some tr, app ys zs) ->
-    parseForest tbl tlRoots (app ys zs) fuel = (Some f, zs) ->
-    parseForest tbl (hdRoot :: tlRoots) (app (app xs ys) zs) fuel = (Some (Fcons tr f), zs).
+Lemma parse_fuel_monotonic :
+  forall tr tbl sym input suffix fuel fuel2,
+    parse tbl sym input fuel = (Some tr, suffix)
+    -> fuel < fuel2
+    -> parse tbl sym input fuel2 = (Some tr, suffix).
+Proof.
+  induction tr as [ s
+                  | s f IHparseForest
+                  |
+                  | tr IHparse f IHparseForest ]
+      using tree_mutual_ind with
+      (P := fun tr =>
+              forall tbl sym input suffix fuel fuel2,
+                parse tbl sym input fuel = (Some tr, suffix)
+                -> fuel < fuel2
+                -> parse tbl sym input fuel2 =
+                   (Some tr, suffix))
+      (P0 := fun subtrees =>
+               forall tbl gamma input suffix fuel fuel2,
+                 parseForest tbl gamma input fuel =
+                 (Some subtrees, suffix)
+                 -> fuel < fuel2
+                 -> parseForest tbl gamma input fuel2 =
+                    (Some subtrees, suffix)).
+  
+  - intros tbl sym input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct sym as [y | x].
+        { destruct input as [| token tokens].
+          { inv Hparse. }
+          { simpl; simpl in Hparse.
+            destruct (Utils.beqSym (T y) (T token)).
+            { inv Hparse. reflexivity. }
+            { inv Hparse. }}}
+        { apply nt_derives_Node in Hparse. inv Hparse. }
+
+  - intros tbl sym input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct sym as [y | x].
+        { apply t_derives_Leaf in Hparse. inv Hparse. }
+        { destruct input as [| token tokens].
+          { inv Hparse. }
+          { simpl; simpl in Hparse.
+            destruct (parseTableLookup (NT x) (T token) tbl)
+              as [gamma |].
+            { destruct (parseForest tbl
+                                    gamma
+                                    (token :: tokens)
+                                    fuel)
+                as (subresult, input') eqn:HpfFuel.
+              destruct subresult as [subtrees |].
+              { destruct (parseForest tbl
+                                      gamma
+                                      (token :: tokens)
+                                      fuel2)
+                  as (subresult, input'') eqn:HpfFuel2.
+                destruct subresult as [subtrees' |].
+                { inv Hparse.
+                  apply IHparseForest with (fuel2 := fuel2)
+                    in HpfFuel.
+                  { rewrite HpfFuel in HpfFuel2.
+                    inv HpfFuel2.
+                    reflexivity. }
+                  { omega. }}
+                { inv Hparse.
+                  apply IHparseForest with (fuel2 := fuel2)
+                    in HpfFuel.
+                  { rewrite HpfFuel in HpfFuel2.
+                    inv HpfFuel2. }
+                  { omega. }}}
+              { inv Hparse. }}
+            { inv Hparse. }}}
+
+  - intros tbl gamma input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct gamma as [| sym syms].
+        { simpl. inv Hparse. reflexivity. }
+        (* Maybe prove in a separate lemma that 
+           a non-empty gamma never derives Fnil *)
+        { simpl in Hparse.
+          destruct (parse tbl sym input fuel)
+            as (subresult, input').
+          destruct subresult as [lSib |].
+          { destruct (parseForest tbl syms input' fuel)
+              as (subresult, input'').
+            destruct subresult as [rSibs |].
+            { inv Hparse. }
+            { inv Hparse. }}
+          { inv Hparse. }}
+
+  - intros tbl gamma input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct gamma as [| sym syms].
+        { inv Hparse. }
+        { simpl; simpl in Hparse.
+          destruct (parse tbl sym input fuel)
+            as (subresult, input') eqn:HparseFuel.
+          { destruct subresult as [lSib |].
+            { destruct (parseForest tbl syms input' fuel)
+                as (subresult, input'') eqn:HparseForestFuel.
+              destruct subresult as [rSibs |].
+              { destruct (parse tbl sym input fuel2)
+                  as (subresult, input2') eqn:HparseFuel2.
+                { destruct subresult as [lSib2 |].
+                  { destruct (parseForest tbl syms input2' fuel2) as (subresult, input2'') eqn:HparseForestFuel2.
+                    destruct subresult as [rSibs2 |].
+                    { inv Hparse.
+                      apply IHparse with (fuel2 := fuel2)
+                        in HparseFuel.
+                      { rewrite HparseFuel in HparseFuel2.
+                        inv HparseFuel2.
+                        apply IHparseForest
+                          with (fuel2 := fuel2)
+                          in HparseForestFuel.
+                        { rewrite HparseForestFuel in HparseForestFuel2.
+                          inv HparseForestFuel2.
+                          reflexivity. }
+                        { omega. }}
+                      { omega. }}
+                    { inv Hparse.
+                      apply IHparse
+                        with (fuel2 := fuel2)
+                        in HparseFuel.
+                      { rewrite HparseFuel in HparseFuel2.
+                        inv HparseFuel2.
+                        apply IHparseForest
+                          with (fuel2 := fuel2)
+                        in HparseForestFuel.
+                        { rewrite HparseForestFuel
+                          in HparseForestFuel2.
+                          inv HparseForestFuel2. }
+                        { omega. }}
+                      { omega. }}}
+                  { inv Hparse.
+                    apply IHparse
+                      with (fuel2 := fuel2)
+                      in HparseFuel.
+                    { rewrite HparseFuel in HparseFuel2.
+                      inv HparseFuel2. }
+                    { omega. }}}}
+              { inv Hparse. }}
+            { inv Hparse. }}}
+Qed.
+
+Lemma parseForest_fuel_monotonic :
+  forall sts tbl gamma input suffix fuel fuel2,
+    parseForest tbl gamma input fuel = (Some sts, suffix)
+    -> fuel < fuel2
+    -> parseForest tbl gamma input fuel2 = (Some sts, suffix).
+Proof.
+  induction sts as [ s
+                   | s f IHparseForest
+                   |
+                   | tr IHparse f IHparseForest ]
+      using forest_mutual_ind with
+      (P := fun tr =>
+              forall tbl sym input suffix fuel fuel2,
+                parse tbl sym input fuel = (Some tr, suffix)
+                -> fuel < fuel2
+                -> parse tbl sym input fuel2 =
+                   (Some tr, suffix))
+      (P0 := fun subtrees =>
+               forall tbl gamma input suffix fuel fuel2,
+                 parseForest tbl gamma input fuel =
+                 (Some subtrees, suffix)
+                 -> fuel < fuel2
+                 -> parseForest tbl gamma input fuel2 =
+                    (Some subtrees, suffix)).
+  
+  - intros tbl sym input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct sym as [y | x].
+        { destruct input as [| token tokens].
+          { inv Hparse. }
+          { simpl; simpl in Hparse.
+            destruct (Utils.beqSym (T y) (T token)).
+            { inv Hparse. reflexivity. }
+            { inv Hparse. }}}
+        { apply nt_derives_Node in Hparse. inv Hparse. }
+
+  - intros tbl sym input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct sym as [y | x].
+        { apply t_derives_Leaf in Hparse. inv Hparse. }
+        { destruct input as [| token tokens].
+          { inv Hparse. }
+          { simpl; simpl in Hparse.
+            destruct (parseTableLookup (NT x) (T token) tbl)
+              as [gamma |].
+            { destruct (parseForest tbl
+                                    gamma
+                                    (token :: tokens)
+                                    fuel)
+                as (subresult, input') eqn:HpfFuel.
+              destruct subresult as [subtrees |].
+              { destruct (parseForest tbl
+                                      gamma
+                                      (token :: tokens)
+                                      fuel2)
+                  as (subresult, input'') eqn:HpfFuel2.
+                destruct subresult as [subtrees' |].
+                { inv Hparse.
+                  apply IHparseForest with (fuel2 := fuel2)
+                    in HpfFuel.
+                  { rewrite HpfFuel in HpfFuel2.
+                    inv HpfFuel2.
+                    reflexivity. }
+                  { omega. }}
+                { inv Hparse.
+                  apply IHparseForest with (fuel2 := fuel2)
+                    in HpfFuel.
+                  { rewrite HpfFuel in HpfFuel2.
+                    inv HpfFuel2. }
+                  { omega. }}}
+              { inv Hparse. }}
+            { inv Hparse. }}}
+
+  - intros tbl gamma input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct gamma as [| sym syms].
+        { simpl. inv Hparse. reflexivity. }
+        (* Maybe prove in a separate lemma that 
+           a non-empty gamma never derives Fnil *)
+        { simpl in Hparse.
+          destruct (parse tbl sym input fuel)
+            as (subresult, input').
+          destruct subresult as [lSib |].
+          { destruct (parseForest tbl syms input' fuel)
+              as (subresult, input'').
+            destruct subresult as [rSibs |].
+            { inv Hparse. }
+            { inv Hparse. }}
+          { inv Hparse. }}
+
+  - intros tbl gamma input suffix fuel fuel2 Hparse Hfuel.
+    destruct fuel.
+    + inv Hparse.
+    + destruct fuel2.
+      * inv Hfuel.
+      * destruct gamma as [| sym syms].
+        { inv Hparse. }
+        { simpl; simpl in Hparse.
+          destruct (parse tbl sym input fuel)
+            as (subresult, input') eqn:HparseFuel.
+          { destruct subresult as [lSib |].
+            { destruct (parseForest tbl syms input' fuel)
+                as (subresult, input'') eqn:HparseForestFuel.
+              destruct subresult as [rSibs |].
+              { destruct (parse tbl sym input fuel2)
+                  as (subresult, input2') eqn:HparseFuel2.
+                { destruct subresult as [lSib2 |].
+                  { destruct (parseForest tbl syms input2' fuel2) as (subresult, input2'') eqn:HparseForestFuel2.
+                    destruct subresult as [rSibs2 |].
+                    { inv Hparse.
+                      apply IHparse with (fuel2 := fuel2)
+                        in HparseFuel.
+                      { rewrite HparseFuel in HparseFuel2.
+                        inv HparseFuel2.
+                        apply IHparseForest
+                          with (fuel2 := fuel2)
+                          in HparseForestFuel.
+                        { rewrite HparseForestFuel in HparseForestFuel2.
+                          inv HparseForestFuel2.
+                          reflexivity. }
+                        { omega. }}
+                      { omega. }}
+                    { inv Hparse.
+                      apply IHparse
+                        with (fuel2 := fuel2)
+                        in HparseFuel.
+                      { rewrite HparseFuel in HparseFuel2.
+                        inv HparseFuel2.
+                        apply IHparseForest
+                          with (fuel2 := fuel2)
+                        in HparseForestFuel.
+                        { rewrite HparseForestFuel
+                          in HparseForestFuel2.
+                          inv HparseForestFuel2. }
+                        { omega. }}
+                      { omega. }}}
+                  { inv Hparse.
+                    apply IHparse
+                      with (fuel2 := fuel2)
+                      in HparseFuel.
+                    { rewrite HparseFuel in HparseFuel2.
+                      inv HparseFuel2. }
+                    { omega. }}}}
+              { inv Hparse. }}
+            { inv Hparse. }}}
+Qed. (* Hmm...same proof as the one for parse! *)
+
+Lemma parse_fuel_max :
+  forall fuel tbl sym input fuel2 tr suffix,
+    parse tbl sym input fuel = (Some tr, suffix) ->
+    parse tbl sym input (max fuel fuel2) = (Some tr, suffix).
+Proof.
+  intros. 
+  pose proof (Max.max_spec fuel fuel2) as H_max_spec.
+  destruct H_max_spec.
+  - destruct H0. rewrite H1.
+    eapply parse_fuel_monotonic.
+    + eassumption.
+    + assumption.
+  - destruct H0. rewrite H1. assumption.
+Qed.
+
+Lemma parseForest_fuel_max :
+  forall tbl gamma input fuel fuel2 sts suffix,
+    parseForest tbl gamma input fuel = (Some sts, suffix)
+    -> parseForest tbl gamma input (max fuel fuel2) =
+       (Some sts, suffix).
+Proof.
+  intros. pose proof (Max.max_spec fuel fuel2) as H_max_spec.
+  destruct H_max_spec.
+  - destruct H0. rewrite H1.
+    eapply parseForest_fuel_monotonic.
+    + eassumption.
+    + assumption.
+  - destruct H0. rewrite H1. assumption.
+Qed.
 
 Theorem parse_complete :
   forall (g   : grammar)
@@ -91,7 +426,7 @@ Proof.
       in H4; clear IHparseForest.
     + destruct H4 as [fuel].
       exists (S fuel).
-      eapply forest_fuel_tree_fuel. eassumption.
+      eapply forest_fuel_tree_S_fuel. eassumption.
     + reflexivity.
       
   - intros input gamma prefix suffix Hinput HderivesForest.
@@ -109,10 +444,28 @@ Proof.
       (input := (suffix0 ++ suffix)%list)
           (suffix := suffix) in H4; clear IHparseForest.
       * destruct H4 as [tlFuel].
-        exists (S (hdFuel + tlFuel)).
+        apply parse_fuel_max with (fuel2 := tlFuel) in H.
+        apply parseForest_fuel_max
+          with (fuel2 := hdFuel) (fuel := tlFuel) in H0.
+        rewrite Max.max_comm in H0.
+        exists (S (Nat.max hdFuel tlFuel)).
         simpl.
-        (* Here, we can prove a lemma saying that if 
-           hdFuel is enough to produce the left sibling, 
-           then so is (hdFuel + tlFuel), and then do the
-           same thing for tlFuel *)
-Abort.
+        destruct (parse tbl
+                        hdRoot
+                        ((prefix0 ++ suffix0) ++ suffix)
+                        (Nat.max hdFuel tlFuel))
+          as (subresult, input') eqn:H_hd.
+        destruct subresult as [lSib |].
+        { destruct (parseForest tbl
+                                tlRoots
+                                input'
+                                (Nat.max hdFuel tlFuel))
+            as (subresult, input'') eqn:H_tl.
+          destruct subresult as [rSibs |].
+          { inv H. rewrite H0 in H_tl.
+            inv H_tl. reflexivity. }
+          { inv H. rewrite H0 in H_tl. inv H_tl. }}
+        { inv H. }
+      * reflexivity.
+    + rewrite <- app_assoc. reflexivity.
+Qed.
