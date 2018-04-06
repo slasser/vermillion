@@ -1,36 +1,60 @@
-Require Import List String.
-Require Import Grammar Utils.
+Require Import List MSets String.
+Require Import FMaps Grammar Lib.Utils.
 Import ListNotations.
 
+Inductive lookahead :=
+| LA  : string -> lookahead
+| EOF : lookahead.
+
+(* sets and maps for lookahead tokens *)
+
+Definition lookahead_eq_dec :
+  forall (lk lk2 : lookahead),
+    {lk = lk2} + {~lk = lk2}.
+Proof. repeat decide equality. Defined.
+  
+Module MDT_Lookahead.
+  Definition t := lookahead.
+  Definition eq_dec := lookahead_eq_dec.
+End MDT_Lookahead.
+
+Module LookaheadAsDT := Make_UDT(MDT_Lookahead).
+Module LookaheadSet := MSetWeakList.Make LookaheadAsDT.
+Module LookaheadSetFacts := WFactsOn LookaheadAsDT LookaheadSet.
+Module LookaheadSetEqProps := EqProperties LookaheadSet.
+
+Module LookaheadMap := FMapWeakList.Make LookaheadAsDT.
+Module LookaheadMapFacts := WFacts_fun LookaheadAsDT LookaheadMap.
+
 Definition parse_table :=
-  SymbolMap.t (SymbolMap.t (list symbol)).
+  StringMap.t (LookaheadMap.t (list symbol)).
 
 Definition parseTableLookup
-           (x : symbol)
-           (y : symbol)
+           (x : string)
+           (y : lookahead)
            (tbl : parse_table) : option (list symbol) :=
-  match SymbolMap.find x tbl with
+  match StringMap.find x tbl with
   | None      => None
-  | Some tMap => SymbolMap.find y tMap
+  | Some tMap => LookaheadMap.find y tMap
   end.
     
 (* Definition of the NULLABLE set for a given grammar *)
 
 (* This can be simplified a little *)
-Inductive nullableSym {g : grammar} : symbol -> Prop :=
+Inductive nullableSym {g : grammar} : nonterminal -> Prop :=
 | nullable_nt :
     forall x gamma,
-      nullableProd (NT x) gamma ->
-      nullableSym (NT x)
-with nullableProd {g : grammar} : symbol -> list symbol -> Prop :=
+      nullableProd x gamma ->
+      nullableSym x
+with nullableProd {g : grammar} : nonterminal -> list symbol -> Prop :=
      | nprod :
          forall x ys,
-           In (NT x, ys) g ->
+           In (x, ys) g.(productions) ->
            (forall sym,
                In sym ys ->
                sym <> NT x) ->
            nullableGamma ys ->
-           nullableProd (NT x) ys
+           nullableProd x ys
 with nullableGamma {g : grammar} : list symbol -> Prop :=
      | nullable_nil :
          nullableGamma nil
@@ -38,19 +62,19 @@ with nullableGamma {g : grammar} : list symbol -> Prop :=
          forall hd tl,
            nullableSym hd ->
            nullableGamma tl ->
-           nullableGamma (hd :: tl).
+           nullableGamma (NT hd :: tl).
 
-Definition nullableSetComplete (nu : SymbolSet.t)
+Definition nullableSetComplete (nu : StringSet.t)
                                (g : grammar) : Prop :=
   forall x,
-    (@nullableSym g) (NT x) ->
-    SymbolSet.In (NT x) nu.
+    (@nullableSym g) x ->
+    StringSet.In x nu.
 
-Definition nullableSetMinimal (nu : SymbolSet.t)
+Definition nullableSetMinimal (nu : StringSet.t)
                               (g  : grammar) : Prop :=
   forall x,
-    SymbolSet.In (NT x) nu ->
-    (@nullableSym g) (NT x).
+    StringSet.In x nu ->
+    (@nullableSym g) x.
 
 Definition isNullableSetFor nu g : Prop :=
   nullableSetComplete nu g /\ nullableSetMinimal nu g.
@@ -60,54 +84,51 @@ Definition isNullableSetFor nu g : Prop :=
 
 
 Inductive firstSym {g : grammar} :
-  symbol -> symbol -> Prop :=
+  terminal -> symbol -> Prop :=
 | first_t : forall y,
-    isT y = true ->
-    firstSym y y
+    firstSym y (T y)
 | first_nt : forall x y ys,
-    isNT x = true -> (* needed? *)
     firstProd y x ys ->
-    firstSym y x
+    firstSym y (NT x)
 with firstProd {g : grammar} :
-       symbol -> symbol -> list symbol -> Prop :=
+       terminal -> nonterminal -> list symbol -> Prop :=
      | fprod : forall y x ys,
-         In (x, ys) g ->
+         In (x, ys) g.(productions) ->
          firstProd' y x ys ->
          firstProd y x ys
 with firstProd' {g : grammar} :
-       symbol -> symbol -> list symbol -> Prop :=
+       terminal -> nonterminal -> list symbol -> Prop :=
      | fprod_hd : forall y x hd tl,
-         x <> hd ->
+         NT x <> hd ->
          firstSym y hd ->
          firstProd' y x (hd :: tl)
      | fprod_tl : forall y x hd tl,
          (@nullableSym g) hd ->
          firstProd' y x tl ->
-         firstProd' y x (hd :: tl).
+         firstProd' y x (NT hd :: tl).
 
 Inductive firstGamma {g : grammar} :
-  symbol -> list symbol -> Prop :=
+  terminal -> list symbol -> Prop :=
 | fgamma_hd : forall y hd tl,
     (@firstSym g) y hd ->
     firstGamma y (hd :: tl)
 | fgamma_tl : forall y hd tl,
     (@nullableSym g) hd ->
     firstGamma y tl ->
-    firstGamma y (hd :: tl).
+    firstGamma y (NT hd :: tl).
 
 Definition firstSetComplete fi g : Prop :=
   forall x y,
-    isNT x = true ->
-    (@firstSym g) y x ->
+    (@firstSym g) y (NT x) ->
     exists xFirst,
-      SymbolMap.find x fi = Some xFirst /\
-      SymbolSet.In y xFirst.
+      StringMap.find x fi = Some xFirst /\
+      StringSet.In y xFirst.
 
 Definition firstSetMinimal fi g : Prop :=
   forall x xFirst y,
-    SymbolMap.find x fi = Some xFirst ->
-    SymbolSet.In y xFirst ->
-    (@firstSym g) y x.
+    StringMap.find x fi = Some xFirst ->
+    StringSet.In y xFirst ->
+    (@firstSym g) y (NT x).
 
 Definition isFirstSetFor fi g : Prop :=
   firstSetComplete fi g /\ firstSetMinimal fi g.
@@ -116,17 +137,15 @@ Definition isFirstSetFor fi g : Prop :=
 (* Definition of the FOLLOW set for a given grammar *)
 
 
-Inductive followSym {g : grammar} : symbol -> symbol -> Prop :=
+Inductive followSym {g : grammar} : terminal -> nonterminal -> Prop :=
 | followRight :
     forall lx rx prefix suffix y,
-      In (lx, (prefix ++ rx :: suffix)%list) g ->
-      isNT rx = true ->
+      In (lx, (prefix ++ NT rx :: suffix)%list) g.(productions) ->
       (@firstGamma g) y suffix -> 
       followSym y rx
 | followLeft :
     forall lx rx prefix suffix y,
-      In (lx, (prefix ++ rx :: suffix)%list) g ->
-      isNT rx = true ->
+      In (lx, (prefix ++ NT rx :: suffix)%list) g.(productions) ->
       lx <> rx -> (* Necessary? *)
       (@nullableGamma g) suffix ->
       followSym y lx ->
@@ -136,13 +155,13 @@ Definition followSetComplete fo g : Prop :=
   forall x y,
     (@followSym g) y x ->
     exists xFollow,
-      SymbolMap.find x fo = Some xFollow /\
-      SymbolSet.In y xFollow.
+      StringMap.find x fo = Some xFollow /\
+      StringSet.In y xFollow.
 
 Definition followSetMinimal fo g : Prop :=
   forall x xFollow y,
-    SymbolMap.find x fo = Some xFollow ->
-    SymbolSet.In y xFollow ->
+    StringMap.find x fo = Some xFollow ->
+    StringSet.In y xFollow ->
     (@followSym g) y x.
 
 Definition isFollowSetFor fo g : Prop :=
@@ -154,31 +173,31 @@ Definition isFollowSetFor fo g : Prop :=
 
 Definition ptCompleteFirst tbl g : Prop :=
   forall x gamma y,
-    In (x, gamma) g ->
+    In (x, gamma) g.(productions) ->
     (@firstGamma g) y gamma ->
     exists tMap,
-      SymbolMap.find x tbl = Some tMap  /\
-      SymbolMap.find y tMap = Some gamma.
+      StringMap.find x tbl = Some tMap  /\
+      StringMap.find y tMap = Some gamma. 
+(* inner map should actually contain lookahead tokens *)
 
 Definition ptCompleteFollow tbl g : Prop :=
   forall x gamma y,
-    In (x, gamma) g ->
+    In (x, gamma) g.(productions) ->
     (@nullableGamma g) gamma ->
     (@followSym g) y x ->
     exists tMap,
-      SymbolMap.find x tbl  = Some tMap /\
-      SymbolMap.find y tMap = Some gamma.
+      StringMap.find x tbl  = Some tMap /\
+      StringMap.find y tMap = Some gamma.
 
 Definition parseTableComplete tbl g : Prop :=
   ptCompleteFirst tbl g /\ ptCompleteFollow tbl g.
 
 Definition parseTableMinimal tbl g : Prop :=
   forall x tMap y gamma,
-    SymbolMap.find x tbl = Some tMap ->
-    SymbolMap.find y tMap = Some gamma ->
+    StringMap.find x tbl = Some tMap ->
+    StringMap.find y tMap = Some gamma ->
     (@firstProd g) y x gamma \/
     (@nullableProd g) x gamma /\ (@followSym g) y x.
 
 Definition isParseTableFor tbl g : Prop :=
   parseTableComplete tbl g /\ parseTableMinimal tbl g.
-

@@ -1,56 +1,58 @@
 Require Import List String.
-Require Import Grammar ParseTree.
+Require Import Grammar ParseTable ParseTree.
 Import ListNotations.
 Open Scope string_scope.
 
 (* Grammar 3.11 from "Modern Compiler Implementation in ML" *)
 Definition g311 : grammar :=
-  [(NT "S", [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"]);
-   (NT "S", [T "begin"; NT "S"; NT "L"]);
-   (NT "S", [T "print"; NT "E"]);
-  
-   (NT "L", [T "end"]);
-   (NT "L", [T ";"; NT "S"; NT "L"]);
-   
-   (NT "E", [T "num"; T "=="; T "num"])].
-
+{| productions :=
+     [("S", [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"]);
+      ("S", [T "begin"; NT "S"; NT "L"]);
+      ("S", [T "print"; NT "E"]);
+        
+      ("L", [T "end"]);
+      ("L", [T ";"; NT "S"; NT "L"]);
+        
+      ("E", [T "num"; T "=="; T "num"])];
+   start := "S" |}.
+     
 (* Grammar 3.11 parse table definitions *)
 
 Definition S_map :=
-  SymbolMap.add
-    (T "if")
+  LookaheadMap.add
+    (LA "if")
     [T "if"; NT "E"; T "then"; NT "S"; T "else"; NT "S"]
-    (SymbolMap.add
-       (T "begin")
+    (LookaheadMap.add
+       (LA "begin")
        [T "begin"; NT "S"; NT "L"]
-       (SymbolMap.add
-          (T "print")
+       (LookaheadMap.add
+          (LA "print")
           [T "print"; NT "E"]
-          (SymbolMap.empty (list symbol)))).
+          (LookaheadMap.empty (list symbol)))).
 
 Definition L_map :=
-  SymbolMap.add
-    (T "end")
+  LookaheadMap.add
+    (LA "end")
     [T "end"]
-    (SymbolMap.add
-       (T ";")
+    (LookaheadMap.add
+       (LA ";")
        [T ";"; NT "S"; NT "L"]
-       (SymbolMap.empty (list symbol))).
+       (LookaheadMap.empty (list symbol))).
 
 Definition E_map :=
-  SymbolMap.add
-    (T "num")
+  LookaheadMap.add
+    (LA "num")
     [T "num"; T "=="; T "num"]
-    (SymbolMap.empty (list symbol)).
+    (LookaheadMap.empty (list symbol)).
 
 Definition g311ParseTable :=
-  SymbolMap.add
-    (NT "S") S_map
-    (SymbolMap.add
-       (NT "L") L_map
-       (SymbolMap.add
-          (NT "E") E_map
-          (SymbolMap.empty (SymbolMap.t (list symbol))))).
+  StringMap.add
+    "S" S_map
+    (StringMap.add
+       "L" L_map
+       (StringMap.add
+          "E" E_map
+          (StringMap.empty (LookaheadMap.t (list symbol))))).
 
 (* For testing purposes, a valid sentence in L(g311) 
    and its derivation tree *)
@@ -86,10 +88,11 @@ Definition g311ParseTree1 :=
 (* Grammar 3.12 from the same textbook *)
 
 Definition g312 : grammar :=
-  [(NT "Z", [T "d"]); 
-   (NT "Z", [NT "X"; NT "Y"; NT "Z"]);
-   (NT "Y", []);
-   (NT "Y", [T "c"]);
-   (NT "X", [NT "Y"]);
-   (NT "X", [T "a"])].
-
+  {| productions :=
+       [("Z", [T "d"]); 
+        ("Z", [NT "X"; NT "Y"; NT "Z"]);
+        ("Y", []);
+        ("Y", [T "c"]);
+        ("X", [NT "Y"]);
+        ("X", [T "a"])];
+     start := "Z" |}.

@@ -12,7 +12,7 @@ Inductive derivesTree {g : grammar} :
            (gamma : list symbol) 
            (tokens : list string) 
            (subtrees : forest),
-      In (NT x, gamma) g ->
+      In (x, gamma) g.(productions) ->
       derivesForest gamma tokens subtrees ->
       derivesTree (NT x) tokens (Node x subtrees)
 with derivesForest {g : grammar} : 
@@ -29,4 +29,3 @@ with derivesForest {g : grammar} :
          derivesForest (hdRoot :: tlRoots) 
                        (prefix ++ suffix) 
                        (Fcons hdTree tlTrees).
-

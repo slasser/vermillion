@@ -3,6 +3,7 @@ Require Import Grammar ParseTable ParseTree Utils.
 Import ListNotations.
 Open Scope string_scope.
 
+(*
 Definition mkNullableSet g fuel :=
   let updateNu (prod : production) nSet :=
       let (x, ys) := prod in
@@ -98,6 +99,13 @@ Definition mkParseTable g fuel :=
           in  SymbolSet.fold (addEntry (x, ys) x) ts tbl
       end
   in  fold_right addProd (SymbolMap.empty (SymbolMap.t (list production))) g.
+*)
+
+Definition peek input :=
+  match input with
+  | nil => EOF
+  | token :: _ => LA token
+  end.
 
 Fixpoint parse (tbl : parse_table)
                (sym : symbol)
@@ -107,14 +115,14 @@ Fixpoint parse (tbl : parse_table)
   | O => (None, input)
   | S n => 
     match (sym, input) with
-    | (_, nil) => (None, input)
+    | (T y, nil) => (None, input)
     | (T y, token :: input') =>
-      match beqSym (T y) (T token) with
+      match beqString y token with
       | false => (None, input)
       | true => (Some (Leaf y), input')
       end
-    | (NT x, token :: _) =>
-      match parseTableLookup sym (T token) tbl with
+    | (NT x, _) =>
+      match parseTableLookup x (peek input) tbl with
       | None => (None, input)
       | Some gamma =>
         match parseForest tbl gamma input n with
@@ -147,4 +155,3 @@ with parseForest (tbl : parse_table)
            end
          end
        end.
-

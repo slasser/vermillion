@@ -19,4 +19,3 @@ Definition isLeaf (tr : tree) : bool :=
 
 Scheme tree_mutual_ind := Induction for tree Sort Prop
   with forest_mutual_ind := Induction for forest Sort Prop.
-

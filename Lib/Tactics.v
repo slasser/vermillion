@@ -97,13 +97,13 @@ Ltac crush :=
          | H : pair (NT _) _ = pair _  _ |- _ =>
            inv H
 
-         | H : firstSym ?NT ?T |- SymbolSet.In ?T _ =>
+         | H : firstSym ?NT ?T |- StringSet.In ?T _ =>
            inv H
 
-         | H : SymbolMap.Raw.PX.MapsTo _ _ _ |- _ =>
+         | H : StringMap.Raw.PX.MapsTo _ _ _ |- _ =>
            inv H
 
-         | H : SymbolMap.Raw.PX.eqke _ _ |- _ =>
+         | H : StringMap.Raw.PX.eqke _ _ |- _ =>
            inv H
 
          | H : fst _ = fst _ |- _ =>
@@ -112,28 +112,28 @@ Ltac crush :=
          | H : snd _ = snd _ |- _ =>
            simpl in H; subst
 
-         | H : SymbolMap.find (NT (String _ _)) _ = Some _
+         | H : StringMap.find (NT (String _ _)) _ = Some _
            |- _ => inv H
 
-         | H : SymbolMap.find (T (String _ _)) _ = Some _
+         | H : StringMap.find (T (String _ _)) _ = Some _
            |- _ => inv H
 
          | H : firstGamma ?y (_::_) |-
-           SymbolMap.find ?y _ = Some _ =>
+           StringMap.find ?y _ = Some _ =>
            inv H
 
          | H : firstGamma ?y (_::_) |-
-           SymbolSet.In ?y _  =>
+           StringSet.In ?y _  =>
            inv H
 
          | H : In (_, _) _ |- _ =>
            inv H
 
-         | H : SymbolSet.In _ _ |- _ => inv H
+         | H : StringSet.In _ _ |- _ => inv H
 
          | H : InA _ _ (_::_) |- _ => inv H
 
-         | H : _ = SymbolSet.this _ |- _ => inv H
+         | H : _ = StringSet.this _ |- _ => inv H
 (*
          | H : firstProd _ (NT (String _ _)) (_ :: _) |- _ =>
            inv H
@@ -165,33 +165,33 @@ Ltac crush :=
          | H : nullableGamma (_::_) |- _ =>
            inv H
 
-         | H : followSym ?y (NT _) |- SymbolSet.In ?y _ =>
+         | H : followSym ?y (NT _) |- StringSet.In ?y _ =>
            inv H
                
          (* lists, maps, and sets *)
                   
-         | |- SymbolMap.find _ _ = Some _ =>
-           unfold SymbolMap.find; reflexivity
+         | |- StringMap.find _ _ = Some _ =>
+           unfold StringMap.find; reflexivity
                                     
          | |- In _ _ =>
            repeat (try (left; reflexivity); right)
 
-         | |- SymbolSet.In (T (String _ _)) _ =>
+         | |- StringSet.In (T (String _ _)) _ =>
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
 
-         | |- SymbolSet.In (NT (String _ _)) _ =>
+         | |- StringSet.In (NT (String _ _)) _ =>
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
 
          (* simplifying goals *)
                   
-         | |- SymbolMap.find _ _ = Some _  /\
-              SymbolSet.In _ _ =>
+         | |- StringMap.find _ _ = Some _  /\
+              StringSet.In _ _ =>
            split
 
-         | |- SymbolMap.find _ _ = Some _  /\
-              SymbolMap.find _ _ = Some _ =>
+         | |- StringMap.find _ _ = Some _  /\
+              StringMap.find _ _ = Some _ =>
            split
 
          | |- nullableProd (NT _) _ =>

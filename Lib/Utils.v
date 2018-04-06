@@ -18,15 +18,15 @@ Definition isT sym :=
 Definition nullable nSet sym :=
   match sym with
   | T _  => false
-  | NT _ => SymbolSet.mem sym nSet
+  | NT x => StringSet.mem x nSet
   end.
 
 Definition first fi sym :=
   match sym with
-  | T _  => SymbolSet.singleton sym
-  | NT _ => match SymbolMap.find sym fi with
+  | T y  => StringSet.singleton y
+  | NT x => match StringMap.find x fi with
             | Some se => se
-            | None    => SymbolSet.empty
+            | None    => StringSet.empty
             end
   end.
 
@@ -41,12 +41,12 @@ Definition fixp {A} update (cmp : A -> A -> bool) x0 fuel :=
   in iter x0 fuel.
 
 Definition getOrEmpty k m :=
-  match SymbolMap.find k m with
+  match StringMap.find k m with
   | Some v => v
-  | None   => SymbolSet.empty
+  | None   => StringSet.empty
   end.
 
-Definition beqSym sy sy2 := if SymbolAsDT.eq_dec sy sy2 then true else false.
+Definition beqString sy sy2 := if StringAsDT.eq_dec sy sy2 then true else false.
 
 Definition tokenize s :=
   let singletonString (a : Ascii.ascii) :=
@@ -67,11 +67,11 @@ Definition tokenize s :=
       end
   in  tokenize' s "" nil.
 
-Fixpoint beqList (xs ys : list symbol) : bool :=
+Fixpoint beqList (xs ys : list string) : bool :=
   match (xs, ys) with
   | (nil, nil) => true
   | (x :: xs', y :: ys') =>
-    if beqSym x y then beqList xs' ys' else false
+    if beqString x y then beqList xs' ys' else false
   | _ => false
   end.
 
@@ -88,24 +88,24 @@ Definition nub {A : Type} (xs : list A) (cmp : A -> A -> bool) : list A :=
   fold_right (fun x acc => if elem x acc cmp then acc else x :: acc) nil xs.
 
 Lemma beqSym_eq : forall x y,
-    beqSym x y = true <-> x = y.
+    beqString x y = true <-> x = y.
 Proof.
   intros; split; intros.
-  - unfold beqSym in H. destruct (SymbolMapFacts.eq_dec).
+  - unfold beqString in H. destruct (StringMapFacts.eq_dec).
     + subst; reflexivity.
     + inversion H.
-  - unfold beqSym. destruct (SymbolMapFacts.eq_dec).
+  - unfold beqString. destruct (StringMapFacts.eq_dec).
     + reflexivity.
     + exfalso. apply n. assumption.
 Qed.
 
 Definition rhss (g : grammar) (x : string) :=
-  map snd (filter (fun prod => beqSym (fst prod) (NT x)) g).
+  map snd (filter (fun prod => beqString (fst prod) x) g.(productions)).
 
 Lemma rhss_in_grammar : forall g x gammas gamma,
     rhss g x = gammas ->
     In gamma gammas ->
-    In (NT x, gamma) g.
+    In (x, gamma) g.(productions).
 Proof.
   intros. unfold rhss in H.
   subst. rewrite in_map_iff in H0.
@@ -116,21 +116,22 @@ Proof.
   subst. assumption.
 Qed.
 
-Definition removeOpt (x : symbol) (s : SymbolSet.t) :=
-  if SymbolSet.mem x s then
-    Some (SymbolSet.remove x s)
+Definition removeOpt (x : string) (s : StringSet.t) :=
+  if StringSet.mem x s then
+    Some (StringSet.remove x s)
   else None.
 
-Definition addAll (xs : list symbol) : SymbolSet.t :=
-  fold_right SymbolSet.add SymbolSet.empty xs.
+Definition addAll (xs : list string) : StringSet.t :=
+  fold_right StringSet.add StringSet.empty xs.
 
-Definition unionAll (ss : list SymbolSet.t) : SymbolSet.t :=
-  fold_right SymbolSet.union SymbolSet.empty ss.
+Definition unionAll (ss : list StringSet.t) : StringSet.t :=
+  fold_right StringSet.union StringSet.empty ss.
 
+(*
 Definition nonterminals g :=
   let prodNTs p :=
       match p with
       | (l, rs) =>
-        SymbolSet.add l (addAll (filter isNT rs))
+        StringSet.add l (addAll (filter isNT rs))
       end
-  in  unionAll (map prodNTs g).
+  in  unionAll (map prodNTs g). *)
