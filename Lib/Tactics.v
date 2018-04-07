@@ -37,7 +37,7 @@ Ltac crush :=
 
          | |- isT (T _) = true => reflexivity
 
-         | |- firstSym (T ?X) (T ?X) =>
+         | |- firstSym ?X (T ?X) =>
            apply first_t
 
          | |- firstGamma (?x) (?x :: _) =>
@@ -94,7 +94,7 @@ Ltac crush :=
          | H : (_ :: _) = (_ :: _) |- _ =>
            inv H
 
-         | H : pair (NT _) _ = pair _  _ |- _ =>
+         | H : pair (String _ _) _ = pair _  _ |- _ =>
            inv H
 
          | H : firstSym ?NT ?T |- StringSet.In ?T _ =>
@@ -112,10 +112,10 @@ Ltac crush :=
          | H : snd _ = snd _ |- _ =>
            simpl in H; subst
 
-         | H : StringMap.find (NT (String _ _)) _ = Some _
+         | H : StringMap.find (String _ _) _ = Some _
            |- _ => inv H
 
-         | H : StringMap.find (T (String _ _)) _ = Some _
+         | H : StringMap.find (String _ _) _ = Some _
            |- _ => inv H
 
          | H : firstGamma ?y (_::_) |-
@@ -144,7 +144,7 @@ Ltac crush :=
          | H : firstProd _ _  _ |- _ =>
            inv H
 
-         | H : firstProd' _ (NT (String _ _)) _ |- _ =>
+         | H : firstProd' _ (String _ _) _ |- _ =>
            inv H
                                                 
          | H : firstSym _ (T (String _ _)) |- _ =>
@@ -176,11 +176,7 @@ Ltac crush :=
          | |- In _ _ =>
            repeat (try (left; reflexivity); right)
 
-         | |- StringSet.In (T (String _ _)) _ =>
-           repeat (try (apply InA_cons_hd; reflexivity);
-                   apply InA_cons_tl)
-
-         | |- StringSet.In (NT (String _ _)) _ =>
+         | |- StringSet.In (String _ _) _ =>
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
 
@@ -194,13 +190,13 @@ Ltac crush :=
               StringMap.find _ _ = Some _ =>
            split
 
-         | |- nullableProd (NT _) _ =>
+         | |- nullableProd (String _ _) _ =>
            apply nprod
 
          | |- firstProd _ _ _ =>
            apply fprod
 
-         | |- firstProd' ?X (NT _) (?X :: _) =>
+         | |- firstProd' ?X (String _ _) (T ?X :: _) =>
            apply fprod_hd
 
          end.

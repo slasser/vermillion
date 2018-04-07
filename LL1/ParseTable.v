@@ -82,22 +82,21 @@ Definition isNullableSetFor nu g : Prop :=
 
 (* Definition of the FIRST set for a given grammar *)
 
-
 Inductive firstSym {g : grammar} :
-  terminal -> symbol -> Prop :=
-| first_t : forall y,
-    firstSym y (T y)
+  lookahead -> symbol -> Prop :=
+| first_t : forall s,
+    firstSym (LA s) (T s)
 | first_nt : forall x y ys,
     firstProd y x ys ->
     firstSym y (NT x)
 with firstProd {g : grammar} :
-       terminal -> nonterminal -> list symbol -> Prop :=
+       lookahead -> nonterminal -> list symbol -> Prop :=
      | fprod : forall y x ys,
          In (x, ys) g.(productions) ->
          firstProd' y x ys ->
          firstProd y x ys
 with firstProd' {g : grammar} :
-       terminal -> nonterminal -> list symbol -> Prop :=
+       lookahead -> nonterminal -> list symbol -> Prop :=
      | fprod_hd : forall y x hd tl,
          NT x <> hd ->
          firstSym y hd ->
@@ -108,7 +107,7 @@ with firstProd' {g : grammar} :
          firstProd' y x (NT hd :: tl).
 
 Inductive firstGamma {g : grammar} :
-  terminal -> list symbol -> Prop :=
+  lookahead -> list symbol -> Prop :=
 | fgamma_hd : forall y hd tl,
     (@firstSym g) y hd ->
     firstGamma y (hd :: tl)
@@ -122,12 +121,12 @@ Definition firstSetComplete fi g : Prop :=
     (@firstSym g) y (NT x) ->
     exists xFirst,
       StringMap.find x fi = Some xFirst /\
-      StringSet.In y xFirst.
+      LookaheadSet.In y xFirst.
 
 Definition firstSetMinimal fi g : Prop :=
   forall x xFirst y,
     StringMap.find x fi = Some xFirst ->
-    StringSet.In y xFirst ->
+    LookaheadSet.In y xFirst ->
     (@firstSym g) y (NT x).
 
 Definition isFirstSetFor fi g : Prop :=
@@ -136,40 +135,36 @@ Definition isFirstSetFor fi g : Prop :=
 
 (* Definition of the FOLLOW set for a given grammar *)
 
-
-Inductive followSym {g : grammar} : terminal -> nonterminal -> Prop :=
+(* Remember to add EOF *)
+Inductive followSym {g : grammar} : lookahead -> nonterminal -> Prop :=
 | followRight :
     forall lx rx prefix suffix y,
       In (lx, (prefix ++ NT rx :: suffix)%list) g.(productions) ->
       (@firstGamma g) y suffix -> 
       followSym y rx
 | followLeft :
-    forall lx rx prefix suffix y,
+    forall lx rx prefix suffix la,
       In (lx, (prefix ++ NT rx :: suffix)%list) g.(productions) ->
       lx <> rx -> (* Necessary? *)
       (@nullableGamma g) suffix ->
-      followSym y lx ->
-      followSym y rx.
+      followSym la lx ->
+      followSym la rx.
 
 Definition followSetComplete fo g : Prop :=
   forall x y,
     (@followSym g) y x ->
     exists xFollow,
       StringMap.find x fo = Some xFollow /\
-      StringSet.In y xFollow.
+      LookaheadSet.In y xFollow.
 
 Definition followSetMinimal fo g : Prop :=
   forall x xFollow y,
     StringMap.find x fo = Some xFollow ->
-    StringSet.In y xFollow ->
+    LookaheadSet.In y xFollow ->
     (@followSym g) y x.
 
 Definition isFollowSetFor fo g : Prop :=
   followSetComplete fo g /\ followSetMinimal fo g.
-
-
-(* Definition of a valid parse table for a given grammar *)
-
 
 Definition ptCompleteFirst tbl g : Prop :=
   forall x gamma y,
@@ -177,8 +172,7 @@ Definition ptCompleteFirst tbl g : Prop :=
     (@firstGamma g) y gamma ->
     exists tMap,
       StringMap.find x tbl = Some tMap  /\
-      StringMap.find y tMap = Some gamma. 
-(* inner map should actually contain lookahead tokens *)
+      LookaheadMap.find y tMap = Some gamma. 
 
 Definition ptCompleteFollow tbl g : Prop :=
   forall x gamma y,
@@ -187,7 +181,7 @@ Definition ptCompleteFollow tbl g : Prop :=
     (@followSym g) y x ->
     exists tMap,
       StringMap.find x tbl  = Some tMap /\
-      StringMap.find y tMap = Some gamma.
+      LookaheadMap.find y tMap = Some gamma.
 
 Definition parseTableComplete tbl g : Prop :=
   ptCompleteFirst tbl g /\ ptCompleteFollow tbl g.
@@ -195,7 +189,7 @@ Definition parseTableComplete tbl g : Prop :=
 Definition parseTableMinimal tbl g : Prop :=
   forall x tMap y gamma,
     StringMap.find x tbl = Some tMap ->
-    StringMap.find y tMap = Some gamma ->
+    LookaheadMap.find y tMap = Some gamma ->
     (@firstProd g) y x gamma \/
     (@nullableProd g) x gamma /\ (@followSym g) y x.
 

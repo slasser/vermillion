@@ -6,6 +6,16 @@ Import ListNotations.
 Open Scope list_scope.
 Open Scope string_scope.
 
+Lemma beqString_eq : 
+  forall s s2,
+    beqString s s2 = true
+    -> s = s2.
+Proof.
+  intros; unfold beqString in H.
+  destruct (StringMapFacts.eq_dec s s2); trivial.
+  inv H.
+Qed.
+
 Lemma nt_derives_Node :
   forall tbl x input fuel tree suffix,
     parse tbl (NT x) input fuel = (Some tree, suffix) ->
@@ -13,14 +23,12 @@ Lemma nt_derives_Node :
 Proof.
   intros. destruct fuel.
   - simpl in H. inv H.
-  - simpl in H. destruct input.
-    + inv H.
-    + destruct (parseTableLookup (NT x) (T s) tbl).
-      * destruct (parseForest tbl l (s :: input) fuel) in H.
-        destruct o.
-        { inv H. simpl. reflexivity. }
-        inv H.
+  - simpl in H. destruct (parseTableLookup x (peek input) tbl).
+    + destruct (parseForest tbl l input fuel). 
+      destruct o. 
+      * inv H. trivial.
       * inv H.
+    + inv H. 
 Qed.
 
 Lemma t_derives_Leaf :
@@ -32,28 +40,28 @@ Proof.
   - inv H.
   - simpl in H. destruct input.
     + inv H.
-    + destruct (beqSym (T y) (T s)).
+    + destruct (Utils.beqString y s).
       * inv H. reflexivity.
       * inv H.
 Qed.
 
 Lemma lookup_tbl_in_grammar : forall g x y tbl gamma,
     isParseTableFor tbl g ->
-    parseTableLookup (NT x) (T y) tbl = Some gamma ->
-    In (NT x, gamma) g.
+    parseTableLookup x y tbl = Some gamma ->
+    In (x, gamma) g.(productions).
 Proof.
   intros.
   unfold isParseTableFor in H. destruct H.
   unfold parseTableComplete in H. destruct H.
   unfold parseTableMinimal in H1.
   unfold parseTableLookup in H0.
-  destruct (SymbolMap.find (NT x) tbl) eqn:Hnt.
-  - destruct (SymbolMap.find (T y) t) eqn:Ht.
+  destruct (StringMap.find x tbl) eqn:Hnt.
+  - destruct (LookaheadMap.find y t) eqn:Ht.
     + inv H0.
       specialize H1 with
-          (x := NT x)
+          (x := x)
           (tMap := t)
-          (y := T y)
+          (y := y)
           (gamma := gamma).
       apply H1 in Hnt. clear H1.
       * destruct Hnt.
@@ -63,8 +71,7 @@ Proof.
       * assumption.
     + inv H0.
   - inv H0.
-Defined.
-
+Qed.
 
 Theorem parse_correct :
   forall (g   : grammar)
@@ -99,6 +106,7 @@ Proof.
                  exists prefix,
                    (prefix ++ suffix)%list = input /\
                    (@derivesForest g) gamma prefix subtrees).
+
   - intros input sym suffix fuel Hparse. 
     destruct fuel as [| fuel].
     + inv Hparse.
@@ -106,24 +114,23 @@ Proof.
       * destruct input as [| token input].
         { inv Hparse. }
         simpl in Hparse.
-        destruct (beqSym (T y) (T token)) eqn:Hbeq.
+        destruct (Utils.beqString y token) eqn:Hbeq.
         { inv Hparse. exists [token]. split.
           { reflexivity. }
-          apply eq_sym_eq_T in Hbeq. subst.
+          apply beqString_eq in Hbeq. subst.
           apply derivesT. }
         inv Hparse.
       * apply nt_derives_Node in Hparse. inv Hparse.
+
   - intros input sym suffix fuel Hparse.
     destruct fuel as [| fuel].
     + inv Hparse.
     + destruct sym as [y | x].
       * apply t_derives_Leaf in Hparse. inv Hparse.
-      * destruct input as [| token input].
-        { inv Hparse. }
-        simpl in Hparse.
-        destruct (parseTableLookup (NT x) (T token) tbl)
+      * simpl in Hparse. 
+        destruct (parseTableLookup x (peek input) tbl)
                  as [ys |] eqn:Hlookup.
-        { destruct (parseForest tbl ys (token :: input) fuel)
+        { destruct (parseForest tbl ys input fuel)
                    as [subresult input'] eqn:Hforest.
           { destruct subresult as [subtrees |].
             { inv Hparse.
@@ -134,27 +141,22 @@ Proof.
               { assumption. }
               inv Hderives.
               { apply derivesNT with (gamma := nil).
-                { apply lookup_tbl_in_grammar with
+                { simpl in Hlookup. 
+                  apply lookup_tbl_in_grammar with
                       (g := g)
                       (x := s)
-                      (y := token)
+                      (y := peek suffix)
                       (gamma:=nil) in Hlookup.
                   { assumption. }
                   assumption. }
                 apply derivesFnil. }
               apply derivesNT with
                   (gamma := (hdRoot :: tlRoots)).
-              { apply lookup_tbl_in_grammar
-                  with (g := g)
-                       (x:=s)
-                       (y:= token)
-                       (gamma:=hdRoot::tlRoots) in Htbl;
-                  assumption. }
-              apply derivesFcons.
-              { assumption. }
-              assumption. }
-            inv Hparse. }}
-        inv Hparse.
+              { eapply lookup_tbl_in_grammar; eassumption. }
+              { apply derivesFcons; assumption. }}
+            { inv Hparse. }}}
+        { inv Hparse. }
+
   - intros input gamma suffix fuel HparseForest.
     destruct fuel as [| fuel].
     + inv HparseForest.
@@ -174,6 +176,7 @@ Proof.
           { inv HparseForest. }
           inv HparseForest. }
         inv HparseForest.
+
   - intros input gamma suffix fuel HparseForest.
     destruct fuel as [| fuel].
     + inv HparseForest.
