@@ -19,3 +19,19 @@ Definition isLeaf (tr : tree) : bool :=
 
 Scheme tree_mutual_ind := Induction for tree Sort Prop
   with forest_mutual_ind := Induction for forest Sort Prop.
+
+Combined Scheme tree_forest_mutual_ind
+         from tree_mutual_ind, forest_mutual_ind.
+
+Fixpoint span tr :=
+  match tr with
+  | Leaf _ => 1
+  | Node _ sts =>
+    spanForest sts
+  end
+with spanForest f :=
+       match f with
+       | Fnil => 0
+       | Fcons hd tl =>
+         span hd + spanForest tl
+       end.

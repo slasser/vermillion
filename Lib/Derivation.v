@@ -29,3 +29,24 @@ with derivesForest {g : grammar} :
          derivesForest (hdRoot :: tlRoots) 
                        (prefix ++ suffix) 
                        (Fcons hdTree tlTrees).
+
+Definition derivesMaximalTree (g : grammar)
+           (sym : symbol) (pre suf : list string)
+           (tree : tree) :=
+    (@derivesTree g) sym pre tree
+    /\ forall pre' suf' tree',
+      (pre ++ suf)%list = (pre' ++ suf')%list
+        -> (@derivesTree g) sym pre' tree'
+        -> span tree' <= span tree.
+
+Definition derivesMaximalForest (g : grammar)
+           (x : nonterminal) (gamma : list symbol)
+           (pre suf : list string)
+           (f : forest) :=
+  In (x, gamma) (productions g)
+  /\ (@derivesForest g) gamma pre f
+  /\ forall gamma' pre' suf' f',
+      In (x, gamma') (productions g)
+      -> (pre ++ suf)%list = (pre' ++ suf')%list
+      -> (@derivesForest g) gamma' pre' f'
+      -> spanForest f' <= spanForest f.
