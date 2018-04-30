@@ -52,12 +52,29 @@ Lemma lookup_tbl_in_grammar : forall g x y tbl gamma,
 Proof.
   intros.
   unfold isParseTableFor in H. destruct H.
-  unfold parseTableComplete in H. destruct H.
-  unfold parseTableMinimal in H1.
+  unfold ptMinimal in H. 
+  unfold ptComplete in H1.
   unfold parseTableLookup in H0.
   destruct (StringMap.find x tbl) eqn:Hnt.
   - destruct (LookaheadMap.find y t) eqn:Ht.
     + inv H0.
+      apply H with
+          (x := x)
+          (la := y)
+          (gamma := gamma)
+          (laMap := t) in Hnt.
+      * destruct Hnt.
+        -- inv H0.
+           auto.
+        -- destruct H0.
+           inv H0.
+           auto.
+      * auto.
+    + inv H0.
+  - inv H0.
+Qed.
+
+(*
       specialize H1 with
           (x := x)
           (tMap := t)
@@ -72,6 +89,7 @@ Proof.
     + inv H0.
   - inv H0.
 Qed.
+*)
 
 Theorem parse_correct :
   forall (g   : grammar)

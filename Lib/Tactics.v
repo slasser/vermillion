@@ -38,10 +38,10 @@ Ltac crush :=
          | |- isT (T _) = true => reflexivity
 
          | |- firstSym ?X (T ?X) =>
-           apply first_t
+           apply FiT
 
          | |- firstGamma (?x) (?x :: _) =>
-           apply fgamma_hd
+           apply FiGammaHd
 
          (* contradictions *)
                                             
@@ -78,7 +78,7 @@ Ltac crush :=
          | H : firstProd _ _ [] |- _ =>
            inv H
 
-         | H : firstProd' _ _ [] |- _ =>
+         | H : firstGamma _ _ [] |- _ =>
            inv H
 
          | H : isNT ?x = true, H2 : ?x = T _ |- _ =>
@@ -144,7 +144,7 @@ Ltac crush :=
          | H : firstProd _ _  _ |- _ =>
            inv H
 
-         | H : firstProd' _ (String _ _) _ |- _ =>
+         | H : firstGamma _ (String _ _) _ |- _ =>
            inv H
                                                 
          | H : firstSym _ (T (String _ _)) |- _ =>
@@ -191,13 +191,13 @@ Ltac crush :=
            split
 
          | |- nullableProd (String _ _) _ =>
-           apply nprod
+           apply NuProd
 
          | |- firstProd _ _ _ =>
-           apply fprod
+           apply FiProd
 
-         | |- firstProd' ?X (String _ _) (T ?X :: _) =>
-           apply fprod_hd
+         | |- firstGamma ?X (String _ _) (T ?X :: _) =>
+           apply FiGammaHd
 
          end.
 

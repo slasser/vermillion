@@ -1,6 +1,7 @@
 Require Import List MSets String.
 Require Import FMaps Grammar Lib.Utils.
 Import ListNotations.
+Open Scope list_scope.
 
 Inductive lookahead :=
 | LA  : string -> lookahead
@@ -34,11 +35,108 @@ Definition parseTableLookup
            (y : lookahead)
            (tbl : parse_table) : option (list symbol) :=
   match StringMap.find x tbl with
-  | None      => None
+  | None => None
   | Some tMap => LookaheadMap.find y tMap
   end.
-    
-(* Definition of the NULLABLE set for a given grammar *)
+
+(* Changed nullableSym from nonterminal to symbol *)
+Inductive nullableProd {g : grammar} :
+  nonterminal -> list symbol -> Prop :=
+| NuProd :
+    forall x ys,
+      In (x, ys) g.(productions)
+      -> nullableGamma ys
+      -> nullableProd x ys
+with nullableGamma {g : grammar} :
+       list symbol -> Prop :=
+     | NuNil :
+         nullableGamma nil
+     | NuCons :
+         forall x tl,
+           nullableSym (NT x)
+           -> nullableGamma tl
+           -> nullableGamma (NT x :: tl)
+with nullableSym {g : grammar} :
+       symbol -> Prop :=
+     | NuSym :
+         forall x ys,
+           nullableProd x ys
+           -> nullableSym (NT x).
+
+Inductive firstProd {g : grammar} :
+    lookahead -> nonterminal -> list symbol -> Prop :=
+| FiProd : forall la x gamma,
+    In (x, gamma) g.(productions)
+    -> firstGamma la gamma
+    -> firstProd la x gamma
+with firstGamma {g : grammar} :
+       lookahead -> list symbol -> Prop :=
+     | FiGammaHd : forall la hd tl,
+         firstSym la hd ->
+         firstGamma la (hd :: tl)
+     | FiGammaTl : forall la x tl,
+         (@nullableSym g) (NT x) ->
+         firstGamma la tl ->
+         firstGamma la (NT x :: tl)
+with firstSym {g : grammar} :
+       lookahead -> symbol -> Prop :=
+| FiT : forall s,
+    firstSym (LA s) (T s)
+| FiNT : forall la x gamma,
+    firstProd la x gamma ->
+    firstSym la (NT x).
+
+Scheme firstProd_mutual_ind := Induction for firstProd Sort Prop
+  with firstGamma_mutual_ind := Induction for firstGamma Sort Prop
+  with firstSym_mutual_ind := Induction for firstSym Sort Prop.
+
+Inductive followProd {g : grammar} :
+  lookahead -> nonterminal -> list symbol -> Prop :=
+| FoProd :
+    forall la x gamma,
+      In (x, gamma) g.(productions)
+      -> followSym la x
+      -> followProd la x gamma
+with followSym {g : grammar} :
+       lookahead -> nonterminal -> Prop :=
+     | FoStart :
+         followSym EOF g.(start)
+     | FoRight :
+         forall x1 x2 prefix suffix la,
+           In (x1, prefix ++ NT x2 :: suffix) g.(productions)
+           -> (@firstGamma g) la suffix
+           -> followSym la x2
+     | FoLeft :
+         forall x1 x2 prefix suffix la,
+           In (x1, prefix ++ NT x2 :: suffix) g.(productions)
+           -> (@nullableGamma g) suffix
+           -> followSym la x1
+           -> followSym la x2.
+
+Scheme followProd_mutual_ind := Induction for firstProd Sort Prop
+  with followSym_mutual_ind := Induction for firstSym Sort Prop.
+
+Definition isLookaheadFor {g} la x gamma :=
+  (@firstProd g) la x gamma
+  \/ (@nullableProd g) x gamma /\ (@followProd g) la x gamma.
+
+Definition ptMinimal tbl g :=
+  forall x la gamma laMap,
+    StringMap.find x tbl = Some laMap
+    -> LookaheadMap.find la laMap = Some gamma
+    -> (@isLookaheadFor g) la x gamma.
+
+Definition ptComplete tbl g :=
+  forall x la gamma,
+    (@isLookaheadFor g) la x gamma
+    -> exists laMap,
+      StringMap.find x tbl = Some laMap
+      /\ LookaheadMap.find la laMap = Some gamma.
+
+Definition isParseTableFor (tbl : parse_table) (g : grammar) :=
+  ptMinimal tbl g /\ ptComplete tbl g.
+
+(*
 
 (* This can be simplified a little *)
 Inductive nullableSym {g : grammar} : nonterminal -> Prop :=
@@ -195,3 +293,5 @@ Definition parseTableMinimal tbl g : Prop :=
 
 Definition isParseTableFor tbl g : Prop :=
   parseTableComplete tbl g /\ parseTableMinimal tbl g.
+
+*)
