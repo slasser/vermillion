@@ -4,24 +4,10 @@ Require Import Derivation Grammar Lemmas ParseTable
         LL1.CorrectnessProof LL1.MonotonicityLemmas.
 Open Scope string_scope.
 
-Conjecture in_grammar_lookup :
-  forall tbl g x gamma,
-    isParseTableFor tbl g
-    -> In (x, gamma) g.(productions)
-    -> exists lk,
-        parseTableLookup x lk tbl = Some gamma.
-
 Lemma symbol_eq_dec :
   forall (s s2 : symbol),
     {s = s2} + {~s = s2}.
 Proof. repeat decide equality. Qed.
-
-Conjecture lookup_deterministic :
-  forall tbl g x lk lk',
-    isParseTableFor tbl g
-    ->
-    (parseTableLookup x lk tbl = parseTableLookup x lk' tbl
-     <-> lk = lk').
 
 Ltac sim := simpl in *.
 
@@ -32,74 +18,6 @@ Definition beqSymTy s s2 :=
   | _ => false
   end.
 
-Lemma lookup_det :
-  forall tbl g lk x x',
-    isParseTableFor tbl g
-    -> parseTableLookup x lk tbl =
-       parseTableLookup x' lk tbl
-    -> x = x'.
-Proof.
-  intros.
-  unfold parseTableLookup in H0.
-Abort. (* Not true, I don't think
-          X -> aY
-          X -> bZ
-          Y -> c
-          Z -> c *)
-
-Lemma lookup_diff :
-  forall tbl g lk x x',
-    isParseTableFor tbl g
-    -> x <> x'
-    -> parseTableLookup x lk tbl <>
-       parseTableLookup x' lk tbl.
-Proof.
-  unfold not; intros.
-  apply H0; clear H0. 
-Abort.                      
-
-Conjecture det :
-  forall tbl g gamma gamma' input fuel,
-    isParseTableFor tbl g
-    -> parseForest tbl gamma input fuel =
-       parseForest tbl gamma' input fuel
-    -> gamma = gamma'.
-
-Conjecture step :
-  forall tbl g gamma input fuel f suffix x,
-    isParseTableFor tbl g
-    -> In (x, gamma) g.(productions)
-    -> parseForest tbl gamma input fuel = (Some f, suffix)
-    <-> parse tbl (NT x) input (S fuel) =
-        (Some (Node x f), suffix).
-
-Lemma lookup_ok :
-  forall tbl g x gamma input fuel f suffix,
-    isParseTableFor tbl g
-    -> In (x, gamma) g.(productions)
-    -> parseForest tbl gamma input fuel = (Some f, suffix)
-    -> parseTableLookup x (peek input) tbl = Some gamma.
-Proof.
-  intros.
-  remember H1 as H1'; clear HeqH1'.
-  apply step with (g := g) (x := x) in H1.
-  - simpl in H1.
-    destruct (parseTableLookup x (peek input) tbl)
-      as [gamma' |] eqn:Hlkp.
-    + destruct (parseForest tbl gamma' input fuel)
-               as (subresult, input') eqn:Hpf.
-      destruct subresult as [f' |].
-      * inv H1.
-        rewrite <- Hpf in H1'.
-        eapply det in H1'. (* NEED TO PROVE THIS! *)
-        { subst. trivial. }
-        { eauto. }
-      * inv H1.
-    + inv H1.
-  - trivial.
-  - trivial.
-Qed.
-          
 Lemma unfold_parse :
   forall tbl x input fuel,
     parse tbl (NT x) input (S fuel) =
@@ -116,31 +34,6 @@ Proof.
   trivial.
 Qed.
 
-
-Conjecture lookup_parseForest :
-  forall tbl g x gamma input fuel f suffix,
-    isParseTableFor tbl g
-    -> In (x, gamma) g.(productions)
-    -> parseForest tbl gamma input fuel =
-       (Some f, suffix)
-    -> parseTableLookup x (peek input) tbl = Some gamma.
-
-
-Lemma derivesTree_lookup :
-  forall g x prefix f,
-    (@derivesTree g) (NT x) prefix (Node x f)
-    -> forall tbl x suffix gamma,
-    isParseTableFor tbl g
-      -> parseTableLookup x (peek (prefix ++ suffix)) tbl =
-         Some gamma.
-Proof.
-  intros g x prefix f H.
-  inv H.
-  intros.
-  destruct prefix.
-  - simpl.
-Abort.
-
 Lemma derives_exists :
   forall g x input trees,
     (@derivesTree g) (NT x) input (Node x trees)
@@ -152,35 +45,6 @@ Proof.
   inv H.
   exists gamma; split; trivial.
 Qed.
-
-
-Lemma in_grammar_lookup_tbl :
-  forall tbl g,
-    isParseTableFor tbl g
-    -> forall gamma prefix suffix x fuel f,
-      In (x, gamma) (productions g)
-      -> parseForest tbl gamma (app prefix suffix) fuel =
-         (Some f, suffix)
-      -> parseTableLookup x (peek (app prefix suffix)) tbl =
-         Some gamma.
-Proof.
-  intros tbl g Htbl gamma.
-  intros.
-  assert (H1 : exists (prefix' : list string),
-               (app prefix' suffix) = (app prefix suffix)
-               /\ (@derivesForest g) gamma prefix' f).
-  { admit. }
-  destruct H1 as [prefix' [H1 H2]].
-  assert (prefix' = prefix).
-  { admit. }
-  subst.
-  assert ((@derivesTree g) (NT x) prefix (Node x f)).
-  { eapply derivesNT; eauto. }
-  apply derives_exists in H3.
-
-    
-  induction gamma as [| sym syms]; intros.
-Abort.
 
 Lemma lookup_exists :
   forall x la tbl gamma,
@@ -195,7 +59,6 @@ Proof.
   - exists laMap; split; trivial.
   - inv H.
 Qed.
-
 
 Lemma eof_fprod :
   forall g la x gamma,
@@ -420,18 +283,6 @@ Proof.
       * apply IHt0.
         auto.
 Qed.
-    
-
-Lemma firstProd_not_nil :
-  forall tbl g,
-    isParseTableFor tbl g
-    -> forall f x gamma word tok,
-      (@derivesForest g) gamma word f
-      -> (@firstProd g) (LA tok) x gamma
-      -> exists tl,
-          word = tok :: tl.
-Proof.
-Admitted.
 
 Lemma derivesForest_cons_firstGamma :
   forall f g tok toks gamma,
@@ -505,6 +356,267 @@ Proof.
     destruct H.
     auto.
 Qed.
+
+Lemma derivesForest_det :
+  forall tbl g,
+    isParseTableFor tbl g
+    -> forall f x gamma word f',
+      In (x, gamma) (productions g)
+      -> (@derivesForest g) gamma word f
+      -> (@derivesForest g) gamma word f'
+      -> f = f'.
+Proof.
+  intros tbl g Htbl.
+  induction f; intros.
+  - inv H0.
+    inv H1.
+    auto.
+  -
+Abort.
+
+Lemma derives_det :
+  forall tbl g x gamma,
+    isParseTableFor tbl g
+    -> In (x, gamma) (productions g)
+    -> forall f word f',
+        (@derivesForest g) gamma word f
+        -> (@derivesForest g) gamma word f'
+        -> f = f'.
+Proof.
+  intros tbl g x gamma Htbl Hin.
+  destruct Htbl as [Hmin Hcom].
+  induction f using forest_mutual_ind with
+      (P := fun tr => forall sym word tr',
+                (@derivesTree g) sym word tr
+                -> (@derivesTree g) sym word tr'
+                -> tr = tr')
+      (P0 := fun f => forall word f',
+                 (@derivesForest g) gamma word f
+                 -> (@derivesForest g) gamma word f'
+                 -> f = f').
+
+  - intros sym word tr' Hder Hder'.
+    inv Hder.
+    inv Hder'.
+    auto.
+
+  - intros sym word tr' Hder Hder'.
+    inv Hder.
+    inv Hder'.
+    pose proof H4 as Hder.
+    pose proof H1 as Hder'.
+    destruct word as [| tok toks]; sim.
+    + apply derivesForest_nil_nullable in H4.
+      apply derivesForest_nil_nullable in H1.
+      assert (Hlk : (@isLookaheadFor g) EOF s gamma0).
+      { unfold isLookaheadFor.
+        right.
+        split.
+        - constructor; auto.
+        - constructor; auto.
+          repeat (econstructor; eauto). }
+      assert (Hlk0 : (@isLookaheadFor g) EOF s gamma1).
+      { unfold isLookaheadFor.
+        right.
+        split.
+        - constructor; auto.
+        - constructor; auto.
+          repeat (econstructor; eauto). }
+      unfold ptComplete in Hcom.
+      apply Hcom in Hlk.
+      apply Hcom in Hlk0.
+      destruct Hlk as [laMap [Hsf Hlf]].
+      destruct Hlk0 as [laMap' [Hsf' Hlf']].
+      assert (gamma0 = gamma1) by congruence.
+      subst.
+      apply IHf in Hder; auto.
+      subst.
+      auto.
+
+    + apply derivesForest_cons_firstGamma in H4.
+      apply derivesForest_cons_firstGamma in H1.
+      assert (Hlk : (@isLookaheadFor g) (LA tok) x gamma).
+      { unfold isLookaheadFor.
+        left.
+        constructor; auto. }
+      assert (Hlk0 : (@isLookaheadFor g) (LA tok) x gamma0).
+      { unfold isLookaheadFor.
+        left.
+        constructor; auto. }
+      unfold ptComplete in Hcom.
+      apply Hcom in Hlk.
+      apply Hcom in Hlk0.
+      destruct Hlk as [laMap [Hsf Hlf]].
+      destruct Hlk0 as [laMap' [Hsf' Hlf']].
+      assert (gamma = gamma0) by congruence.
+      subst.
+      apply IHtr in Hder'; subst; auto.
+
+Lemma derives_det :
+  forall tbl g,
+    isParseTableFor tbl g
+    -> forall tr sym word tr',
+      (@derivesTree g) sym word tr
+      ->(@derivesTree g) sym word tr'
+      -> tr = tr'.
+Proof.
+  intros tbl g Htbl.
+  destruct Htbl as [Hmin Hcom].
+  induction tr using tree_mutual_ind with
+      (P := fun tr => forall sym word tr',
+                (@derivesTree g) sym word tr
+                -> (@derivesTree g) sym word tr'
+                -> tr = tr')
+      (P0 := fun f => forall gamma word f',
+                 (@derivesForest g) gamma word f
+                 -> (@derivesForest g) gamma word f'
+                 -> f = f').
+
+  - intros sym word tr' Hder Hder'.
+    inv Hder.
+    inv Hder'.
+    auto.
+
+  - intros sym word tr' Hder Hder'.
+    rename s into x.
+    inv Hder.
+    inv Hder'.
+    pose proof H4 as Hder.
+    pose proof H1 as Hder'.
+    destruct word as [| tok toks]; sim.
+    + apply derivesForest_nil_nullable in H4.
+      apply derivesForest_nil_nullable in H1.
+      assert (Hlk : (@isLookaheadFor g) EOF x gamma).
+      { unfold isLookaheadFor.
+        right.
+        split.
+        - constructor; auto.
+        - constructor; auto.
+          repeat (econstructor; eauto). }
+      assert (Hlk0 : (@isLookaheadFor g) EOF x gamma0).
+      { unfold isLookaheadFor.
+        right.
+        split.
+        - constructor; auto.
+        - constructor; auto.
+          repeat (econstructor; eauto). }
+      unfold ptComplete in Hcom.
+      apply Hcom in Hlk.
+      apply Hcom in Hlk0.
+      destruct Hlk as [laMap [Hsf Hlf]].
+      destruct Hlk0 as [laMap' [Hsf' Hlf']].
+      assert (gamma = gamma0) by congruence.
+      subst.
+      apply IHtr in Hder'; auto.
+      subst.
+      auto.
+
+    + apply derivesForest_cons_firstGamma in H4.
+      apply derivesForest_cons_firstGamma in H1.
+      assert (Hlk : (@isLookaheadFor g) (LA tok) x gamma).
+      { unfold isLookaheadFor.
+        left.
+        constructor; auto. }
+      assert (Hlk0 : (@isLookaheadFor g) (LA tok) x gamma0).
+      { unfold isLookaheadFor.
+        left.
+        constructor; auto. }
+      unfold ptComplete in Hcom.
+      apply Hcom in Hlk.
+      apply Hcom in Hlk0.
+      destruct Hlk as [laMap [Hsf Hlf]].
+      destruct Hlk0 as [laMap' [Hsf' Hlf']].
+      assert (gamma = gamma0) by congruence.
+      subst.
+      apply IHtr in Hder'; subst; auto.
+      
+  - intros gamma word f' Hder Hder'.
+    inv Hder.
+    inv Hder'.
+    auto.
+
+  - intros gamma word f' Hder Hder'.
+    inv Hder.
+    inv Hder'.
+    destruct prefix; destruct prefix0; sim; subst.
+    
+
+    
+           
+Lemma derives_nil_eq :
+  forall tbl g,
+    isParseTableFor tbl g
+    -> forall f f' gamma g,
+      (@derivesForest g) gamma [] f
+      -> (@derivesForest g) gamma [] f'
+      -> f = f'.
+Proof.
+  intros tbl g Htbl.
+  induction gamma as [| sym syms]; intros.
+  - inv H.
+    inv H0.
+    auto.
+Abort.
+      
+Lemma derivesForest_gammas_eq :
+  forall tbl g,
+    isParseTableFor tbl g
+    -> forall x gamma gamma' word f f',
+      In (x, gamma) (productions g)
+      -> In (x, gamma') (productions g)
+      -> parseTableLookup x (peek word) tbl =
+         Some gamma
+      -> (@derivesForest g) gamma word f
+      -> (@derivesForest g) gamma' word f'
+      -> gamma = gamma' /\ f = f'.
+Proof.
+  induction word; intros; simpl in *.
+Abort.
+
+Lemma derivesForest_gammas_eq :
+  forall tbl g,
+    isParseTableFor tbl g
+    -> forall x gamma gamma' word f f',
+      In (x, gamma) (productions g)
+      -> In (x, gamma') (productions g)
+      -> parseTableLookup x (peek word) tbl =
+         Some gamma
+      -> (@derivesForest g) gamma word f
+      -> (@derivesForest g) gamma' word f'
+      -> gamma = gamma' /\ f = f'.
+Proof.
+  intros tbl g Htbl x gamma gamma' word f f'
+         Hin Hin' Hlkp Hder Hder'.
+  destruct Htbl as [Hmin Hcom].
+  pose proof Hlkp as Hlkp2.
+  destruct word; simpl in *.
+  - apply lookup_exists in Hlkp.
+    destruct Hlkp as [laMap [Hsf Hlf]].
+    unfold ptMinimal in Hmin.
+    pose proof Hsf as Hsf2.
+    apply (Hmin x EOF gamma laMap) in Hsf; auto.
+    destruct Hsf.
+    + apply eof_fprod in H; auto.
+      inv H.
+    + destruct H as [Hnp Hfp].
+      inversion Hfp.
+      subst.
+      pose proof Hder' as Hder'2.
+      apply derivesForest_nil_nullable in Hder'.
+      assert (Hlkf : (@isLookaheadFor g) EOF x gamma').
+      { unfold isLookaheadFor.
+        right.
+        split; constructor; auto. }
+      unfold ptComplete in Hcom.
+      apply Hcom in Hlkf.
+      destruct Hlkf as [laMap' [Hsf' Hlf']].
+      rewrite Hsf2 in Hsf'.
+      inv Hsf'.
+      rewrite Hlf in Hlf'.
+      inv Hlf'.
+      split.
+      * congruence.
+Abort.
     
 Theorem parse_complete :
   forall (g   : grammar)
@@ -569,7 +681,7 @@ Proof.
                                  (peek (prefix ++ suffix)) tbl)
       as [gamma' |] eqn:Hlkp.
     * destruct (parseForest tbl gamma' (prefix ++ suffix) fuel)
-        as (o, suffix') eqn:Hpf.
+        as (o, suffix') eqn:Hpf'.
       destruct o as [f' |].
       -- rename s into x.
          assert (parseTableLookup x
@@ -579,6 +691,7 @@ Proof.
          { (* parseForest gamma and parseForest gamma' both
             succeed -- we should be able to prove that gamma
             and gamma' are the same *)
+           pose proof H as Hpf.
          apply parseForest_correct with (g := g) in H; auto.
          destruct H as [pre [Happ Hder]].
          assert (pre = prefix) by
@@ -594,19 +707,25 @@ Proof.
              pose proof Hlkp as Hlkp'.
              apply lookup_exists in Hlkp.
              destruct Hlkp as [laMap [Hsf Hlf]].
-             apply parseForest_correct with (g := g) in Hpf;
+             pose proof Hpf' as Hpf''.
+             apply parseForest_correct with (g := g) in Hpf';
                auto.
-             destruct Hpf as [prefix' [Happ' Hder']].
+             destruct Hpf' as [prefix' [Happ' Hder']].
              unfold ptMinimal in Hmin.
              pose proof Hsf as Hsf2.
-             destruct prefix' as [| ptok' ptoks'].
+             destruct prefix' as [| ptok' ptoks'] eqn:Hpre'.
              
              + (* prefix' is nil *)
+               simpl in Happ'.
+               subst.
+               (* prove that any two derivations for 
+                  the same prefix must be the same *)
                destruct suffix' as [| stok' stoks'];
-                 subst; simpl in *; auto.
+                simpl in *; auto.
                
                * (* prefix' and suffix' are nil -- x is 
                     nullable, and EOF is in FOLLOW(x) *)
+                 subst; simpl in *.
                  apply Hmin with
                      (la := EOF)
                      (gamma := gamma') in Hsf; auto.
@@ -629,8 +748,10 @@ Proof.
                     handle the FIRST case *)
                  apply Hmin with (la := LA stok')
                                  (gamma := gamma') in Hsf; auto.
+                 unfold isLookaheadFor in Hsf.
                  destruct Hsf as [Hfi | Hfo].
-                 -- admit.
+                 -- inv Hfi.
+                   admit.
                  -- destruct Hfo as [Hnp Hfp].
                     inv Hfp.
                     assert (Hlkf : (@isLookaheadFor g) (LA stok') x gamma).

@@ -24,12 +24,17 @@ with derivesForest {g : grammar} :
                 (hdTree : tree)
                 (tlRoots : list symbol)
                 (tlTrees : forest),
-         derivesTree hdRoot prefix hdTree ->
-         derivesForest tlRoots suffix tlTrees ->
-         derivesForest (hdRoot :: tlRoots) 
-                       (prefix ++ suffix) 
-                       (Fcons hdTree tlTrees).
+         derivesTree hdRoot prefix hdTree
+         -> derivesForest tlRoots suffix tlTrees
+         -> derivesForest (hdRoot :: tlRoots) 
+                          (prefix ++ suffix) 
+                          (Fcons hdTree tlTrees).
 
+Scheme derivesTree_mutual_ind :=
+  Induction for derivesTree Sort Prop
+  with derivesForest_mutual_ind :=
+    Induction for derivesForest Sort Prop.
+              
 Definition symDerivesMaximalPrefix (g : grammar)
            (sym : symbol) (pre suf : list string)
            (tree : tree) :=
