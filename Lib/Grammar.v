@@ -10,6 +10,12 @@ Inductive symbol :=
   | T  : terminal -> symbol
   | NT : nonterminal -> symbol.
 
+Definition symbol_eq_dec : forall (sy sy2 : symbol),
+    {sy = sy2} + {~sy = sy2}.
+Proof.
+  intros. decide equality; apply String.string_dec.
+Defined.
+
 Definition production := (string * list symbol)%type.
 
 Record grammar := { productions : list production;

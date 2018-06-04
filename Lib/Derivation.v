@@ -31,9 +31,10 @@ with derivesForest {g : grammar} :
                           (Fcons hdTree tlTrees).
 
 Scheme derivesTree_mutual_ind :=
-  Induction for derivesTree Sort Prop
+  Minimality for derivesTree Sort Prop
   with derivesForest_mutual_ind :=
-    Induction for derivesForest Sort Prop.
+    Minimality for derivesForest Sort Prop.
+
               
 Definition symDerivesMaximalPrefix (g : grammar)
            (sym : symbol) (pre suf : list string)

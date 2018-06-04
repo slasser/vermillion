@@ -328,6 +328,7 @@ Proof.
       auto.
 Qed.
 
+(*
 Lemma derivesForest_cons_firstProd :
   forall f g tok toks x gamma,
     In (x, gamma) (productions g)
@@ -339,6 +340,7 @@ Proof.
   eapply derivesForest_cons_firstGamma.
   eauto.
 Qed.
+ *)
 
 Lemma prefixes_eq :
   forall (suf pre pre' : list string),
@@ -374,6 +376,7 @@ Proof.
   -
 Abort.
 
+(*
 Lemma derives_det :
   forall tbl g x gamma,
     isParseTableFor tbl g
@@ -539,7 +542,7 @@ Proof.
     inv Hder.
     inv Hder'.
     destruct prefix; destruct prefix0; sim; subst.
-    
+ *)  
 
     
            
@@ -573,6 +576,7 @@ Proof.
   induction word; intros; simpl in *.
 Abort.
 
+(*
 Lemma derivesForest_gammas_eq :
   forall tbl g,
     isParseTableFor tbl g
@@ -617,7 +621,8 @@ Proof.
       split.
       * congruence.
 Abort.
-    
+ *)
+
 Theorem parse_complete :
   forall (g   : grammar)
          (tbl : parse_table),
@@ -720,7 +725,7 @@ Proof.
                subst.
                (* prove that any two derivations for 
                   the same prefix must be the same *)
-               destruct suffix' as [| stok' stoks'];
+               destruct suffix as [| stok' stoks'];
                 simpl in *; auto.
                
                * (* prefix' and suffix' are nil -- x is 
