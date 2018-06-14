@@ -13,6 +13,8 @@ Inductive derivesTree {g : grammar} :
            (tokens : list string) 
            (subtrees : forest),
       In (x, gamma) g.(productions) ->
+      (* OR define relation that captures behavior of peek  *)
+      (* parseTableLookup (NT x) (peek tokens) = Some gamma *)
       derivesForest gamma tokens subtrees ->
       derivesTree (NT x) tokens (Node x subtrees)
 with derivesForest {g : grammar} : 
