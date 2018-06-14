@@ -5,7 +5,7 @@ Import ListNotations.
 Open Scope list_scope.
 
 (* "symbol Sym derives input prefix Pre, producing tree Tr
-    and leaving input suffix Suf unconsumed *)
+    and leaving input suffix Suf unconsumed" *)
 Inductive sym_derives_prefix {g : grammar} :
   symbol -> list string -> tree -> list string -> Prop :=
 | T_sdp : 
