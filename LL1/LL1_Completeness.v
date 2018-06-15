@@ -1,5 +1,5 @@
 Require Import List Omega String.
-Require Import Derivation Grammar Lemmas ParseTable
+Require Import Grammar Lemmas ParseTable
         ParseTree LL1.Parser Lib.Tactics
         LL1.CorrectnessProof LL1.MonotonicityLemmas
         LL1.LL1_Derivation.
@@ -11,27 +11,27 @@ Theorem parse_complete :
     isParseTableFor tbl g
          -> forall (tr     : tree)
                    (sym    : symbol)
-                   (wpre wsuf : list string),
-      (@sym_derives_prefix g) sym wpre tr wsuf
+                   (word rem : list string),
+      (@sym_derives_prefix g) sym word tr rem
       -> exists (fuel : nat),
-          parse tbl sym (wpre ++ wsuf) fuel = (Some tr, wsuf).
+          parse tbl sym (word ++ rem) fuel = (Some tr, rem).
 Proof.
-  intros g tbl Htbl tr sym wpre wsuf Hder.
+  intros g tbl Htbl tr sym word rem Hder.
   pose proof Htbl as Htbl'.
   destruct Htbl as [Hmin Hcom].
   induction Hder using sdp_mutual_ind with
       
-      (P := fun sym wpre tr wsuf
-                (pf : sym_derives_prefix sym wpre tr wsuf) =>
+      (P := fun sym word tr rem
+                (pf : sym_derives_prefix sym word tr rem) =>
               exists (fuel : nat),
-                parse tbl sym (wpre ++ wsuf) fuel =
-                (Some tr, wsuf))
+                parse tbl sym (word ++ rem) fuel =
+                (Some tr, rem))
 
-      (P0 := fun gamma wpre f wsuf
-             (pf : gamma_derives_prefix gamma wpre f wsuf) =>
+      (P0 := fun gamma word f rem
+             (pf : gamma_derives_prefix gamma word f rem) =>
                exists fuel,
-                 parseForest tbl gamma (wpre ++ wsuf) fuel =
-                 (Some f, wsuf)).
+                 parseForest tbl gamma (word ++ rem) fuel =
+                 (Some f, rem)).
 
   - (* T case *)
     exists 1. simpl.
@@ -40,41 +40,22 @@ Proof.
     + unfold Utils.beqString in Hbeq. (*lemma*)
       destruct (StringMapFacts.eq_dec) in Hbeq.
       * inv Hbeq.
-      * congruence. 
+      * congruence.
 
-  - (* NTFirst case *)
+  - (* NT case *)
     destruct IHHder as [fuel].
     exists (S fuel); simpl.
-    destruct wpre as [| tok toks]; simpl in *.
-    + inv f.
-      eapply eof_fgamma in H3; eauto; inv H3. (*tactic*)
-    + unfold ptComplete in Hcom.
-      assert ((@isLookaheadFor g) (LA tok) (NT x) gamma).
-      { unfold isLookaheadFor; auto. } (*lemma*)
-      eapply Hcom in H0.
-      destruct H0 as [m [Hs Hl]].
-      unfold parseTableLookup; rewrite Hs; rewrite Hl. (*tac*)
-      rewrite H.
-      auto.
-
-  - (* NtFollow case *)
-    destruct IHHder as [fuel]; simpl in *.
-    exists (S fuel); simpl.
-    assert ((@isLookaheadFor g) (peek wsuf) (NT x) gamma).
-    { unfold isLookaheadFor.
-      right; split; auto.
-      inv f.
-      eapply gamma_derives_nil_nullable in g0; eauto.
-      constructor; auto. } (*lemma*)
-    apply Hcom in H0.
-    destruct H0 as [m [Hs Hl]].
+    unfold ptComplete in Hcom.
+    apply Hcom in i.
+    destruct i as [m [Hs Hl]].
     unfold parseTableLookup; rewrite Hs; rewrite Hl.
-    rewrite H.
-    auto.
+    rewrite H; auto.
 
-  - exists 1; simpl; auto.
+  - (* Fnil case *)
+    exists 1; simpl; auto.
 
-  - destruct IHHder as [hdFuel].
+  - (* Fcons case *)
+    destruct IHHder as [hdFuel].
     destruct IHHder0 as [tlFuel].
     eapply parse_fuel_max in H.
     eapply parseForest_fuel_max in H0.
