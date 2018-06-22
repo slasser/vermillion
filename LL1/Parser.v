@@ -137,12 +137,12 @@ with parseForest (tbl : parse_table)
                  (gamma : list symbol)
                  (input : list string)
                  (fuel : nat) :
-                 (option forest * list string) :=
+                 (option (list tree) * list string) :=
        match fuel with
        | O => (None, input)
        | S n =>
          match gamma with
-         | nil => (Some Fnil, input)
+         | nil => (Some nil, input)
          | sym :: gamma' =>
            match parse tbl sym input n with
            | (None, _) => (None, input)
@@ -150,52 +150,8 @@ with parseForest (tbl : parse_table)
              match parseForest tbl gamma' input' n with
              | (None, _) => (None, input)
              | (Some rSibs, input'') =>
-               (Some (Fcons lSib rSibs), input'')
+               (Some (lSib :: rSibs), input'')
              end
            end
          end
        end.
-
-
-Fixpoint parse2 (tbl : parse_table)
-                (sym : symbol)
-                (input : list string)
-                (fuel : nat) : (option tree * list string) :=
-  match fuel with
-  | O => (None, input)
-  | S n =>
-    match sym with
-    | T y =>
-      match input with
-      | nil => (None, input)
-      | tok :: input' =>
-        if beqString y tok then
-          (Some (Leaf y), input')
-        else
-          (None, input)
-      end
-      | NT x =>
-        match parseTableLookup x (peek input) tbl with
-        | None => (None, input)
-        | Some gamma =>
-          let fix parseForest gamma input :=
-              match gamma with
-              | nil => (Some Fnil, input)
-              | sym :: gamma' =>
-                match parse2 tbl sym input n with
-                | (None, _) => (None, input)
-                | (Some lSib, input') =>
-                  match parseForest gamma' input' with
-                | (None, _) => (None, input)
-                | (Some rSibs, input'') =>
-                  (Some (Fcons lSib rSibs), input'')
-                end
-              end
-            end
-        in  match parseForest gamma input with
-            | (Some f, input') => (Some (Node x f), input')
-            | (None, input') => (None, input)
-            end
-        end
-      end
-  end.

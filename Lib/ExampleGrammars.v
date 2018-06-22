@@ -61,29 +61,17 @@ Definition g311Sentence1 :=
   ["if"; "num"; "=="; "num"; "then";
      "print"; "num"; "=="; "num";
     "else";
-      "print"; "num"; "=="; "num"].
+     "print"; "num"; "=="; "num"].
 
-Definition E_tree :=
-  Node "E"
-     (Fcons (Leaf "num")
-            (Fcons (Leaf "==")
-                   (Fcons (Leaf "num")
-                          Fnil))).
+Definition E_tree := Node "E" [Leaf "num"; Leaf "=="; Leaf "num"].
 
-Definition S_print_tree :=
-  Node "S"
-     (Fcons (Leaf "print")
-            (Fcons E_tree Fnil)).
+Definition S_print_tree := Node "S" [Leaf "print"; E_tree].
 
 Definition g311ParseTree1 :=
-  Node "S"
-     (Fcons (Leaf "if")
-            (Fcons E_tree
-                   (Fcons (Leaf "then")
-                           (Fcons S_print_tree
-                                  (Fcons (Leaf "else")
-                                         (Fcons S_print_tree
-                                                Fnil)))))).
+  Node "S" [Leaf "if"; E_tree; Leaf "then";
+              S_print_tree;
+            Leaf "else";
+              S_print_tree].
 
 (* Grammar 3.12 from the same textbook *)
 

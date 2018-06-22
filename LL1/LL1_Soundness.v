@@ -77,7 +77,7 @@ Proof.
                   | s f IHpf
                   |
                   | tr IHp f IHpf ]
-                    using tree_mutual_ind with
+                    using tree_nested_ind with
       
       (P := fun tr =>
               forall sym input rem fuel,
@@ -87,7 +87,7 @@ Proof.
                   word ++ rem = input
                   /\ sym_derives_prefix sym word tr rem)
       
-      (P0 := fun f =>
+      (Q := fun f =>
                forall gamma input rem fuel,
                  parseForest tbl gamma input fuel =
                  (Some f, rem)

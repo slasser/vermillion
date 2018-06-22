@@ -35,6 +35,19 @@ Module StringSetEqProps := EqProperties StringSet.
 Module StringMap := FMapWeakList.Make StringAsDT.
 Module StringMapFacts := WFacts_fun StringAsDT StringMap.
 
+Module MDT_Symbol.
+  Definition t := symbol.
+  Definition eq_dec := symbol_eq_dec.
+End MDT_Symbol.
+
+Module SymbolAsDT := Make_UDT(MDT_Symbol).
+
+Module SymbolSet := MSetWeakList.Make SymbolAsDT.
+Module SymbolSetFacts := WFactsOn SymbolAsDT SymbolSet.
+Module SymbolSetEqProps := EqProperties SymbolSet.
+
+Module SymbolMap := FMapWeakList.Make SymbolAsDT.
+Module SymbolMapFacts := WFacts_fun SymbolAsDT SymbolMap.
 
 (*
 Module Type SYMBOL.
@@ -265,4 +278,4 @@ Module G <: GRAMMAR.
   Proof. repeat decide equality. Defined.
 
 End G.
-*)
+ *)

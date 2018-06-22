@@ -13,25 +13,25 @@ Inductive sym_derives_prefix {g : grammar} :
     forall (x : string) 
            (gamma : list symbol)
            (word rem : list string) 
-           (subtrees : forest),
+           (subtrees : list tree),
       (@isLookaheadFor g) (peek (word ++ rem)) (NT x) gamma
       -> gamma_derives_prefix gamma word subtrees rem
       -> sym_derives_prefix (NT x) word (Node x subtrees) rem
 with gamma_derives_prefix {g : grammar} : 
-       list symbol -> list string -> forest -> list string -> Prop :=
+       list symbol -> list string -> list tree -> list string -> Prop :=
      | Nil_gdp : forall rem,
-         gamma_derives_prefix [] [] Fnil rem
+         gamma_derives_prefix [] [] [] rem
      | Cons_gdp : 
          forall (hdRoot : symbol)
                 (wpre wsuf rem : list string)
                 (hdTree : tree)
                 (tlRoots : list symbol)
-                (tlTrees : forest),
+                (tlTrees : list tree),
          sym_derives_prefix hdRoot wpre hdTree (wsuf ++ rem)
          -> gamma_derives_prefix tlRoots wsuf tlTrees rem
          -> gamma_derives_prefix (hdRoot :: tlRoots) 
                                  (wpre ++ wsuf)
-                                 (Fcons hdTree tlTrees)
+                                 (hdTree :: tlTrees)
                                  rem.
 
 Scheme sdp_mutual_ind :=

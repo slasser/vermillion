@@ -22,8 +22,8 @@ Ltac derCrush :=
          | |- derivesTree (T _) _ _ => apply derivesT
          | |- derivesForest (T ?s :: _) _ _ =>
            let tName := s
-           in  apply derivesFcons with (prefix := [tName])
-         | |- derivesForest [] _ _ => apply derivesFnil
+           in  apply derivesCons with (prefix := [tName])
+         | |- derivesForest [] _ _ => constructor
          | |- ?P = ?P => reflexivity
          | |- _ => simpl in *
          end.

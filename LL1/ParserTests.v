@@ -37,5 +37,5 @@ Definition x_y_parse_table :=
                 
 Example x_y_test1 :
   parse x_y_parse_table (NT "x") nil 100 =
-  (Some (Node "x" (Fcons (Node "y" Fnil) Fnil)), nil).
+  (Some (Node "x" [Node "y" []]), nil).
 Proof. simpl. reflexivity. Qed.

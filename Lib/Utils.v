@@ -116,22 +116,21 @@ Proof.
   subst. assumption.
 Qed.
 
-Definition removeOpt (x : string) (s : StringSet.t) :=
-  if StringSet.mem x s then
-    Some (StringSet.remove x s)
+Definition removeOpt (x : symbol) (s : SymbolSet.t) :=
+  if SymbolSet.mem x s then
+    Some (SymbolSet.remove x s)
   else None.
 
-Definition addAll (xs : list string) : StringSet.t :=
-  fold_right StringSet.add StringSet.empty xs.
+Definition addAll (xs : list symbol) : SymbolSet.t :=
+  fold_right SymbolSet.add SymbolSet.empty xs.
 
-Definition unionAll (ss : list StringSet.t) : StringSet.t :=
-  fold_right StringSet.union StringSet.empty ss.
+Definition unionAll (ss : list SymbolSet.t) : SymbolSet.t :=
+  fold_right SymbolSet.union SymbolSet.empty ss.
 
-(*
 Definition nonterminals g :=
   let prodNTs p :=
       match p with
       | (l, rs) =>
-        StringSet.add l (addAll (filter isNT rs))
+        SymbolSet.add (NT l) (addAll (filter isNT rs))
       end
-  in  unionAll (map prodNTs g). *)
+  in  unionAll (map prodNTs g).

@@ -110,14 +110,14 @@ Proof.
                   | s f IHparseForest
                   |
                   | tr IHparse f IHparseForest ]
-      using tree_mutual_ind with
+      using tree_nested_ind with
       (P := fun tr =>
               forall input sym suffix fuel,
                 parse tbl sym input fuel = (Some tr, suffix) ->
                 exists prefix,
                   (prefix ++ suffix)%list = input /\
                   (@derivesTree g) sym prefix tr)
-      (P0 := fun subtrees =>
+      (Q := fun subtrees =>
                forall input gamma suffix fuel,
                  parseForest tbl gamma input fuel =
                  (Some subtrees, suffix) ->
@@ -167,11 +167,11 @@ Proof.
                       (gamma:=nil) in Hlookup.
                   { assumption. }
                   assumption. }
-                apply derivesFnil. }
+                apply derivesNil. }
               apply derivesNT with
                   (gamma := (hdRoot :: tlRoots)).
               { eapply lookup_tbl_in_grammar; eassumption. }
-              { apply derivesFcons; assumption. }}
+              { apply derivesCons; assumption. }}
             { inv Hparse. }}}
         { inv Hparse. }
 
@@ -182,7 +182,7 @@ Proof.
       * simpl in HparseForest. inv HparseForest.
         exists nil. split.
         { reflexivity. }
-        apply derivesFnil.
+        apply derivesNil.
       * exfalso.
         simpl in HparseForest.
         destruct (parse tbl sym input fuel)
@@ -217,10 +217,9 @@ Proof.
               subst.
               exists (treePrefix ++ forestPrefix)%list. split.
               { rewrite app_assoc. reflexivity. }
-              apply derivesFcons.
+              apply derivesCons.
               { assumption. }
               assumption. }}
           inv HparseForest. }
         inv HparseForest.
 Qed.
-

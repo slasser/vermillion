@@ -14,16 +14,16 @@ Proof.
                   | s f IHparseForest
                   |
                   | tr IHparse f IHparseForest ]
-      using tree_mutual_ind with
+    using tree_nested_ind with
       (P := fun tr =>
               forall tbl sym input suffix fuel fuel2,
                 parse tbl sym input fuel = (Some tr, suffix)
                 -> fuel < fuel2
                 -> parse tbl sym input fuel2 =
                    (Some tr, suffix))
-      (P0 := fun subtrees =>
-               forall tbl gamma input suffix fuel fuel2,
-                 parseForest tbl gamma input fuel =
+      (Q := fun subtrees =>
+              forall tbl gamma input suffix fuel fuel2,
+                parseForest tbl gamma input fuel =
                  (Some subtrees, suffix)
                  -> fuel < fuel2
                  -> parseForest tbl gamma input fuel2 =
@@ -155,14 +155,14 @@ Proof.
                    | s f IHparseForest
                    |
                    | tr IHparse f IHparseForest ]
-      using forest_mutual_ind with
+      using forest_nested_ind with
       (P := fun tr =>
               forall tbl sym input suffix fuel fuel2,
                 parse tbl sym input fuel = (Some tr, suffix)
                 -> fuel < fuel2
                 -> parse tbl sym input fuel2 =
                    (Some tr, suffix))
-      (P0 := fun subtrees =>
+      (Q := fun subtrees =>
                forall tbl gamma input suffix fuel fuel2,
                  parseForest tbl gamma input fuel =
                  (Some subtrees, suffix)

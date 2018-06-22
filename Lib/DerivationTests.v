@@ -11,66 +11,66 @@ Proof.
       (x := "S")
       (gamma := [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"]).
   - left. reflexivity.
-  - apply derivesFcons with (prefix := ["if"]).
+  - apply derivesCons with (prefix := ["if"]).
     + apply derivesT.
-    + apply derivesFcons with (prefix := ["num" ; "==" ; "num"]).
+    + apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
       * apply derivesNT with 
             (x := "E")
             (gamma := [T "num" ; T "==" ; T "num"]).
         { repeat (try (left ; reflexivity) ; right). }
-        { apply derivesFcons with (prefix := ["num"]).
+        { apply derivesCons with (prefix := ["num"]).
           { apply derivesT. }
-          apply derivesFcons with (prefix := ["=="]).
+          apply derivesCons with (prefix := ["=="]).
           { apply derivesT. }
-          apply derivesFcons with (prefix := ["num"]).
+          apply derivesCons with (prefix := ["num"]).
           { apply derivesT. }
-          apply derivesFnil. }
-      * apply derivesFcons with (prefix := ["then"]).
+          apply derivesNil. }
+      * apply derivesCons with (prefix := ["then"]).
         { apply derivesT. }
-        apply derivesFcons with (prefix := ["print" ; "num" ; "==" ; "num"]).
+        apply derivesCons with (prefix := ["print" ; "num" ; "==" ; "num"]).
         { apply derivesNT with 
               (x := "S")
               (gamma := [T "print" ; NT "E"]).
           { repeat (try (left ; reflexivity) ; right). }
-          apply derivesFcons with (prefix := ["print"]).
+          apply derivesCons with (prefix := ["print"]).
           { apply derivesT. }
-          apply derivesFcons with (prefix := ["num" ; "==" ; "num"]).
+          apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
           { apply derivesNT with
                 (x := "E") 
                 (gamma := [T "num" ; T "==" ; T "num"]).
             { repeat (try (left ; reflexivity) ; right). }
-            apply derivesFcons with (prefix := ["num"]).
+            apply derivesCons with (prefix := ["num"]).
             { apply derivesT. }
-            apply derivesFcons with (prefix := ["=="]).
+            apply derivesCons with (prefix := ["=="]).
             { apply derivesT. }
-            apply derivesFcons with (prefix := ["num"]).
+            apply derivesCons with (prefix := ["num"]).
             { apply derivesT. }
-            apply derivesFnil. }
-          apply derivesFnil. }
-        apply derivesFcons with (prefix := ["else"]).
+            apply derivesNil. }
+          apply derivesNil. }
+        apply derivesCons with (prefix := ["else"]).
         { apply derivesT. }
-        apply derivesFcons with (prefix := ["print" ; "num" ; "==" ; "num"]).
+        apply derivesCons with (prefix := ["print" ; "num" ; "==" ; "num"]).
         { apply derivesNT with 
               (x := "S")
               (gamma := [T "print" ; NT "E"]).
           { repeat (try (left ; reflexivity) ; right). }
-          apply derivesFcons with (prefix := ["print"]).
+          apply derivesCons with (prefix := ["print"]).
           { apply derivesT. }
-          apply derivesFcons with (prefix := ["num" ; "==" ; "num"]).
+          apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
           { apply derivesNT with 
                 (x := "E")
                 (gamma := [T "num" ; T "==" ; T "num"]).
             { repeat (try (left ; reflexivity) ; right). }
-            apply derivesFcons with (prefix := ["num"]).
+            apply derivesCons with (prefix := ["num"]).
             { apply derivesT. }
-            apply derivesFcons with (prefix := ["=="]).
+            apply derivesCons with (prefix := ["=="]).
             { apply derivesT. }
-            apply derivesFcons with (prefix := ["num"]).
+            apply derivesCons with (prefix := ["num"]).
             { apply derivesT. }
-            apply derivesFnil. }
-          apply derivesFnil. }
-        apply derivesFnil.
-Defined.
+            apply derivesNil. }
+          apply derivesNil. }
+        apply derivesNil.
+Qed.
 
 (* A (slightly) more automated proof of the same derivation. *)
 Example derivesTest2 :
@@ -80,30 +80,30 @@ Proof.
       (x := "S")
       (gamma := [T "if" ; NT "E" ; T "then" ; NT "S" ; T "else" ; NT "S"]);
     derCrush.
-  apply derivesFcons with (prefix := ["num" ; "==" ; "num"]).
+  apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
   - apply derivesNT with 
         (x := "E")
         (gamma := [T "num" ; T "==" ; T "num"]); derCrush.
   - derCrush.
-    apply derivesFcons with (prefix := ["print" ; "num" ; "==" ; "num"]).
+    apply derivesCons with (prefix := ["print" ; "num" ; "==" ; "num"]).
     + apply derivesNT with 
           (x := "S")
           (gamma := [T "print" ; NT "E"]); derCrush.
-      apply derivesFcons with (prefix := ["num" ; "==" ; "num"]).
+      apply derivesCons with (prefix := ["num" ; "==" ; "num"]).
       * apply derivesNT with 
             (x := "E")
             (gamma := [T "num" ; T "==" ; T "num"]); derCrush.
       * derCrush.
     + derCrush.
-      apply derivesFcons with (prefix := ["print" ; "num" ; "==" ; "num"]).
+      apply derivesCons with (prefix := ["print" ; "num" ; "==" ; "num"]).
       * apply derivesNT with 
             (x := "S")
             (gamma := [T "print" ; NT "E"]); derCrush.
-        apply derivesFcons with (prefix := ["num"; "=="; "num"]).
+        apply derivesCons with (prefix := ["num"; "=="; "num"]).
         { apply derivesNT with 
               (x := "E")
               (gamma := [T "num" ; T "==" ; T "num"]); derCrush. }
         derCrush.
       * derCrush.
-Defined.
+Qed.
 
