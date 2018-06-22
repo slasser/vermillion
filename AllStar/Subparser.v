@@ -7,11 +7,26 @@ Record subparser :=
   mkSp { stack: list symbol ;
          pred : list symbol }.
 
+Definition beqSym s s2 :=
+  match (s, s2) with
+  | (T y, T y2) => beqString y y2
+  | (NT x, NT x2) => beqString x x2
+  | (_, _) => false
+  end.
+
+Fixpoint beqSymList (xs ys : list symbol) : bool :=
+  match (xs, ys) with
+  | (nil, nil) => true
+  | (x :: xs', y :: ys') =>
+    if beqSym x y then beqSymList xs' ys' else false
+  | _ => false
+  end.
+
 (* Two subparsers are equal if their stacks 
    and predictions are equal. *)
 Definition beqSp (sp sp2 : subparser) : bool :=
-  beqList sp.(stack) sp2.(stack) &&
-  beqList sp.(pred) sp2.(pred).
+  beqSymList sp.(stack) sp2.(stack) &&
+  beqSymList sp.(pred) sp2.(pred).
 
 Section spClosure.
 
@@ -251,11 +266,11 @@ Definition startState (g : grammar) (x : string)
   let sps := map (fun gamma =>
                     mkSp (gamma ++ stack0) gamma)
                  (rhss g x)
-  in  closure g (nonterminals g) sps.
+  in  closure g (nonterminals (productions g)) sps.
 
 Definition target (g : grammar) (sps : list subparser)
                   (token : string) : list subparser :=
-  closure g (nonterminals g) (move token sps).
+  closure g (nonterminals (productions g)) (move token sps).
 
 Fixpoint conflict (sps : list subparser) : bool :=
   match sps with
@@ -263,8 +278,8 @@ Fixpoint conflict (sps : list subparser) : bool :=
   | sp :: sps' => 
     if existsb
          (fun sp2 => 
-            beqList sp.(stack) sp2.(stack) && 
-            negb (beqList sp.(pred) sp2.(pred)))
+            beqSymList sp.(stack) sp2.(stack) && 
+            negb (beqSymList sp.(pred) sp2.(pred)))
          sps'
     then true
     else conflict sps'
@@ -278,7 +293,7 @@ Inductive pred_result :=
 Fixpoint predict (g : grammar) (sps : list subparser)
                  (input : list string) : pred_result :=
   (*let preds := map pred sps in *)
-  match nub sps (fun sp sp2 => beqList sp.(pred) sp2.(pred)) with
+  match nub sps (fun sp sp2 => beqSymList sp.(pred) sp2.(pred)) with
   | nil => Fail
   | [p] => Choice p.(pred)
   | _ => if conflict sps then

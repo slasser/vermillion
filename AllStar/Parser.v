@@ -37,12 +37,12 @@ with parseForest (g : grammar)
                  (input : list string)
                  (stack : list symbol)
                  (fuel : nat) :
-                 (option forest * list string) :=
+                 (option (list tree) * list string) :=
        match fuel with
        | O => (None, input)
        | S n =>
          match gamma with
-         | nil => (Some Fnil, input)
+         | nil => (Some nil, input)
          | sym :: gamma' =>
            match parse' g sym input (gamma' ++ stack) n with
            | (None, _) => (None, input)
@@ -50,7 +50,7 @@ with parseForest (g : grammar)
              match parseForest g gamma' input' stack n with
              | (None, _) => (None, input)
              | (Some rSibs, input'') =>
-               (Some (Fcons lSib rSibs), input'')
+               (Some (lSib :: rSibs), input'')
              end
            end
          end

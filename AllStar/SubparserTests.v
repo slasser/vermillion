@@ -15,7 +15,7 @@ Require Import Grammar.
 
 (* spClosure works with an empty stack *)
 Example spClosureTest1 :
-  spClosure g312 (nonterminals g312) {| stack := nil; pred := [T "d"] |} =
+  spClosure g312 (nonterminals (productions g312)) {| stack := nil; pred := [T "d"] |} =
   [{| stack := nil; pred := [T "d"] |}].
 Proof.
   unfold spClosure. simpl. reflexivity.
@@ -23,21 +23,21 @@ Qed.
 
 (* it also works when the top stack element is a terminal *)
 Example spClosureTest2 :
-  spClosure g312 (nonterminals g312) {| stack := [T "d"]; pred := [T "d"] |} =
+  spClosure g312 (nonterminals (productions g312)) {| stack := [T "d"]; pred := [T "d"] |} =
   [{| stack := [T "d"]; pred := [T "d"] |}].
 Proof.
   unfold spClosure. simpl. reflexivity.
 Qed.
 
 Example spClosureTest3 :
-  spClosure g312 (nonterminals g312) {| stack := [NT "out-of-vocab"]; pred := [T "d"] |} = nil.
+  spClosure g312 (nonterminals (productions g312)) {| stack := [NT "out-of-vocab"]; pred := [T "d"] |} = nil.
 Proof.
   unfold spClosure. simpl. reflexivity.
 Qed.
 
 Example spClosureTest4 :
   spClosure g312
-            (nonterminals g312)
+            (nonterminals (productions g312))
             {| stack := [NT "X"; NT "Y"; NT "Z"];
                pred := [NT "X"; NT "Y"; NT "Z"] |} =
   [{|
@@ -71,4 +71,3 @@ Proof. eexists. compute. reflexivity. Qed.
 Example Z_d : 
   adaptivePredict g312 "Z" ["d"] nil = Choice [].
 Proof. compute. Abort.
-
