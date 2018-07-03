@@ -1,5 +1,5 @@
 Require Import List String.
-Require Import Derivation ExampleGrammars Grammar ParseTree Tactics.
+Require Import Lib.Derivation ExampleGrammars Grammar ParseTree Tactics.
 Import ListNotations.
 Open Scope string_scope.
 

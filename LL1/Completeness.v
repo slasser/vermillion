@@ -1,8 +1,8 @@
 Require Import List Omega String.
 Require Import Grammar Lemmas ParseTable
         ParseTree LL1.Parser Lib.Tactics
-        LL1.CorrectnessProof LL1.MonotonicityLemmas
-        LL1.LL1_Derivation.
+        LL1.Monotonicity
+        LL1.Derivation.
 Open Scope string_scope.
 
 Theorem parse_complete :

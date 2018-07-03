@@ -1,5 +1,5 @@
 Require Import List MSets String.
-Require Import Derivation Grammar ParseTable Lib.Utils.
+Require Import Lib.Derivation Grammar ParseTable Lib.Utils.
 Import ListNotations.
 Open Scope string_scope.
 

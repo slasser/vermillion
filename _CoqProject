@@ -9,16 +9,15 @@ Lib/Tactics.v
 Lib/ParseTree.v
 Lib/Utils.v
 
-LL1/MonotonicityLemmas.v
+LL1/Monotonicity.v
 LL1/Parser.v
 LL1/ParseTable.v
 LL1/ParseTableLemmas.v
 LL1/ParserTests.v
-LL1/LL1_Derivation.v
+LL1/Derivation.v
 LL1/ParseTableTests.v
-LL1/CorrectnessProof.v
-LL1/LL1_Soundness.v
-LL1/LL1_Completeness.v
+LL1/Soundness.v
+LL1/Completeness.v
 
 AllStar/Parser.v
 AllStar/ParserTests.v

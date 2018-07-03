@@ -1,8 +1,7 @@
 Require Import List Omega String.
 Require Import Lib.Derivation Lib.Grammar Lib.Lemmas
                Lib.ParseTree Lib.Tactics.
-Require Import LL1.CorrectnessProof. (* move lemmas out *)
-Require Import LL1.ParseTable LL1.Parser.
+Require Import LL1.ParseTable LL1.Parser LL1.Soundness.
 
 Lemma parse_fuel_monotonic :
   forall tr tbl sym input suffix fuel fuel2,
@@ -41,7 +40,7 @@ Proof.
             destruct (Utils.beqString y token).
             { inv Hparse. reflexivity. }
             { inv Hparse. }}}
-        { apply nt_derives_Node in Hparse. inv Hparse. }
+        { apply parse_nt_ret_node in Hparse. inv Hparse. }
 
   - intros tbl sym input suffix fuel fuel2 Hparse Hfuel.
     destruct fuel.
@@ -49,7 +48,7 @@ Proof.
     + destruct fuel2.
       * inv Hfuel.
       * destruct sym as [y | x].
-        { apply t_derives_Leaf in Hparse. inv Hparse. }
+        { apply parse_t_ret_leaf in Hparse. inv Hparse. }
         { simpl; simpl in Hparse.
           destruct (parseTableLookup x (peek input) tbl)
             as [gamma |] eqn:Hlookup.
@@ -182,7 +181,7 @@ Proof.
             destruct (Utils.beqString y token).
             { inv Hparse. reflexivity. }
             { inv Hparse. }}}
-        { apply nt_derives_Node in Hparse. inv Hparse. }
+        { apply parse_nt_ret_node in Hparse. inv Hparse. }
 
   - intros tbl sym input suffix fuel fuel2 Hparse Hfuel.
     destruct fuel.
@@ -190,7 +189,7 @@ Proof.
     + destruct fuel2.
       * inv Hfuel.
       * destruct sym as [y | x].
-        { apply t_derives_Leaf in Hparse. inv Hparse. }
+        { apply parse_t_ret_leaf in Hparse. inv Hparse. }
         { simpl; simpl in Hparse.
           destruct (parseTableLookup x (peek input) tbl)
             as [gamma |] eqn:Hlookup.
