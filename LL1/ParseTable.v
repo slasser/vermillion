@@ -39,102 +39,151 @@ Definition parseTableLookup
   | Some tMap => LookaheadMap.find y tMap
   end.
 
-(* Changed nullableSym from nonterminal to symbol *)
-Inductive nullableProd {g : grammar} :
+(* Changed nullable_sym from nonterminal to symbol *)
+Inductive nullable_prod {g : grammar} :
   symbol -> list symbol -> Prop :=
 | NuProd :
     forall x ys,
       In (x, ys) g.(productions)
-      -> nullableGamma ys
-      -> nullableProd (NT x) ys
-with nullableGamma {g : grammar} :
+      -> nullable_gamma ys
+      -> nullable_prod (NT x) ys
+with nullable_gamma {g : grammar} :
        list symbol -> Prop :=
      | NuNil :
-         nullableGamma nil
+         nullable_gamma nil
      | NuCons :
          forall x tl,
-           nullableSym (NT x)
-           -> nullableGamma tl
-           -> nullableGamma (NT x :: tl)
-with nullableSym {g : grammar} :
+           nullable_sym (NT x)
+           -> nullable_gamma tl
+           -> nullable_gamma (NT x :: tl)
+with nullable_sym {g : grammar} :
        symbol -> Prop :=
      | NuSym :
          forall sym ys,
-           nullableProd sym ys
-           -> nullableSym sym.
+           nullable_prod sym ys
+           -> nullable_sym sym.
 
-Inductive firstProd {g : grammar} :
+Scheme nullable_prod_mutual_ind := Induction for nullable_prod Sort Prop
+  with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop
+  with nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop.
+
+
+Definition nullable_set_complete (nu : SymbolSet.t)
+                                 (g  : grammar) : Prop :=
+  forall x, (@nullable_sym g) (NT x) -> SymbolSet.In (NT x) nu.
+
+Definition nullable_set_minimal (nu : SymbolSet.t)
+                                (g  : grammar) : Prop :=
+  forall x, SymbolSet.In (NT x) nu -> (@nullable_sym g) (NT x).
+
+Definition nullable_set_for nu g : Prop :=
+nullable_set_complete nu g /\ nullable_set_minimal nu g.
+
+Inductive first_prod {g : grammar} :
     lookahead -> symbol -> list symbol -> Prop :=
 | FiProd : forall la x gamma,
     In (x, gamma) g.(productions)
-    -> firstGamma la gamma
-    -> firstProd la (NT x) gamma
-with firstGamma {g : grammar} :
+    -> first_gamma la gamma
+    -> first_prod la (NT x) gamma
+with first_gamma {g : grammar} :
        lookahead -> list symbol -> Prop :=
      | FiGammaHd : forall la hd tl,
-         firstSym la hd ->
-         firstGamma la (hd :: tl)
+         first_sym la hd
+         -> first_gamma la (hd :: tl)
      | FiGammaTl : forall la x tl,
-         (@nullableSym g) (NT x) ->
-         firstGamma la tl ->
-         firstGamma la (NT x :: tl)
-with firstSym {g : grammar} :
+         (@nullable_sym g) (NT x)
+         -> first_gamma la tl
+         -> first_gamma la (NT x :: tl)
+with first_sym {g : grammar} :
        lookahead -> symbol -> Prop :=
 | FiT : forall s,
-    firstSym (LA s) (T s)
+    first_sym (LA s) (T s)
 | FiNT : forall la sym gamma,
-    firstProd la sym gamma ->
-    firstSym la sym.
+    first_prod la sym gamma
+    -> first_sym la sym.
 
-Scheme firstProd_mutual_ind := Induction for firstProd Sort Prop
-  with firstGamma_mutual_ind := Induction for firstGamma Sort Prop
-  with firstSym_mutual_ind := Induction for firstSym Sort Prop.
+Scheme first_prod_mutual_ind := Induction for first_prod Sort Prop
+  with first_gamma_mutual_ind := Induction for first_gamma Sort Prop
+  with first_sym_mutual_ind := Induction for first_sym Sort Prop.
 
-Inductive followProd {g : grammar} :
+Definition first_set_complete fi g : Prop :=
+  forall x la,
+    isNT x = true
+    -> (@first_sym g) la x
+    -> exists xFirst,
+        SymbolMap.find x fi = Some xFirst
+        /\ LookaheadSet.In la xFirst.
+
+Definition first_set_minimal fi g : Prop :=
+  forall x xFirst la,
+    SymbolMap.find x fi = Some xFirst
+    -> LookaheadSet.In la xFirst
+    -> (@first_sym g) la x.
+
+Definition first_set_for fi g : Prop :=
+first_set_complete fi g /\ first_set_minimal fi g.
+
+Inductive follow_prod {g : grammar} :
   lookahead -> symbol -> list symbol -> Prop :=
 | FoProd :
     forall la x gamma,
       In (x, gamma) g.(productions)
-      -> followSym la (NT x)
-      -> followProd la (NT x) gamma
-with followSym {g : grammar} :
+      -> follow_sym la (NT x)
+      -> follow_prod la (NT x) gamma
+with follow_sym {g : grammar} :
        lookahead -> symbol -> Prop :=
      | FoNu :
          forall sym gamma,
-           (@nullableProd g) sym gamma
-           -> followSym EOF sym
+           (@nullable_prod g) sym gamma
+           -> follow_sym EOF sym
      | FoRight :
          forall x1 x2 prefix suffix la,
            In (x1, prefix ++ NT x2 :: suffix) g.(productions)
-           -> (@firstGamma g) la suffix
-           -> followSym la (NT x2)
+           -> (@first_gamma g) la suffix
+           -> follow_sym la (NT x2)
      | FoLeft :
          forall x1 x2 prefix suffix la,
            In (x1, prefix ++ NT x2 :: suffix) g.(productions)
-           -> (@nullableGamma g) suffix
-           -> followSym la (NT x1)
-           -> followSym la (NT x2).
+           -> (@nullable_gamma g) suffix
+           -> follow_sym la (NT x1)
+           -> follow_sym la (NT x2).
 
-Scheme followProd_mutual_ind := Induction for firstProd Sort Prop
-  with followSym_mutual_ind := Induction for firstSym Sort Prop.
+Scheme follow_prod_mutual_ind := Induction for follow_prod Sort Prop
+  with follow_sym_mutual_ind := Induction for follow_sym Sort Prop.
 
-Definition isLookaheadFor {g} la sym gamma :=
-  (@firstProd g) la sym gamma
-  \/ (@nullableProd g) sym gamma
-     /\ (@followProd g) la sym gamma.
+Definition follow_set_complete fo g : Prop :=
+  forall x y,
+    (@follow_sym g) y x
+    -> exists xFollow,
+      SymbolMap.find x fo = Some xFollow
+      /\ LookaheadSet.In y xFollow.
 
-Definition ptMinimal tbl g :=
+Definition follow_set_minimal fo g : Prop :=
+  forall x xFollow y,
+    SymbolMap.find x fo = Some xFollow
+    -> LookaheadSet.In y xFollow
+    -> (@follow_sym g) y x.
+
+Definition follow_set_for fo g : Prop :=
+follow_set_complete fo g /\ follow_set_minimal fo g.
+
+Definition lookahead_for {g} la sym gamma :=
+  (@first_prod g) la sym gamma
+  \/ ((@nullable_prod g) sym gamma
+      /\ (@follow_prod g) la sym gamma).
+
+Definition pt_minimal tbl g :=
   forall x la gamma laMap,
     StringMap.find x tbl = Some laMap
     -> LookaheadMap.find la laMap = Some gamma
-    -> (@isLookaheadFor g) la (NT x) gamma.
+    -> (@lookahead_for g) la (NT x) gamma.
 
-Definition ptComplete tbl g :=
+Definition pt_complete tbl g :=
   forall x la gamma,
-    (@isLookaheadFor g) la (NT x) gamma
+    (@lookahead_for g) la (NT x) gamma
     -> exists laMap,
       StringMap.find x tbl = Some laMap
       /\ LookaheadMap.find la laMap = Some gamma.
 
-Definition isParseTableFor (tbl : parse_table) (g : grammar) :=
-  ptMinimal tbl g /\ ptComplete tbl g.
+Definition parse_table_for (tbl : parse_table) (g : grammar) :=
+  pt_minimal tbl g /\ pt_complete tbl g.

@@ -2,10 +2,10 @@ Require Import Bool List Omega String.
 Require Import Grammar Lib.Tactics Lib.Utils.
 
 Lemma find_In : forall k vT (v : vT) m,
-    StringMap.find k m = Some v ->
-    StringMap.In k m.
+    SymbolMap.find k m = Some v ->
+    SymbolMap.In k m.
 Proof.
-  intros. rewrite StringMapFacts.in_find_iff. rewrite H.
+  intros. rewrite SymbolMapFacts.in_find_iff. rewrite H.
   unfold not. intro Hcontra. inv Hcontra.
 Qed.
 

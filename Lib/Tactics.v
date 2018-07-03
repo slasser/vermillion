@@ -31,17 +31,22 @@ Ltac derCrush :=
 Ltac crush :=
   repeat match goal with
            
-         | |- ?X = ?X => reflexivity
+         | |- ?X = ?X => auto
 
-         | |- isNT (NT _) = true => reflexivity
+         | |- isNT (NT _) = true => auto
 
-         | |- isT (T _) = true => reflexivity
+         | |- isT (T _) = true => auto
 
-         | |- firstSym ?X (T ?X) =>
-           apply FiT
+         | |- nullable_gamma [] => constructor
 
-         | |- firstGamma (?x) (?x :: _) =>
-           apply FiGammaHd
+         | |- first_sym (LA ?x) (T ?x) =>
+           constructor
+
+         | |- first_sym (LA _) (NT _) =>
+           econstructor
+
+         | |- first_gamma (LA ?x) (T ?x :: _) =>
+           constructor
 
          (* contradictions *)
                                             
@@ -56,7 +61,7 @@ Ltac crush :=
 
          | H : isT (NT _) = true |- _ => inv H
 
-         | H : firstGamma _ [] |- _ =>
+         | H : first_gamma _ [] |- _ =>
            inv H
 
          | H : ?X <> ?X |- _ =>
@@ -75,16 +80,13 @@ Ltac crush :=
          | H : (isNT ?x = true), H2 : (isT ?x = true) |- _ =>
            destruct x
 
-         | H : firstProd _ _ [] |- _ =>
-           inv H
-
-         | H : firstGamma _ _ [] |- _ =>
+         | H : first_prod _ _ [] |- _ =>
            inv H
 
          | H : isNT ?x = true, H2 : ?x = T _ |- _ =>
            subst
 
-         | H : nullableSym (T _) |- _ =>
+         | H : nullable_sym (T _) |- _ =>
            inv H
 
          | H : In _ [] |- _ => inv H
@@ -97,7 +99,7 @@ Ltac crush :=
          | H : pair (String _ _) _ = pair _  _ |- _ =>
            inv H
 
-         | H : firstSym ?NT ?T |- StringSet.In ?T _ =>
+         | H : first_sym ?NT ?T |- SymbolSet.In ?T _ =>
            inv H
 
          | H : StringMap.Raw.PX.MapsTo _ _ _ |- _ =>
@@ -112,45 +114,39 @@ Ltac crush :=
          | H : snd _ = snd _ |- _ =>
            simpl in H; subst
 
-         | H : StringMap.find (String _ _) _ = Some _
+         | H : SymbolMap.find (NT (String _ _)) _ = Some _
            |- _ => inv H
 
-         | H : StringMap.find (String _ _) _ = Some _
-           |- _ => inv H
-
-         | H : firstGamma ?y (_::_) |-
-           StringMap.find ?y _ = Some _ =>
+         | H : first_gamma ?la (_::_) |-
+           SymbolMap.find ?la _ = Some _ =>
            inv H
 
-         | H : firstGamma ?y (_::_) |-
-           StringSet.In ?y _  =>
+         | H : first_gamma ?la (_::_) |-
+           LookaheadSet.In ?la _  =>
            inv H
 
          | H : In (_, _) _ |- _ =>
            inv H
 
-         | H : StringSet.In _ _ |- _ => inv H
+         | H : SymbolSet.In _ _ |- _ => inv H
 
          | H : InA _ _ (_::_) |- _ => inv H
 
-         | H : _ = StringSet.this _ |- _ => inv H
-(*
-         | H : firstProd _ (NT (String _ _)) (_ :: _) |- _ =>
+         | H : _ = SymbolSet.this _ |- _ => inv H
+
+         | H : first_prod _ _  _ |- _ =>
            inv H
 
-         | H : firstProd' _ (NT (String _ _)) (_ :: _) |- _ =>
-           inv H
- *)
-         | H : firstProd _ _  _ |- _ =>
+         | H : first_gamma _ (T _ :: _) |- _ =>
            inv H
 
-         | H : firstGamma _ (String _ _) _ |- _ =>
+         | H : first_gamma (LA _) (NT _ :: _) |- _ =>
            inv H
                                                 
-         | H : firstSym _ (T (String _ _)) |- _ =>
+         | H : first_sym _ (T (String _ _)) |- _ =>
            inv H
 
-         | H : firstSym _ (NT (String _ _)) |- _ =>
+         | H : first_sym _ (NT (String _ _)) |- _ =>
            inv H
 
          | H : (_::_) = ([] ++ _ :: _)%list |- _ =>
@@ -162,42 +158,54 @@ Ltac crush :=
          | H : (_::_) = (?pre ++ _ :: _)%list |- _ =>
            destruct pre
 
-         | H : nullableGamma (_::_) |- _ =>
+         | H : nullable_prod _ _ |- _ =>
            inv H
 
-         | H : followSym ?y (NT _) |- StringSet.In ?y _ =>
+         | H : nullable_gamma (_::_) |- _ =>
            inv H
-               
+
+         | H : follow_sym ?y (NT _) |- SymbolSet.In ?y _ =>
+           inv H
+
+         | H : NT _ = NT (String _ _) |- _ => inv H
+
          (* lists, maps, and sets *)
                   
-         | |- StringMap.find _ _ = Some _ =>
-           unfold StringMap.find; reflexivity
+         | |- SymbolMap.find _ _ = Some _ =>
+           unfold StringMap.find; auto
                                     
          | |- In _ _ =>
            repeat (try (left; reflexivity); right)
 
-         | |- StringSet.In (String _ _) _ =>
+         | |- SymbolSet.In (NT (String _ _)) _ =>
+           repeat (try (apply InA_cons_hd; reflexivity);
+                   apply InA_cons_tl)
+
+         | |- LookaheadSet.In _ _ =>
            repeat (try (apply InA_cons_hd; reflexivity);
                    apply InA_cons_tl)
 
          (* simplifying goals *)
+
+         | |- _ /\ _ => split
                   
          | |- StringMap.find _ _ = Some _  /\
-              StringSet.In _ _ =>
+              SymbolSet.In _ _ =>
            split
 
-         | |- StringMap.find _ _ = Some _  /\
-              StringMap.find _ _ = Some _ =>
+         | |- SymbolMap.find _ _ = Some _  /\
+              SymbolMap.find _ _ = Some _ =>
            split
 
-         | |- nullableProd (String _ _) _ =>
-           apply NuProd
+         | |- nullable_prod (NT (String _ _)) _ => constructor
 
-         | |- firstProd _ _ _ =>
-           apply FiProd
+         | |- nullable_sym (NT (String _ _)) => econstructor
 
-         | |- firstGamma ?X (String _ _) (T ?X :: _) =>
+         | |- nullable_gamma (_ :: _) => constructor
+
+         | |- first_prod _ _ _ => apply FiProd
+
+         | |- first_gamma ?X (String _ _) (T ?X :: _) =>
            apply FiGammaHd
 
          end.
-

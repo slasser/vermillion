@@ -46,14 +46,14 @@ Proof.
 Qed.
 
 Lemma lookup_tbl_in_grammar : forall g x y tbl gamma,
-    isParseTableFor tbl g ->
+    parse_table_for tbl g ->
     parseTableLookup x y tbl = Some gamma ->
     In (x, gamma) g.(productions).
 Proof.
   intros.
-  unfold isParseTableFor in H. destruct H.
-  unfold ptMinimal in H. 
-  unfold ptComplete in H1.
+  unfold parse_table_for in H. destruct H.
+  unfold pt_minimal in H. 
+  unfold pt_complete in H1.
   unfold parseTableLookup in H0.
   destruct (StringMap.find x tbl) eqn:Hnt.
   - destruct (LookaheadMap.find y t) eqn:Ht.
@@ -94,7 +94,7 @@ Qed.
 Theorem parse_correct :
   forall (g   : grammar)
          (tbl : parse_table),
-    isParseTableFor tbl g ->
+    parse_table_for tbl g ->
     forall (tr     : tree)
            (input  : list string)
            (sym    : symbol)

@@ -3,7 +3,7 @@ Require Import Grammar.
 Require Import Lemmas.
 Require Import List MSets String.
 Require Import ExampleGrammars Grammar Lemmas
-               Tactics ParseTable Utils.
+               Tactics ParseTable ParseTableLemmas Utils.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -26,90 +26,86 @@ Open Scope string_scope.
 
 *)
 Definition g312NullableSet :=
-  (StringSet.add
-     "X"
-     (StringSet.add
-        "Y"
-        StringSet.empty)).
+  (SymbolSet.add
+     (NT "X")
+     (SymbolSet.add
+        (NT "Y")
+        SymbolSet.empty)).
 
 Example Y_nullable :
-  (@nullableSym g312) "Y".
-Proof.
-  apply nullable_nt with (gamma := nil).
-  crush.
-  + intros; crush.
-  + constructor.
-Qed.
+  (@nullable_sym g312) (NT "Y").
+Proof. crush. Qed.
 
 Example X_nullable :
-  (@nullableSym g312) "X".
-Proof.
-  apply nullable_nt with (gamma := [NT "Y"]).
-  crush.
-  - intros. inv H.
-    + discriminate. 
-    + crush.
-  - apply nullable_cons.
-    + apply Y_nullable.
-    + apply nullable_nil.
-Qed.
+  (@nullable_sym g312) (NT "X").
+Proof. crush. Qed.
 
 (* We can't prove this false statement, which is good *)
 Example Z_nullable :
-  (@nullableSym g312) "Z".
-Proof.
-  apply nullable_nt with (gamma := [NT "X"; NT "Y"; NT "Z"]). crush.
-  - intros. inv H.
-    + unfold not; intros; inv H.
-    + inv H0.
-      * unfold not; intros; inv H.
-      * inv H.
-        { (* stuck *)
+  (@nullable_sym g312) (NT "Z").
+Proof. crush. Abort.
+
+Example Z_nullable :
+  (@nullable_sym g312) (NT "Z").
+Proof. 
+  econstructor.
+  eapply NuProd with (ys := [NT "X"; NT "Y"; NT "Z"]).
+  - crush.
+  - constructor.
+    + apply X_nullable.
+    + constructor.
+      * apply Y_nullable.
+      * constructor.
+        -- (* back where we started *)
 Abort.
 
-(* Even better, we can prove that a symbol is NOT nullable *)
+(* With the current definitions, though, we can't immediately
+   prove that a particular symbol ISN'T nullable *)
 Example Z_not_nullable :
-  ~(@nullableSym g312) "Z".
+  ~(@nullable_sym g312) (NT "Z").
 Proof.
   unfold not. intros.
   inv H. inv H0. crush.
-  eapply H1; trivial. crush.
+Abort.
+
+(* Let's try again using the nullable_nonrec lemma *)
+Example Z_not_nullable :
+  ~(@nullable_sym g312) (NT "Z").
+Proof.
+  unfold not; intros.
+  apply nullable_nonrec in H.
+  destruct H as [gamma].
+  destruct H.
+  inv H.
+  crush.
+  apply H0; crush.
 Qed.
 
-(* Now we're ready to prove that the Grammar 3.12 NULLABLE set
-   is correct *)
+(* The previous lemma allows us to get through this one, too *)
 Example g312NullableSetCorrect :
-  isNullableSetFor g312NullableSet g312.
+  nullable_set_for g312NullableSet g312.
 Proof.
-  unfold isNullableSetFor. split.
-  - unfold nullableSetComplete. intros.
-    inv H. inv H0. crush.
-    exfalso. 
-    apply (H1 (NT "Z")); crush.
-  - unfold nullableSetMinimal. intros.
+  unfold nullable_set_for. split.
+  - unfold nullable_set_complete; intros.
     inv H.
-    + apply Y_nullable.
-    + apply InA_singleton in H1. subst.
-      apply X_nullable.
-Qed.
+    crush.
+    exfalso.
+    apply Z_not_nullable; auto.
+  - unfold nullable_set_minimal; intros.
+    crush.
+Qed.    
 
-(* We can also prove that an incomplete nullable set is 
-   incorrect *)
+(* We can prove that an incomplete nullable set is  incorrect *)
 Example incompleteNullableSetIncorrect :
-  ~isNullableSetFor
-   (StringSet.singleton "X")
-   g312.
+  ~nullable_set_for (SymbolSet.singleton (NT "X")) g312.
 Proof.
-  unfold not. intros. inv H. clear H1.
-  unfold nullableSetComplete in H0.
-  specialize H0 with (x := "Y").
-  assert (~StringSet.In "Y"
-           (StringSet.add "X" StringSet.empty)).
-  { unfold not. intros. crush. inv H2. }
-  apply H. apply H0.
-  apply nullable_nt with (gamma := nil).
-  - crush.
-    intros. inv H1. apply nullable_nil.
+  unfold not; intros.
+  inv H.
+  clear H1.
+  unfold nullable_set_complete in H0.
+  pose proof Y_nullable.
+  apply H0 in H.
+  crush.
 Qed.
 
 
@@ -117,188 +113,174 @@ Qed.
 
 
 (* FIRST sets for each nonterminal in Grammar 3.12 *)
-Definition cSet   := StringSet.add "c" StringSet.empty.
-Definition acSet  := StringSet.add "a" cSet.
-Definition acdSet := StringSet.add "d" acSet.
+Definition cSet   := LookaheadSet.add (LA "c") LookaheadSet.empty.
+Definition acSet  := LookaheadSet.add (LA "a") cSet.
+Definition acdSet := LookaheadSet.add (LA "d") acSet.
 
 (* Correct FIRST set for Grammar 3.12 *)
 Definition g312FirstSet :=
-  StringMap.add
-    "X" acSet
-    (StringMap.add
-       "Y" cSet
-       (StringMap.add
-          "Z" acdSet
-          (StringMap.empty StringSet.t))).
+  SymbolMap.add
+    (NT "X") acSet
+    (SymbolMap.add
+       (NT "Y") cSet
+       (SymbolMap.add
+          (NT "Z") acdSet
+          (SymbolMap.empty LookaheadSet.t))).
 
 Example c_in_First_Y :
-  (@firstSym g312) "c" (NT "Y").
+  (@first_sym g312) (LA "c") (NT "Y").
 Proof.
-  apply first_nt with (ys := [T "c"]).
-  crush.
+  apply FiNT with (gamma := [T "c"]); crush.
 Qed.
 
 Example a_in_First_X :
-  (@firstSym g312) "a" (NT "X").
+  (@first_sym g312) (LA "a") (NT "X").
 Proof.
-  apply first_nt with (ys := [T "a"]); crush.
+  apply FiNT with (gamma := [T "a"]); crush.
 Qed.
 
 Example c_in_First_X :
-  (@firstSym g312) "c" (NT "X").
+  (@first_sym g312) (LA "c") (NT "X").
 Proof.
-  apply first_nt with (ys := [NT "Y"]); crush.
-  apply fprod_hd; crush. 
-  apply first_nt with (ys := [T "c"]); crush.
+  apply FiNT with (gamma := [NT "Y"]); crush.
+  apply FiGammaHd.
+  econstructor.
+  apply FiProd with (gamma := [T "c"]); crush.
 Qed.
 
-(* We can also prove that a pair is not in FIRST *)
-Example d_not_in_First_X :
-  ~(@firstSym g312) "d" (NT "X").
+Example d_not_in_First_Y :
+  ~(@first_sym g312) (LA "d") (NT "Y").
 Proof.
-  unfold not. intros. crush.
+  unfold not; intros.
+  crush.
+Qed.
+
+Example d_not_in_First_X :
+  ~(@first_sym g312) (LA "d") (NT "X").
+Proof.
+  unfold not; intros.
+  crush.
 Qed.
 
 Example a_in_First_Z :
-  (@firstSym g312) "a" (NT "Z").
+  (@first_sym g312) (LA "a") (NT "Z").
 Proof.
-  apply first_nt with (ys := [NT "X"; NT "Y"; NT "Z"]);
+  apply FiNT with (gamma := [NT "X"; NT "Y"; NT "Z"]);
   crush.
-  apply fprod_hd; crush.
-  apply a_in_First_X.
+  apply FiGammaHd.
+  apply FiNT with (gamma := [T "a"]).
+  crush.
 Qed.
 
 Example c_in_First_Z :
-  (@firstSym g312) "c" (NT "Z").
+  (@first_sym g312) (LA "c") (NT "Z").
 Proof.
-  apply first_nt with (ys := [NT "X"; NT "Y"; NT "Z"]); crush.
-  apply fprod_tl.
+  apply FiNT with (gamma := [NT "X"; NT "Y"; NT "Z"]); crush.
+  apply FiGammaTl.
   - apply X_nullable.
-  - apply fprod_hd; crush.
-    apply c_in_First_Y.
+  - apply FiGammaHd.
+    apply FiNT with (gamma := [T "c"]).
+    crush.
 Qed.
   
 Example d_in_First_Z :
-  (@firstSym g312) "d" (NT "Z").
+  (@first_sym g312) (LA "d") (NT "Z").
 Proof.
-  apply first_nt with (ys := [T "d"]); crush.
+  apply FiNT with (gamma := [T "d"]); crush.
 Qed.
 
-(* Much nicer than the proof of the same proposition below! *)
+
 Example g312FirstSetCorrect :
-  isFirstSetFor g312FirstSet g312.
+  first_set_for g312FirstSet g312.
 Proof.
-  unfold isFirstSetFor. split.
-  - unfold firstSetComplete. intros. inv H.
-    crush.
-    + exists acdSet. crush.
-    + exists acdSet. crush.
-    + exists acdSet. crush.
-    + exists acdSet. crush.
-    + exists cSet. crush.
-    + exists acSet. crush.
-    + exists acSet. crush.
-  - unfold firstSetMinimal. intros. 
-    remember H as Hfind. clear HeqHfind.
-    apply find_In in H. inv H.
-    crush.
-    + apply c_in_First_Z.
-    + apply a_in_First_Z.
-    + apply d_in_First_Z.
-    + apply c_in_First_Y.
-    + apply c_in_First_X.
-    + apply a_in_First_X.
-Qed.
+  unfold g312FirstSet.
+  unfold first_set_for. split.
+  - unfold first_set_complete; intros.
+    inv H0; crush.
+    + exists acdSet.
+      crush.
+    + exists acdSet. split.
+      * crush.
+      * inv H2.
+        -- inv H3.
+           crush.
+        -- inv H5.
+           ++ crush.
+           ++ inv H6.
+              **(* We're getting stuck in a loop because of the
+                   Z here. *)
+                inv H2.
+                 inv H0.
+                 inv H2.
+                 --- inv H0.
+                     crush.
+                 --- inv H0.
+                     +++ inv H1.
+Abort.
 
 Definition g312FirstSetPlus :=
-  StringMap.add
-    "X" acdSet (* d shouldn't be in there! *)
-    (StringMap.add
-       "Y" cSet
-       (StringMap.add
-          "Z" acdSet
-          (StringMap.empty StringSet.t))).
+  SymbolMap.add
+    (NT "X") acdSet (* d shouldn't be in there! *)
+    (SymbolMap.add
+       (NT "Y") cSet
+       (SymbolMap.add
+          (NT "Z") acdSet
+          (SymbolMap.empty LookaheadSet.t))).
 
-(* We can also prove that a FIRST set with extraneous elements
-   is not the correct FIRST set for Grammar 3.12 *)
-Example nonMinimalFirstSetIncorrect :
-  ~isFirstSetFor g312FirstSetPlus g312.
+(* This fact might still be provable after updating the Ltac *)Example nonMinimalFirstSetIncorrect :
+  ~first_set_for g312FirstSetPlus g312.
 Proof.
-  unfold not. intros. unfold isFirstSetFor in H. destruct H.
-  clear H. unfold firstSetMinimal in H0.
-  specialize H0 with (x := "X")
-                     (xFirst := acdSet)
-                     (y := "d").
-  assert (~(@firstSym g312) "d" (NT "X")).
-  { unfold not. intros.
-    inv H. crush. }
-  apply H. apply H0.
-  - crush.
-  - crush.
+  unfold not; intros.
+  unfold first_set_for in H.
+  destruct H as [_ Hmin].
+  unfold first_set_minimal in Hmin.
+  specialize Hmin with (x := NT "X")
+                       (xFirst := acdSet)
+                       (la := LA "d").
+  assert (H : ~(@first_sym g312) (LA "d") (NT "X")).
+  { unfold not; intros; crush. }
+  apply H.
+  apply Hmin; crush.
 Qed.
 
 
 (* tests of FOLLOW definitions *)
 
+Definition xFollow := LookaheadSet.add EOF acdSet.
+Definition yFollow := LookaheadSet.add EOF acdSet.
 
 (* Correct FOLLOW set for Grammar 3.12 *)
 Definition g312FollowSet :=
-  StringMap.add
-    "X" acdSet
-    (StringMap.add
-       "Y" acdSet
-       (StringMap.empty StringSet.t)).
+  SymbolMap.add
+    (NT "X") xFollow
+    (SymbolMap.add
+       (NT "Y") yFollow
+       (SymbolMap.empty LookaheadSet.t)).
 
 Example finiteFollowCorrect :
-  isFollowSetFor g312FollowSet g312.
+  follow_set_for g312FollowSet g312.
 Proof.
-  unfold isFollowSetFor. split.
-  - unfold followSetComplete. intros. inv H.
+  unfold follow_set_for. split.
+  - unfold follow_set_complete; intros.
+    inv H.
     + crush.
-      * exists acdSet. crush.
-      * exists acdSet. crush.
+      * exfalso.
+        apply Z_not_nullable.
+        auto.
+      * exists xFollow. crush.
+      * exists xFollow. crush.
     + crush.
-      * exfalso. apply Z_not_nullable. assumption.
-      * exfalso. apply Z_not_nullable. assumption.
-      * exists acdSet. crush.
-  - unfold followSetMinimal. intros.
-    copy_and_find_In H. inv H. crush.
-    + apply followRight with
-          (lx := NT "Z")
-          (prefix := [NT "X"])
-          (suffix := [NT "Z"]); crush.
-      apply fgamma_hd. apply c_in_First_Z.
-    + apply followRight with
-          (lx := NT "Z")
-          (prefix := [NT "X"])
-          (suffix := [NT "Z"]); crush.
-      apply fgamma_hd. apply a_in_First_Z.
-    + apply followRight with
-          (lx := NT "Z")
-          (prefix := [NT "X"])
-          (suffix := [NT "Z"]); crush.
-      apply fgamma_hd. apply d_in_First_Z.
-    + apply followRight with
-          (lx := NT "Z")
-          (prefix := nil)
-          (suffix := [NT "Y"; NT "Z"]); crush.
-      apply fgamma_hd. apply c_in_First_Y.
-    + apply followRight with
-          (lx := NT "Z")
-          (prefix := nil)
-          (suffix := [NT "Y"; NT "Z"]); crush.
-      apply fgamma_tl.
-      * apply Y_nullable.
-      * apply fgamma_hd. apply a_in_First_Z.
-    + apply followRight with
-          (lx := NT "Z")
-          (prefix := nil)
-          (suffix := [NT "Y"; NT "Z"]); crush.
-      apply fgamma_tl.
-      * apply Y_nullable.
-      * apply fgamma_hd. apply d_in_First_Z.
-Defined.       
-        
+      * inv H1.
+        -- crush.
+           exists xFollow. crush.
+        -- inv H4.
+           ++ crush.
+              ** exists xFollow. crush.
+              ** inv H4.
+                 (* We're going to get caught in a loop here
+                    because of the first_gamma definition *)
+Abort.
+
 
 (* The next tests use Grammar 3.11, shown here:
 
@@ -313,31 +295,9 @@ Defined.
 
  *)
 
+(* Fix the nonterminal and terminal types, and their
+   corresponding modules, before filling out this example *)
 Example g311ParseTableCorrect :
-  isParseTableFor g311ParseTable g311.
+  parse_table_for g311ParseTable g311.
 Proof.
-  unfold isParseTableFor. split.
-  - unfold parseTableComplete. split.
-    + unfold ptCompleteFirst. intros. crush.
-      * exists S_map. crush.
-      * exists S_map. crush.
-      * exists S_map. crush.
-      * exists L_map. crush.
-      * exists L_map. crush.
-      * exists E_map. crush.
-    + unfold ptCompleteFollow. intros. crush.
-  - unfold parseTableMinimal.
-    intros  x tMap y gamma H_outer_find H_inner_find.
-    copy_and_find_In H_outer_find.
-    inv H_outer_find. crush.
-    + copy_and_find_In H_inner_find.
-      inv H_inner_find. crush.
-      left. crush.
-    + copy_and_find_In H_inner_find.
-      inv H_inner_find. crush.
-      * left. crush.
-      * left. crush.
-    + copy_and_find_In H_inner_find.
-      inv H_inner_find. crush; left; crush.
-Defined.
-
+Abort.

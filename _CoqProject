@@ -11,10 +11,11 @@ Lib/Utils.v
 
 LL1/MonotonicityLemmas.v
 LL1/Parser.v
-LL1/ParserTests.v
 LL1/ParseTable.v
+LL1/ParseTableLemmas.v
+LL1/ParserTests.v
 LL1/LL1_Derivation.v
-# LL1/ParseTableTests.v
+LL1/ParseTableTests.v
 LL1/CorrectnessProof.v
 LL1/LL1_Soundness.v
 LL1/LL1_Completeness.v

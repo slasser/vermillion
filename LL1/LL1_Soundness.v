@@ -46,13 +46,13 @@ Qed.
 
 Lemma tbl_entry_is_lookahead :
   forall tbl g x la gamma,
-    isParseTableFor tbl g
+    parse_table_for tbl g
     -> parseTableLookup x la tbl = Some gamma
-    -> (@isLookaheadFor g) la (NT x) gamma.
+    -> (@lookahead_for g) la (NT x) gamma.
 Proof.
   intros tbl g x la gamma Htbl Hlkp.
   destruct Htbl as [Hmin Hcom].
-  unfold ptMinimal in Hmin.
+  unfold pt_minimal in Hmin.
   unfold parseTableLookup in Hlkp.
   destruct (StringMap.find x tbl) as [m |] eqn:Hsf.
   - eapply Hmin; eauto.
@@ -62,7 +62,7 @@ Qed.
 Theorem parse_correct :
   forall (g   : grammar)
          (tbl : parse_table),
-    isParseTableFor tbl g
+    parse_table_for tbl g
     -> forall (tr        : tree)
               (sym       : symbol)
               (input rem : list string)
@@ -190,7 +190,7 @@ Qed.
 Corollary parse_correct' :
   forall (g   : grammar)
          (tbl : parse_table),
-    isParseTableFor tbl g
+    parse_table_for tbl g
     -> forall (tr       : tree)
               (sym      : symbol)
               (word rem : list string)

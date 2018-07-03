@@ -8,7 +8,7 @@ Open Scope string_scope.
 Theorem parse_complete :
   forall (g : grammar)
          (tbl : parse_table),
-    isParseTableFor tbl g
+    parse_table_for tbl g
          -> forall (tr     : tree)
                    (sym    : symbol)
                    (word rem : list string),
@@ -45,9 +45,9 @@ Proof.
   - (* NT case *)
     destruct IHHder as [fuel].
     exists (S fuel); simpl.
-    unfold ptComplete in Hcom.
-    apply Hcom in i.
-    destruct i as [m [Hs Hl]].
+    unfold pt_complete in Hcom.
+    apply Hcom in l.
+    destruct l as [m [Hs Hl]].
     unfold parseTableLookup; rewrite Hs; rewrite Hl.
     rewrite H; auto.
 
