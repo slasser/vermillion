@@ -1,11 +1,15 @@
-Require Import ExampleGrammars.
-Require Import Grammar.
-Require Import Lemmas.
-Require Import List MSets String.
-Require Import ExampleGrammars Grammar Lemmas
-               Tactics ParseTable ParseTableLemmas Utils.
+Require Import List.
+Require Import MSets.
+Require Import String.
+
+Require Import Lib.ExampleGrammars.
+Require Import Lib.Grammar.
+Require Import Lib.Tactics.
+
+Require Import LL1.Lemmas.
+Require Import LL1.ParseTable.
+
 Import ListNotations.
-Open Scope string_scope.
 
 (* Tests use Grammar 3.12, shown here:
 
@@ -227,7 +231,7 @@ Definition g312FirstSetPlus :=
           (NT "Z") acdSet
           (SymbolMap.empty LookaheadSet.t))).
 
-(* This fact might still be provable after updating the Ltac *)Example nonMinimalFirstSetIncorrect :
+Example nonMinimalFirstSetIncorrect :
   ~first_set_for g312FirstSetPlus g312.
 Proof.
   unfold not; intros.
@@ -243,6 +247,44 @@ Proof.
   apply Hmin; crush.
 Qed.
 
+Definition Ac_grammar :=
+  {| productions := [("A", [NT "A"; T "c"]);
+                     ("A", [])];
+     start := "A" |}.
+
+Definition Ac_first_set :=
+  SymbolMap.add (NT "A") cSet
+                (SymbolMap.empty LookaheadSet.t).
+
+Example Ac_first_correct :
+  first_set_for Ac_first_set Ac_grammar.
+Proof.
+  unfold first_set_for.
+  split.
+  - unfold first_set_complete.
+    intros.
+    revert H.
+    induction H0 using first_sym_mutual_ind with
+        (P := fun la x gamma (pf : first_prod la x gamma) =>
+                Utils.isNT x = true
+                -> exists xFirst : LookaheadSet.t,
+                  SymbolMap.find (elt:=LookaheadSet.t) x Ac_first_set = Some xFirst /\ LookaheadSet.In la xFirst)
+        (P0 := fun la gamma (pf : first_gamma la gamma) =>
+                 forall gpre y gsuf,
+                   gamma = gpre ++ y :: gsuf
+                   -> nullable_gamma gpre
+                   -> first_sym la y
+                   -> exists yFirst : LookaheadSet.t,
+                       SymbolMap.find (elt:=LookaheadSet.t) y Ac_first_set = Some yFirst /\ LookaheadSet.In la yFirst).
+
+    + intros.
+      inv i.
+      * admit.
+      * inv H0.
+        -- inv H1.
+           inv f.
+        -- inv H1.
+Abort.
 
 (* tests of FOLLOW definitions *)
 

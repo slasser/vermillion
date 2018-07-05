@@ -1,60 +1,57 @@
-Require Import List Omega String.
-Require Import Grammar Lemmas ParseTable
-        ParseTree LL1.Parser Lib.Tactics
-        LL1.Monotonicity
-        LL1.Derivation.
-Open Scope string_scope.
+Require Import List.
+Require Import String.
+
+Require Import Lib.Grammar.
+Require Import Lib.Lemmas.
+Require Import Lib.ParseTree.
+Require Import Lib.Tactics.
+Require Import Lib.Utils.
+
+Require Import LL1.Derivation.
+Require Import LL1.Monotonicity.
+Require Import LL1.Parser.
+Require Import LL1.ParseTable.
 
 Theorem parse_complete :
   forall (g : grammar)
          (tbl : parse_table),
     parse_table_for tbl g
-         -> forall (tr     : tree)
-                   (sym    : symbol)
-                   (word rem : list string),
+    -> forall (tr : tree)
+              (sym : symbol)
+              (word rem : list string),
       (@sym_derives_prefix g) sym word tr rem
       -> exists (fuel : nat),
-          parse tbl sym (word ++ rem) fuel = (Some tr, rem).
+        parse tbl sym (word ++ rem) fuel = (Some tr, rem).
 Proof.
   intros g tbl Htbl tr sym word rem Hder.
   pose proof Htbl as Htbl'.
   destruct Htbl as [Hmin Hcom].
   induction Hder using sdp_mutual_ind with
       
-      (P := fun sym word tr rem
-                (pf : sym_derives_prefix sym word tr rem) =>
+      (P := fun sym word tr rem (pf : sym_derives_prefix sym word tr rem) =>
               exists (fuel : nat),
-                parse tbl sym (word ++ rem) fuel =
-                (Some tr, rem))
+                parse tbl sym (word ++ rem) fuel = (Some tr, rem))
 
-      (P0 := fun gamma word f rem
-             (pf : gamma_derives_prefix gamma word f rem) =>
+      (P0 := fun gamma word f rem (pf : gamma_derives_prefix gamma word f rem) =>
                exists fuel,
-                 parseForest tbl gamma (word ++ rem) fuel =
-                 (Some f, rem)).
+                 parseForest tbl gamma (word ++ rem) fuel = (Some f, rem)).
 
   - (* T case *)
-    exists 1. simpl.
-    destruct (Utils.beqString y y) eqn:Hbeq.
-    + reflexivity.
-    + unfold Utils.beqString in Hbeq. (*lemma*)
-      destruct (StringMapFacts.eq_dec) in Hbeq.
-      * inv Hbeq.
-      * congruence.
+    exists 1; simpl.
+    rewrite beqString_refl; auto.
 
   - (* NT case *)
     destruct IHHder as [fuel].
     exists (S fuel); simpl.
-    unfold pt_complete in Hcom.
     apply Hcom in l.
     destruct l as [m [Hs Hl]].
     unfold parseTableLookup; rewrite Hs; rewrite Hl.
     rewrite H; auto.
 
-  - (* Fnil case *)
+  - (* nil case *)
     exists 1; simpl; auto.
 
-  - (* Fcons case *)
+  - (* cons case *)
     destruct IHHder as [hdFuel].
     destruct IHHder0 as [tlFuel].
     eapply parse_fuel_max in H.

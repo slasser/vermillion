@@ -1,65 +1,20 @@
-Require Import List Omega String.
-Require Import ExampleGrammars Grammar
-               Lemmas LL1.Parser Lib.Tactics ParseTable
-               ParseTree Lib.Utils LL1.Derivation.
+Require Import List.
+Require Import String.
+
+Require Import Lib.Grammar.
+Require Import Lib.Lemmas.
+Require Import Lib.ParseTree.
+Require Import Lib.Tactics.
+Require Import Lib.Utils.
+
+Require Import LL1.Derivation.
+Require Import LL1.Lemmas.
+Require Import LL1.Parser.
+Require Import LL1.ParseTable.
+
 Import ListNotations.
-Open Scope list_scope.
 
-Lemma beqString_eq : 
-  forall s s2,
-    beqString s s2 = true
-    -> s = s2.
-Proof.
-  intros; unfold beqString in H.
-  destruct (StringMapFacts.eq_dec s s2); trivial.
-  inv H.
-Qed.
-
-Lemma parse_t_ret_leaf :
-  forall tbl y input fuel tree suffix,
-    parse tbl (T y) input fuel = (Some tree, suffix) ->
-    isLeaf tree = true.
-Proof.
-  intros. destruct fuel.
-  - inv H.
-  - simpl in H. destruct input.
-    + inv H.
-    + destruct (Utils.beqString y s).
-      * inv H. reflexivity.
-      * inv H.
-Qed.
-
-Lemma parse_nt_ret_node :
-  forall tbl x input fuel tree suffix,
-    parse tbl (NT x) input fuel = (Some tree, suffix)
-    -> isNode tree = true.
-Proof.
-  intros. destruct fuel.
-  - simpl in H. inv H.
-  - simpl in H. destruct (parseTableLookup x (peek input) tbl).
-    + destruct (parseForest tbl l input fuel). 
-      destruct o. 
-      * inv H. trivial.
-      * inv H.
-    + inv H. 
-Qed.
-
-Lemma tbl_entry_is_lookahead :
-  forall tbl g x la gamma,
-    parse_table_for tbl g
-    -> parseTableLookup x la tbl = Some gamma
-    -> (@lookahead_for g) la (NT x) gamma.
-Proof.
-  intros tbl g x la gamma Htbl Hlkp.
-  destruct Htbl as [Hmin Hcom].
-  unfold pt_minimal in Hmin.
-  unfold parseTableLookup in Hlkp.
-  destruct (StringMap.find x tbl) as [m |] eqn:Hsf.
-  - eapply Hmin; eauto.
-  - inv Hlkp.
-Qed.
-
-Theorem parse_correct :
+Lemma parse_correct' :
   forall (g   : grammar)
          (tbl : parse_table),
     parse_table_for tbl g
@@ -135,7 +90,7 @@ Proof.
            ++ inv Hp.
         -- inv Hp.
 
-  - (* Fnil case *)
+  - (* nil case *)
     intros gamma input rem fuel Hpf.
     destruct fuel as [| fuel].
     + inv Hpf.
@@ -155,7 +110,7 @@ Proof.
            destruct subres as [rSibs |]; inv Hpf.
         -- inv Hpf.
 
-  - (* Fcons case *)
+  - (* cons case *)
     intros gamma input rem fuel Hpf.
     destruct fuel as [| fuel].
     + inv Hpf.
@@ -187,7 +142,7 @@ Qed.
 
 (* This version specifies exactly what prefix of the input
    is consumed *)
-Corollary parse_correct' :
+Theorem parse_correct :
   forall (g   : grammar)
          (tbl : parse_table),
     parse_table_for tbl g
@@ -200,7 +155,7 @@ Corollary parse_correct' :
 Proof.
   intros g tbl Htbl tr sym word rem fuel Hp.
   pose proof Hp as Hp'.
-  eapply parse_correct in Hp; eauto.
+  eapply parse_correct' in Hp; eauto.
   destruct Hp as [word' [Happ Hder]].
   apply app_inv_tail in Happ.
   subst; auto.

@@ -46,7 +46,9 @@ Definition getOrEmpty k m :=
   | None   => StringSet.empty
   end.
 
-Definition beqString sy sy2 := if StringAsDT.eq_dec sy sy2 then true else false.
+(*Definition beqString sy sy2 := if StringAsDT.eq_dec sy sy2 then true else false. *)
+
+Definition beqString s s2 := if string_dec s s2 then true else false.
 
 Definition tokenize s :=
   let singletonString (a : Ascii.ascii) :=

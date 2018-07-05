@@ -99,7 +99,7 @@ Definition mkParseTable g fuel :=
           in  SymbolSet.fold (addEntry (x, ys) x) ts tbl
       end
   in  fold_right addProd (SymbolMap.empty (SymbolMap.t (list production))) g.
-*)
+ *)
 
 Definition peek input :=
   match input with

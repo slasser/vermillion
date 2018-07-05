@@ -1,5 +1,11 @@
-Require Import List MSets String.
-Require Import FMaps Grammar Lib.Utils.
+Require Import FMaps.
+Require Import List.
+Require Import MSets.
+Require Import String.
+
+Require Import Lib.Grammar.
+Require Import Lib.Utils.
+
 Import ListNotations.
 Open Scope list_scope.
 
@@ -39,7 +45,6 @@ Definition parseTableLookup
   | Some tMap => LookaheadMap.find y tMap
   end.
 
-(* Changed nullable_sym from nonterminal to symbol *)
 Inductive nullable_prod {g : grammar} :
   symbol -> list symbol -> Prop :=
 | NuProd :

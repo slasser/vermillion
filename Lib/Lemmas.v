@@ -71,3 +71,24 @@ Proof.
   rewrite H0. rewrite in_app_iff.
   right. apply in_eq.
 Qed.
+
+Lemma beqString_refl :
+  forall (s : string),
+    beqString s s = true.
+Proof.
+  intros.
+  unfold beqString.
+  destruct (string_dec s s) eqn:Hbeq; auto.
+Qed.
+
+Lemma beqString_eq :
+  forall (s s2 : string),
+    beqString s s2 = true <-> s = s2.
+Proof.
+  split; intros.
+  - unfold beqString in H.
+    destruct (string_dec s s2); auto.
+    congruence.
+  - unfold beqString.
+    destruct (string_dec s s2); auto.
+Qed.
