@@ -28,6 +28,7 @@ Ltac derCrush :=
          | |- _ => simpl in *
          end.
 
+(*
 Ltac crush :=
   repeat match goal with
            
@@ -209,3 +210,4 @@ Ltac crush :=
            apply FiGammaHd
 
          end.
+*)

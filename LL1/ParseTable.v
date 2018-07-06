@@ -45,6 +45,7 @@ Definition parseTableLookup
   | Some tMap => LookaheadMap.find y tMap
   end.
 
+(*
 Inductive nullable_prod {g : grammar} :
   symbol -> list symbol -> Prop :=
 | NuProd :
@@ -71,7 +72,22 @@ with nullable_sym {g : grammar} :
 Scheme nullable_prod_mutual_ind := Induction for nullable_prod Sort Prop
   with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop
   with nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop.
+ *)
 
+Inductive nullable_sym (g : grammar) : symbol -> Prop :=
+| NuSym : forall x ys,
+    In (x, ys) g.(productions)
+    -> nullable_gamma g ys
+    -> nullable_sym g (NT x)
+with nullable_gamma (g : grammar) : list symbol -> Prop :=
+     | NuNil : nullable_gamma g []
+     | NuCons : forall hd tl,
+         nullable_sym g hd
+         -> nullable_gamma g tl
+         -> nullable_gamma g (hd :: tl).
+
+Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
+  with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop.
 
 Definition nullable_set_complete (nu : SymbolSet.t)
                                  (g  : grammar) : Prop :=
@@ -84,6 +100,7 @@ Definition nullable_set_minimal (nu : SymbolSet.t)
 Definition nullable_set_for nu g : Prop :=
 nullable_set_complete nu g /\ nullable_set_minimal nu g.
 
+(*
 Inductive first_prod {g : grammar} :
     lookahead -> symbol -> list symbol -> Prop :=
 | FiProd : forall la x gamma,
@@ -110,6 +127,23 @@ with first_sym {g : grammar} :
 Scheme first_prod_mutual_ind := Induction for first_prod Sort Prop
   with first_gamma_mutual_ind := Induction for first_gamma Sort Prop
   with first_sym_mutual_ind := Induction for first_sym Sort Prop.
+ *)
+
+Inductive first_sym (g : grammar) :
+  lookahead -> symbol -> Prop :=
+| FirstT : forall s,
+    first_sym g (LA s) (T s)
+| FirstNT : forall x y la gpre gsuf,
+    In (x, gpre ++ y :: gsuf) g.(productions)
+    -> nullable_gamma g gpre
+    -> first_sym g la y
+    -> first_sym g la (NT x).
+
+Inductive first_gamma (g : grammar) : lookahead -> list symbol -> Prop :=
+| FirstGamma : forall gpre gsuf la y,
+    nullable_gamma g gpre
+    -> first_sym g la y
+    -> first_gamma g la (gpre ++ y :: gsuf).
 
 Definition first_set_complete fi g : Prop :=
   forall x la,
@@ -128,6 +162,7 @@ Definition first_set_minimal fi g : Prop :=
 Definition first_set_for fi g : Prop :=
 first_set_complete fi g /\ first_set_minimal fi g.
 
+(*
 Inductive follow_prod {g : grammar} :
   lookahead -> symbol -> list symbol -> Prop :=
 | FoProd :
@@ -155,6 +190,21 @@ with follow_sym {g : grammar} :
 
 Scheme follow_prod_mutual_ind := Induction for follow_prod Sort Prop
   with follow_sym_mutual_ind := Induction for follow_sym Sort Prop.
+ *)
+
+Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
+| FollowNullable : forall sym,
+    nullable_sym g sym
+    -> follow_sym g EOF sym
+| FollowRight : forall x1 x2 la gpre gsuf,
+    In (x1, gpre ++ NT x2 :: gsuf) g.(productions)
+    -> first_gamma g la gsuf
+    -> follow_sym g la (NT x2)
+| FollowLeft : forall x1 x2 la gpre gsuf,
+    In (x1, gpre ++ NT x2 :: gsuf) g.(productions)
+    -> nullable_gamma g gsuf
+    -> follow_sym g la (NT x1)
+    -> follow_sym g la (NT x2).
 
 Definition follow_set_complete fo g : Prop :=
   forall x y,
@@ -172,20 +222,21 @@ Definition follow_set_minimal fo g : Prop :=
 Definition follow_set_for fo g : Prop :=
 follow_set_complete fo g /\ follow_set_minimal fo g.
 
-Definition lookahead_for {g} la sym gamma :=
-  (@first_prod g) la sym gamma
-  \/ ((@nullable_prod g) sym gamma
-      /\ (@follow_prod g) la sym gamma).
+Definition lookahead_for g la x gamma :=
+  In (x, gamma) g.(productions)
+  /\ (first_gamma g la gamma
+      \/ (nullable_gamma g gamma
+          /\ follow_sym g la (NT x))).
 
 Definition pt_minimal tbl g :=
   forall x la gamma laMap,
     StringMap.find x tbl = Some laMap
     -> LookaheadMap.find la laMap = Some gamma
-    -> (@lookahead_for g) la (NT x) gamma.
+    -> lookahead_for g la x gamma.
 
 Definition pt_complete tbl g :=
   forall x la gamma,
-    (@lookahead_for g) la (NT x) gamma
+    (@lookahead_for g) la x gamma
     -> exists laMap,
       StringMap.find x tbl = Some laMap
       /\ LookaheadMap.find la laMap = Some gamma.

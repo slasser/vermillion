@@ -6,7 +6,6 @@ Require Import Lib.ExampleGrammars.
 Require Import Lib.Grammar.
 Require Import Lib.Tactics.
 
-Require Import LL1.Lemmas.
 Require Import LL1.ParseTable.
 
 Import ListNotations.
@@ -38,80 +37,82 @@ Definition g312NullableSet :=
 
 Example Y_nullable :
   (@nullable_sym g312) (NT "Y").
+Proof.
+  eapply NuSym with (ys := []).
+  - simpl. right. right. left; auto.
+  - constructor.
+Qed.
+
+(*
+Example Y_nullable :
+  (@nullable_sym g312) (NT "Y").
 Proof. crush. Qed.
+ *)
 
 Example X_nullable :
   (@nullable_sym g312) (NT "X").
-Proof. crush. Qed.
-
-(* We can't prove this false statement, which is good *)
-Example Z_nullable :
-  (@nullable_sym g312) (NT "Z").
-Proof. crush. Abort.
-
-Example Z_nullable :
-  (@nullable_sym g312) (NT "Z").
-Proof. 
-  econstructor.
-  eapply NuProd with (ys := [NT "X"; NT "Y"; NT "Z"]).
-  - crush.
+Proof.
+  eapply NuSym with (ys := [NT "Y"]).
+  - simpl. do 4 right. left; auto.
   - constructor.
-    + apply X_nullable.
+    + apply Y_nullable.
     + constructor.
-      * apply Y_nullable.
-      * constructor.
-        -- (* back where we started *)
-Abort.
-
-(* With the current definitions, though, we can't immediately
-   prove that a particular symbol ISN'T nullable *)
-Example Z_not_nullable :
-  ~(@nullable_sym g312) (NT "Z").
-Proof.
-  unfold not. intros.
-  inv H. inv H0. crush.
-Abort.
-
-(* Let's try again using the nullable_nonrec lemma *)
-Example Z_not_nullable :
-  ~(@nullable_sym g312) (NT "Z").
-Proof.
-  unfold not; intros.
-  apply nullable_nonrec in H.
-  destruct H as [gamma].
-  destruct H.
-  inv H.
-  crush.
-  apply H0; crush.
 Qed.
 
-(* The previous lemma allows us to get through this one, too *)
-Example g312NullableSetCorrect :
-  nullable_set_for g312NullableSet g312.
+(*
+Example X_nullable :
+  (@nullable_sym g312) (NT "X").
+Proof. crush. Qed.
+ *)
+
+(* Nice -- with the new definitions of nullable_sym and
+   nullable_gamma, we were able to complete this example
+   without using a special "nullable_nonrec" lemma *)
+Example Z_not_nullable :
+  forall sym,
+    (@nullable_sym g312) sym
+    -> sym <> NT "Z".
 Proof.
-  unfold nullable_set_for. split.
-  - unfold nullable_set_complete; intros.
+  unfold not; intros.
+  induction H using nullable_sym_mutual_ind with
+      (P := fun sym (pf : nullable_sym g312 sym) =>
+              sym = NT "Z" -> False)
+      (P0 := fun gamma (pf : nullable_gamma g312 gamma) =>
+               forall sym,
+                 In sym gamma
+                 -> sym = NT "Z" -> False).
+  - inv H0.
+    eapply IHnullable_sym with (sym := NT "Z").
+    + inv i.
+      * inv H.
+        inv n.
+        inv H1.
+      * inv H.
+        -- inv H0.
+           apply in_cons.
+           apply in_cons.
+           apply in_eq.
+        -- inv H0.
+           ++ inv H.
+           ++ inv H.
+              ** inv H0.
+              ** inv H0.
+                 --- inv H.
+                 --- inv H.
+                     +++ inv H0.
+                     +++ inv H0.
+    + auto.
+  - intros.
     inv H.
-    crush.
-    exfalso.
-    apply Z_not_nullable; auto.
-  - unfold nullable_set_minimal; intros.
-    crush.
-Qed.    
-
-(* We can prove that an incomplete nullable set is  incorrect *)
-Example incompleteNullableSetIncorrect :
-  ~nullable_set_for (SymbolSet.singleton (NT "X")) g312.
-Proof.
-  unfold not; intros.
-  inv H.
-  clear H1.
-  unfold nullable_set_complete in H0.
-  pose proof Y_nullable.
-  apply H0 in H.
-  crush.
+  - intros.
+    inv H2.
+    inv H1.
+    + apply IHnullable_sym.
+      auto.
+    + eapply IHnullable_sym0.
+      * eauto.
+      * auto.
 Qed.
-
 
 (* Tests of FIRST set definitions *)
 
@@ -134,9 +135,16 @@ Definition g312FirstSet :=
 Example c_in_First_Y :
   (@first_sym g312) (LA "c") (NT "Y").
 Proof.
-  apply FiNT with (gamma := [T "c"]); crush.
+  econstructor.
+  - simpl. right. right. right.
+    assert ([T "c"] = [] ++ [T "c"]) by auto.
+    rewrite H.
+    left. eauto.
+  - constructor.
+  - constructor.
 Qed.
 
+(*
 Example a_in_First_X :
   (@first_sym g312) (LA "a") (NT "X").
 Proof.
@@ -192,6 +200,7 @@ Example d_in_First_Z :
 Proof.
   apply FiNT with (gamma := [T "d"]); crush.
 Qed.
+ *)
 
 
 Example g312FirstSetCorrect :

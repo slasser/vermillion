@@ -6,7 +6,7 @@ Require Import LL1.Derivation.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
 Import ListNotations.
-
+(*
 Lemma eof_fgamma :
   forall g la gamma,
     (@first_gamma g) la gamma
@@ -321,3 +321,4 @@ Proof.
   - inv H0; eauto.
   - eauto.
 Qed.
+*)
