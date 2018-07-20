@@ -306,30 +306,187 @@ Definition g312FollowSet :=
        (NT "Y") yFollow
        (SymbolMap.empty LookaheadSet.t)).
 
+Example what's_in_xFirst :
+  forall la,
+    first_sym g312 la (NT "X")
+    -> LookaheadSet.In la acSet.
+Proof.
+  intros.
+  pose proof g312FirstSetCorrect as Hc.
+  unfold first_set_for in Hc.
+  destruct Hc as [Hcom _].
+  unfold first_set_complete in Hcom.
+  apply Hcom in H; auto.
+  destruct H as [xFirst [Hs Hf]].
+  inv Hs.
+  auto.
+Qed.
+
+Example what's_in_yFirst :
+  forall la,
+    first_sym g312 la (NT "Y")
+    -> LookaheadSet.In la cSet.
+Proof.
+  intros.
+  pose proof g312FirstSetCorrect as Hc.
+  unfold first_set_for in Hc.
+  destruct Hc as [Hcom _].
+  unfold first_set_complete in Hcom.
+  apply Hcom in H; auto.
+  destruct H as [yFirst [Hs Hf]].
+  inv Hs.
+  auto.
+Qed.
+
+Example what's_in_zFirst :
+  forall la,
+    first_sym g312 la (NT "Z")
+    -> LookaheadSet.In la acdSet.
+Proof.
+  intros.
+  pose proof g312FirstSetCorrect as Hc.
+  unfold first_set_for in Hc.
+  destruct Hc as [Hcom _].
+  unfold first_set_complete in Hcom.
+  apply Hcom in H; auto.
+  destruct H as [zFirst [Hs Hf]].
+  inv Hs.
+  auto.
+Qed.
+
+(* Another possible approach -- use the "what's in xFirst"
+   strategy for the other cases *)
 Example finiteFollowCorrect :
   follow_set_for g312FollowSet g312.
 Proof.
   unfold follow_set_for. split.
   - unfold follow_set_complete; intros.
-    inv H.
+    induction H.
+    + induction H. 
+      crush.
+      * pose proof Z_not_nullable as Hz.
+        apply Hz in H3.
+        congruence.
+      * exists yFollow; split; crush.
+      * exists xFollow; split; crush.
     + crush.
-      * exfalso.
-        apply Z_not_nullable.
-        auto.
-      * exists xFollow. crush.
-      * exists xFollow. crush.
-    + crush.
-      * inv H1.
-        -- crush.
-           exists xFollow. crush.
-        -- inv H4.
-           ++ crush.
-              ** exists xFollow. crush.
+      * crush'.
+      * crush'.
+        -- inv H0.
+           destruct gpre.
+           ++ inv H.
+              apply what's_in_yFirst in H3.
+              crush.
+              exists xFollow; split; crush.
+           ++ inv H.
+              destruct gpre.
               ** inv H4.
-                 (* We're going to get caught in a loop here
-                    because of the first_gamma definition *)
-Abort.
-
+                 apply what's_in_zFirst in H3.
+                 crush.
+                 --- exists xFollow; split; crush.
+                 --- inv H0.
+                     +++ exists xFollow; split; crush.
+                     +++ inv H1.
+                         *** exists xFollow; split; crush.
+                         *** inv H0.
+              ** crush.
+                 inv H4.
+                 symmetry in H5; crush.
+        -- crush'.
+           ++ inv H0.
+              destruct gpre.
+              ** inv H.
+                 apply what's_in_zFirst in H3.
+                 crush.
+                 --- exists yFollow; split; crush.
+                 --- inv H0.
+                     +++ exists yFollow; split; crush.
+                     +++ inv H2.
+                         *** exists yFollow; split; crush.
+                         *** inv H0.
+              ** inv H.
+                 symmetry in H4; crush.
+           ++ crush'.
+              inv H0.
+              symmetry in H; crush.
+      * crush'.
+      * crush'.
+        inv H0.
+        symmetry in H; crush.
+      * crush'.
+    + crush.
+      * crush'.
+      * crush'.
+        -- pose proof Z_not_nullable.
+           apply H in H2; congruence.
+        -- destruct IHfollow_sym as [zFollow [Hs Hl]].
+           inv Hs.
+      * crush'.
+      * crush'.
+        destruct IHfollow_sym as [xFollow [Hs Hl]].
+        inv Hs.
+        crush.
+        -- exists yFollow; split; crush.
+        -- inv H2.
+           ++ exists yFollow; split; crush.
+           ++ inv H3.
+              ** exists yFollow; split; crush.
+              ** inv H2.
+                 --- exists yFollow; split; crush.
+                 --- inv H3.
+      * crush'.
+  - unfold follow_set_minimal; intros.
+    unfold g312FollowSet in *.
+    copy_and_find_In H.
+    crush.
+    + apply FollowRight with (x1 := "Z")
+                             (gpre := nil)
+                             (gsuf := [NT "Y"; NT "Z"]); crush.
+      apply FirstGamma with (gpre := nil)
+                            (y := NT "Y"); crush.
+      apply c_in_First_Y.
+    + inv H1.
+      * apply FollowRight with (x1 := "Z")
+                               (gpre := nil)
+                               (gsuf := [NT "Y"; NT "Z"]); crush.
+        apply FirstGamma with (gpre := [NT "Y"]).
+        -- constructor; crush.
+           apply Y_nullable.
+        -- apply a_in_First_Z.
+      * inv H0.
+        -- apply FollowRight with (x1 := "Z")
+                                  (gpre := nil)
+                                  (gsuf := [NT "Y"; NT "Z"]); crush.
+           ++ apply FirstGamma with (gpre := [NT "Y"]).
+              ** constructor; crush.
+                 apply Y_nullable.
+              ** apply d_in_First_Z.
+        -- inv H1.
+           ++ apply FollowNullable.
+              apply X_nullable.
+           ++ inv H0.
+    + apply FollowRight with (x1 := "Z")
+                             (gpre := [NT "X"])
+                             (gsuf := [NT "Z"]); crush.
+      apply FirstGamma with (gpre := nil); crush.
+      apply c_in_First_Z.
+    + inv H1.
+      * apply FollowRight with (x1 := "Z")
+                               (gpre := [NT "X"])
+                               (gsuf := [NT "Z"]); crush.
+        apply FirstGamma with (gpre := nil); crush.
+        apply a_in_First_Z.
+      * inv H0.
+        -- apply FollowRight with (x1 := "Z")
+                                  (gpre := [NT "X"])
+                                  (gsuf := [NT "Z"]); crush.
+           apply FirstGamma with (gpre := nil); crush.
+           apply d_in_First_Z.
+        -- inv H1.
+           ++ apply FollowNullable.
+              apply Y_nullable.
+           ++ inv H0.
+Qed. (* got it! *)
 
 (* The next tests use Grammar 3.11, shown here:
 
