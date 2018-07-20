@@ -4,11 +4,51 @@ Require Import String.
 
 Require Import Lib.ExampleGrammars.
 Require Import Lib.Grammar.
+Require Import Lib.Lemmas.
 Require Import Lib.Tactics.
 
 Require Import LL1.ParseTable.
 
 Import ListNotations.
+
+Ltac crush :=
+  repeat match goal with
+         (* inversions *)
+         | H : InA _ _ [] |- _ => inv H
+         | H : NT _ = NT _ |- _ => inv H
+         | H : In _ _ |- _ => inv H
+         | H : (String _ _, _) = (String _ _, _) |- _ => inv H
+         | H : [] = _ ++ _ :: _ |- _ => apply app_cons_not_nil in H; inv H
+         | H : _ = [] ++ _ :: _ |- _ => inv H
+         | H : _ :: _ = (_ :: _) ++ _ |- _ => inv H
+         | H : (_, _) = (_, _) |- _ => inv H
+         | H : nullable_sym _ (T _) |- _ => inv H
+         | H : nullable_gamma _ (_ :: _) |- _ => inv H
+         | H : first_sym _ _ (T _) |- _ => inv H
+         | H : first_sym _ _ (NT _) |- _ => inv H
+         | H : SymbolMap.In _ (SymbolMap.add _ _ _) |- _ =>
+           apply SymbolMapFacts.add_in_iff in H; inv H
+         | H : SymbolMap.find (NT (String _ _)) _ = Some _ |- _ =>
+           inv H
+         | H : LookaheadSet.In _ _ |- _ => inv H
+         | H : SymbolMap.In _ (SymbolMap.empty _) |- _ =>
+           apply SymbolMapFacts.empty_in_iff in H; inv H
+
+         (* goals *)
+         | |- In _ _ => repeat (try (left; reflexivity); right)
+         | |- nullable_gamma _ _ => constructor
+         | |- first_sym _ _ _ => constructor
+         | |- SymbolMap.find (NT (String _ _)) _ = _ => auto
+         | |- LookaheadSet.In _ _ =>
+           repeat (try (apply InA_cons_hd; reflexivity); apply InA_cons_tl)
+         | |- Utils.isNT (NT _) = true => auto
+         end.
+
+Ltac crush' :=
+  (match goal with
+   | H : InA _ ?la _ |- first_sym _ ?la _  => inv H
+   | H : _ :: _ = ?pre ++ ?y :: _ |- _ => destruct pre
+  end); crush.
 
 (* Tests use Grammar 3.12, shown here:
 
@@ -38,32 +78,15 @@ Definition g312NullableSet :=
 Example Y_nullable :
   (@nullable_sym g312) (NT "Y").
 Proof.
-  eapply NuSym with (ys := []).
-  - simpl. right. right. left; auto.
-  - constructor.
+  eapply NullableSym with (ys := []); crush.
 Qed.
-
-(*
-Example Y_nullable :
-  (@nullable_sym g312) (NT "Y").
-Proof. crush. Qed.
- *)
 
 Example X_nullable :
   (@nullable_sym g312) (NT "X").
 Proof.
-  eapply NuSym with (ys := [NT "Y"]).
-  - simpl. do 4 right. left; auto.
-  - constructor.
-    + apply Y_nullable.
-    + constructor.
+  eapply NullableSym with (ys := [NT "Y"]); crush.
+  apply Y_nullable.
 Qed.
-
-(*
-Example X_nullable :
-  (@nullable_sym g312) (NT "X").
-Proof. crush. Qed.
- *)
 
 (* Nice -- with the new definitions of nullable_sym and
    nullable_gamma, we were able to complete this example
@@ -74,48 +97,21 @@ Example Z_not_nullable :
     -> sym <> NT "Z".
 Proof.
   unfold not; intros.
+  revert H0.
   induction H using nullable_sym_mutual_ind with
       (P := fun sym (pf : nullable_sym g312 sym) =>
               sym = NT "Z" -> False)
       (P0 := fun gamma (pf : nullable_gamma g312 gamma) =>
-               forall sym,
-                 In sym gamma
-                 -> sym = NT "Z" -> False).
-  - inv H0.
-    eapply IHnullable_sym with (sym := NT "Z").
-    + inv i.
-      * inv H.
-        inv n.
-        inv H1.
-      * inv H.
-        -- inv H0.
-           apply in_cons.
-           apply in_cons.
-           apply in_eq.
-        -- inv H0.
-           ++ inv H.
-           ++ inv H.
-              ** inv H0.
-              ** inv H0.
-                 --- inv H.
-                 --- inv H.
-                     +++ inv H0.
-                     +++ inv H0.
-    + auto.
-  - intros.
-    inv H.
-  - intros.
-    inv H2.
-    inv H1.
-    + apply IHnullable_sym.
-      auto.
-    + eapply IHnullable_sym0.
-      * eauto.
-      * auto.
+               In (NT "Z") gamma -> False); intros.
+  - crush.
+    apply IHnullable_sym; crush.
+  - crush.
+  - crush.
+    + apply IHnullable_sym; auto.
+    + apply IHnullable_sym0; auto.
 Qed.
 
 (* Tests of FIRST set definitions *)
-
 
 (* FIRST sets for each nonterminal in Grammar 3.12 *)
 Definition cSet   := LookaheadSet.add (LA "c") LookaheadSet.empty.
@@ -135,29 +131,20 @@ Definition g312FirstSet :=
 Example c_in_First_Y :
   (@first_sym g312) (LA "c") (NT "Y").
 Proof.
-  econstructor.
-  - simpl. right. right. right.
-    assert ([T "c"] = [] ++ [T "c"]) by auto.
-    rewrite H.
-    left. eauto.
-  - constructor.
-  - constructor.
+  apply FirstNT with (gpre := nil) (y := T "c") (gsuf := nil); crush.
 Qed.
 
-(*
 Example a_in_First_X :
   (@first_sym g312) (LA "a") (NT "X").
 Proof.
-  apply FiNT with (gamma := [T "a"]); crush.
+  apply FirstNT with (gpre := nil) (y := T "a") (gsuf := nil) ; crush.
 Qed.
 
 Example c_in_First_X :
   (@first_sym g312) (LA "c") (NT "X").
 Proof.
-  apply FiNT with (gamma := [NT "Y"]); crush.
-  apply FiGammaHd.
-  econstructor.
-  apply FiProd with (gamma := [T "c"]); crush.
+  apply FirstNT with (gpre := nil) (y := NT "Y") (gsuf := nil); crush.
+  apply c_in_First_Y.
 Qed.
 
 Example d_not_in_First_Y :
@@ -165,6 +152,7 @@ Example d_not_in_First_Y :
 Proof.
   unfold not; intros.
   crush.
+  crush'.
 Qed.
 
 Example d_not_in_First_X :
@@ -172,65 +160,78 @@ Example d_not_in_First_X :
 Proof.
   unfold not; intros.
   crush.
+  crush'.
+  - crush'.
+  - crush'.
 Qed.
 
 Example a_in_First_Z :
   (@first_sym g312) (LA "a") (NT "Z").
 Proof.
-  apply FiNT with (gamma := [NT "X"; NT "Y"; NT "Z"]);
-  crush.
-  apply FiGammaHd.
-  apply FiNT with (gamma := [T "a"]).
-  crush.
+  apply FirstNT with (gpre := nil) (y := NT "X") (gsuf := [NT "Y"; NT "Z"]); crush.
+  apply a_in_First_X.
 Qed.
 
 Example c_in_First_Z :
   (@first_sym g312) (LA "c") (NT "Z").
 Proof.
-  apply FiNT with (gamma := [NT "X"; NT "Y"; NT "Z"]); crush.
-  apply FiGammaTl.
+  apply FirstNT with (gpre := [NT "X"]) (y := NT "Y") (gsuf := [NT "Z"]); crush.
   - apply X_nullable.
-  - apply FiGammaHd.
-    apply FiNT with (gamma := [T "c"]).
-    crush.
+  - apply c_in_First_Y.
 Qed.
   
 Example d_in_First_Z :
   (@first_sym g312) (LA "d") (NT "Z").
 Proof.
-  apply FiNT with (gamma := [T "d"]); crush.
+  apply FirstNT with (gpre := nil) (y := T "d") (gsuf := nil); crush.
 Qed.
- *)
-
 
 Example g312FirstSetCorrect :
   first_set_for g312FirstSet g312.
 Proof.
   unfold g312FirstSet.
   unfold first_set_for. split.
-  - unfold first_set_complete; intros.
-    inv H0; crush.
-    + exists acdSet.
-      crush.
-    + exists acdSet. split.
-      * crush.
-      * inv H2.
-        -- inv H3.
-           crush.
-        -- inv H5.
-           ++ crush.
-           ++ inv H6.
-              **(* We're getting stuck in a loop because of the
-                   Z here. *)
-                inv H2.
-                 inv H0.
-                 inv H2.
-                 --- inv H0.
-                     crush.
-                 --- inv H0.
-                     +++ inv H1.
-Abort.
-
+  - (* prove that g312FirstSet is complete *)
+    unfold first_set_complete; intros.
+    revert H.
+    induction H0; intros.
+    + inv H.
+    + crush.
+      * crush'.
+        exists acdSet; split; crush.
+      * crush'.
+        -- crush'.
+           crush'.
+           exists acdSet; split; crush.
+        -- crush'.
+           exists acdSet; split; crush.
+        -- crush'.
+           ++ crush'.
+              exists acdSet; split; crush.
+           ++ crush'.
+              ** apply IHfirst_sym; crush.
+              ** apply IHfirst_sym; crush.
+      * crush'.
+        exists cSet; split; crush.
+      * crush'.
+        crush'.
+        exists acSet; split; crush.
+      * crush'.
+        exists acSet; split; crush.
+  - unfold first_set_minimal; intros.
+    copy_and_find_In H.
+    crush.
+    + apply c_in_First_X.
+    + crush'.
+      apply a_in_First_X.
+    + apply c_in_First_Y.
+    + apply c_in_First_Z.
+    + crush'.
+      * apply a_in_First_Z.
+      * crush'.
+        apply d_in_First_Z.
+Qed.
+    
 Definition g312FirstSetPlus :=
   SymbolMap.add
     (NT "X") acdSet (* d shouldn't be in there! *)
@@ -251,7 +252,11 @@ Proof.
                        (xFirst := acdSet)
                        (la := LA "d").
   assert (H : ~(@first_sym g312) (LA "d") (NT "X")).
-  { unfold not; intros; crush. }
+  { unfold not; intros.
+    crush.
+    - crush'.
+      crush'.
+    - crush'. }
   apply H.
   apply Hmin; crush.
 Qed.
@@ -265,35 +270,28 @@ Definition Ac_first_set :=
   SymbolMap.add (NT "A") cSet
                 (SymbolMap.empty LookaheadSet.t).
 
+(* Got this one using induction on the first_sym derivation *)
 Example Ac_first_correct :
   first_set_for Ac_first_set Ac_grammar.
 Proof.
   unfold first_set_for.
   split.
-  - unfold first_set_complete.
-    intros.
+  - unfold first_set_complete; intros.
     revert H.
-    induction H0 using first_sym_mutual_ind with
-        (P := fun la x gamma (pf : first_prod la x gamma) =>
-                Utils.isNT x = true
-                -> exists xFirst : LookaheadSet.t,
-                  SymbolMap.find (elt:=LookaheadSet.t) x Ac_first_set = Some xFirst /\ LookaheadSet.In la xFirst)
-        (P0 := fun la gamma (pf : first_gamma la gamma) =>
-                 forall gpre y gsuf,
-                   gamma = gpre ++ y :: gsuf
-                   -> nullable_gamma gpre
-                   -> first_sym la y
-                   -> exists yFirst : LookaheadSet.t,
-                       SymbolMap.find (elt:=LookaheadSet.t) y Ac_first_set = Some yFirst /\ LookaheadSet.In la yFirst).
-
-    + intros.
-      inv i.
-      * admit.
-      * inv H0.
-        -- inv H1.
-           inv f.
-        -- inv H1.
-Abort.
+    induction H0; intros.
+    + inv H.
+    + crush.
+      crush'.
+      * apply IHfirst_sym; crush.
+      * crush'.
+        exists cSet; split; crush.
+  - unfold first_set_minimal; intros.
+    unfold Ac_first_set in *.
+    copy_and_find_In H.
+    crush.
+    apply FirstNT with (gpre := [NT "A"]) (y := T "c") (gsuf := nil); crush.
+    apply NullableSym with (ys := []); crush.
+Qed.
 
 (* tests of FOLLOW definitions *)
 

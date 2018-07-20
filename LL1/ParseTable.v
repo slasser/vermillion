@@ -45,43 +45,14 @@ Definition parseTableLookup
   | Some tMap => LookaheadMap.find y tMap
   end.
 
-(*
-Inductive nullable_prod {g : grammar} :
-  symbol -> list symbol -> Prop :=
-| NuProd :
-    forall x ys,
-      In (x, ys) g.(productions)
-      -> nullable_gamma ys
-      -> nullable_prod (NT x) ys
-with nullable_gamma {g : grammar} :
-       list symbol -> Prop :=
-     | NuNil :
-         nullable_gamma nil
-     | NuCons :
-         forall x tl,
-           nullable_sym (NT x)
-           -> nullable_gamma tl
-           -> nullable_gamma (NT x :: tl)
-with nullable_sym {g : grammar} :
-       symbol -> Prop :=
-     | NuSym :
-         forall sym ys,
-           nullable_prod sym ys
-           -> nullable_sym sym.
-
-Scheme nullable_prod_mutual_ind := Induction for nullable_prod Sort Prop
-  with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop
-  with nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop.
- *)
-
 Inductive nullable_sym (g : grammar) : symbol -> Prop :=
-| NuSym : forall x ys,
+| NullableSym : forall x ys,
     In (x, ys) g.(productions)
     -> nullable_gamma g ys
     -> nullable_sym g (NT x)
 with nullable_gamma (g : grammar) : list symbol -> Prop :=
-     | NuNil : nullable_gamma g []
-     | NuCons : forall hd tl,
+     | NullableNil  : nullable_gamma g []
+     | NullableCons : forall hd tl,
          nullable_sym g hd
          -> nullable_gamma g tl
          -> nullable_gamma g (hd :: tl).
