@@ -14,7 +14,7 @@ Import ListNotations.
 Ltac crush :=
   repeat match goal with
          (* inversions *)
-         | H : InA _ _ [] |- _ => inv H
+         | H : InA _ _ _ |- _ => inv H
          | H : NT _ = NT _ |- _ => inv H
          | H : In _ _ |- _ => inv H
          | H : (String _ _, _) = (String _ _, _) |- _ => inv H
@@ -28,11 +28,12 @@ Ltac crush :=
          | H : first_sym _ _ (NT _) |- _ => inv H
          | H : SymbolMap.In _ (SymbolMap.add _ _ _) |- _ =>
            apply SymbolMapFacts.add_in_iff in H; inv H
+         | H : SymbolMap.In _ (SymbolMap.empty _) |- _ =>
+           apply SymbolMapFacts.empty_in_iff in H; inv H
          | H : SymbolMap.find (NT (String _ _)) _ = Some _ |- _ =>
            inv H
          | H : LookaheadSet.In _ _ |- _ => inv H
-         | H : SymbolMap.In _ (SymbolMap.empty _) |- _ =>
-           apply SymbolMapFacts.empty_in_iff in H; inv H
+         | H : SymbolSet.In _ _ |- _ => inv H
 
          (* goals *)
          | |- In _ _ => repeat (try (left; reflexivity); right)
@@ -40,6 +41,8 @@ Ltac crush :=
          | |- first_sym _ _ _ => constructor
          | |- SymbolMap.find (NT (String _ _)) _ = _ => auto
          | |- LookaheadSet.In _ _ =>
+           repeat (try (apply InA_cons_hd; reflexivity); apply InA_cons_tl)
+         | |- SymbolSet.In _ _ =>
            repeat (try (apply InA_cons_hd; reflexivity); apply InA_cons_tl)
          | |- Utils.isNT (NT _) = true => auto
          | |- _ /\ _ => split
@@ -70,19 +73,10 @@ Ltac crush' :=
 
  *)
 
-Definition fromSymList ys :=
+Definition mkSymbolSet (ys : list symbol) :=
   fold_right SymbolSet.add SymbolSet.empty ys.
 
-Definition g312NullableSet := fromSymList [NT "X"; NT "Y"].
-
-(*
-Definition g312NullableSet :=
-  (SymbolSet.add
-     (NT "X")
-     (SymbolSet.add
-        (NT "Y")
-        SymbolSet.empty)).
- *)
+Definition g312NullableSet := mkSymbolSet [NT "X"; NT "Y"].
 
 Example Y_nullable :
   (@nullable_sym g312) (NT "Y").
@@ -123,24 +117,38 @@ Qed.
 Example g312NullableSetCorrect :
   nullable_set_for g312NullableSet g312.
 Proof.
-Abort. (* to do *)
+  unfold nullable_set_for.
+  split.
+  - unfold nullable_set_complete; intros.
+    unfold g312NullableSet; simpl.
+    inv H.
+    crush.
+    exfalso.
+    eapply Z_not_nullable; eauto.
+  - unfold nullable_set_minimal; intros.
+    unfold g312NullableSet in *; simpl in *.
+    crush.
+    + apply Y_nullable.
+    + apply X_nullable.
+Qed.
 
 (* Tests of FIRST set definitions *)
 
 (* FIRST sets for each nonterminal in Grammar 3.12 *)
-Definition cSet   := LookaheadSet.add (LA "c") LookaheadSet.empty.
+Definition cSet   := LookaheadSet.singleton (LA "c").
 Definition acSet  := LookaheadSet.add (LA "a") cSet.
 Definition acdSet := LookaheadSet.add (LA "d") acSet.
 
+Definition mkSymbolMap (pairs : list (symbol * LookaheadSet.t)) :=
+  fold_right (fun pr m => match pr with
+                          | (sym, se) => SymbolMap.add sym se m
+                          end)
+             (SymbolMap.empty LookaheadSet.t)
+             pairs.
+
 (* Correct FIRST set for Grammar 3.12 *)
 Definition g312FirstSet :=
-  SymbolMap.add
-    (NT "X") acSet
-    (SymbolMap.add
-       (NT "Y") cSet
-       (SymbolMap.add
-          (NT "Z") acdSet
-          (SymbolMap.empty LookaheadSet.t))).
+  mkSymbolMap [(NT "X", acSet); (NT "Y", cSet); (NT "Z", acdSet)].
 
 Example c_in_First_Y :
   (@first_sym g312) (LA "c") (NT "Y").
@@ -233,27 +241,21 @@ Proof.
       * crush'.
         exists acSet; crush.
   - unfold first_set_minimal; intros.
+    simpl in H.
     copy_and_find_In H.
     crush.
     + apply c_in_First_X.
-    + crush'.
-      apply a_in_First_X.
+    + apply a_in_First_X.
     + apply c_in_First_Y.
     + apply c_in_First_Z.
-    + crush'.
-      * apply a_in_First_Z.
-      * crush'.
-        apply d_in_First_Z.
+    + apply a_in_First_Z. 
+    + apply d_in_First_Z.
 Qed.
-    
+
 Definition g312FirstSetPlus :=
-  SymbolMap.add
-    (NT "X") acdSet (* d shouldn't be in there! *)
-    (SymbolMap.add
-       (NT "Y") cSet
-       (SymbolMap.add
-          (NT "Z") acdSet
-          (SymbolMap.empty LookaheadSet.t))).
+  mkSymbolMap [(NT "X", acdSet); (* d shouldn't be in there! *)
+               (NT "Y", cSet);
+               (NT "Z", acdSet)].  
 
 Example nonMinimalFirstSetIncorrect :
   ~first_set_for g312FirstSetPlus g312.
@@ -281,8 +283,7 @@ Definition Ac_grammar :=
      start := "A" |}.
 
 Definition Ac_first_set :=
-  SymbolMap.add (NT "A") cSet
-                (SymbolMap.empty LookaheadSet.t).
+  mkSymbolMap [(NT "A", cSet)].
 
 (* Got this one using induction on the first_sym derivation *)
 Example Ac_first_correct :
@@ -300,7 +301,7 @@ Proof.
       * crush'.
         exists cSet; crush.
   - unfold first_set_minimal; intros.
-    unfold Ac_first_set in *.
+    unfold Ac_first_set in *; simpl in *.
     copy_and_find_In H.
     crush.
     apply FirstNT with (gpre := [NT "A"]) (y := T "c") (gsuf := nil); crush.
@@ -314,11 +315,7 @@ Definition yFollow := LookaheadSet.add EOF acdSet.
 
 (* Correct FOLLOW set for Grammar 3.12 *)
 Definition g312FollowSet :=
-  SymbolMap.add
-    (NT "X") xFollow
-    (SymbolMap.add
-       (NT "Y") yFollow
-       (SymbolMap.empty LookaheadSet.t)).
+  mkSymbolMap [(NT "X", xFollow); (NT "Y", yFollow)].
 
 Example what's_in_xFirst :
   forall la,
@@ -396,13 +393,7 @@ Proof.
               destruct gpre.
               ** inv H4.
                  apply what's_in_zFirst in H3.
-                 crush.
-                 --- exists xFollow; crush.
-                 --- inv H0.
-                     +++ exists xFollow; crush.
-                     +++ inv H1.
-                         *** exists xFollow; crush.
-                         *** inv H0.
+                 crush; (exists yFollow; crush).
               ** crush.
                  inv H4.
                  symmetry in H5; crush.
@@ -411,13 +402,7 @@ Proof.
               destruct gpre.
               ** inv H.
                  apply what's_in_zFirst in H3.
-                 crush.
-                 --- exists yFollow; crush.
-                 --- inv H0.
-                     +++ exists yFollow; crush.
-                     +++ inv H2.
-                         *** exists yFollow; crush.
-                         *** inv H0.
+                 crush; (exists yFollow; crush).
               ** inv H.
                  symmetry in H4; crush.
            ++ crush'.
@@ -439,18 +424,10 @@ Proof.
       * crush'.
         destruct IHfollow_sym as [xFollow [Hs Hl]].
         inv Hs.
-        crush.
-        -- exists yFollow; crush.
-        -- inv H2.
-           ++ exists yFollow; crush.
-           ++ inv H3.
-              ** exists yFollow; crush.
-              ** inv H2.
-                 --- exists yFollow; crush.
-                 --- inv H3.
+        crush; (exists yFollow; crush).
       * crush'.
   - unfold follow_set_minimal; intros.
-    unfold g312FollowSet in *.
+    unfold g312FollowSet in *; simpl in *.
     copy_and_find_In H.
     crush.
     (* make these separate examples *)
@@ -460,48 +437,40 @@ Proof.
       apply FirstGamma with (gpre := nil)
                             (y := NT "Y"); crush.
       apply c_in_First_Y.
-    + inv H1.
-      * apply FollowRight with (x1 := "Z")
-                               (gpre := nil)
-                               (gsuf := [NT "Y"; NT "Z"]); crush.
-        apply FirstGamma with (gpre := [NT "Y"]).
-        -- constructor; crush.
-           apply Y_nullable.
-        -- apply a_in_First_Z.
-      * inv H0.
-        -- apply FollowRight with (x1 := "Z")
-                                  (gpre := nil)
-                                  (gsuf := [NT "Y"; NT "Z"]); crush.
-           ++ apply FirstGamma with (gpre := [NT "Y"]).
-              ** constructor; crush.
-                 apply Y_nullable.
-              ** apply d_in_First_Z.
-        -- inv H1.
-           ++ apply FollowNullable.
-              apply X_nullable.
-           ++ inv H0.
+    + apply FollowRight with (x1 := "Z")
+                             (gpre := nil)
+                             (gsuf := [NT "Y"; NT "Z"]); crush.
+      apply FirstGamma with (gpre := [NT "Y"]).
+      -- constructor; crush.
+         apply Y_nullable.
+      -- apply a_in_First_Z.
+    + apply FollowRight with (x1 := "Z")
+                             (gpre := nil)
+                             (gsuf := [NT "Y"; NT "Z"]); crush.
+      apply FirstGamma with (gpre := [NT "Y"]).
+      -- constructor; crush.
+         apply Y_nullable.
+      -- apply d_in_First_Z.
+    + apply FollowNullable.
+      apply X_nullable.
     + apply FollowRight with (x1 := "Z")
                              (gpre := [NT "X"])
                              (gsuf := [NT "Z"]); crush.
       apply FirstGamma with (gpre := nil); crush.
       apply c_in_First_Z.
-    + inv H1.
-      * apply FollowRight with (x1 := "Z")
-                               (gpre := [NT "X"])
-                               (gsuf := [NT "Z"]); crush.
-        apply FirstGamma with (gpre := nil); crush.
-        apply a_in_First_Z.
-      * inv H0.
-        -- apply FollowRight with (x1 := "Z")
-                                  (gpre := [NT "X"])
-                                  (gsuf := [NT "Z"]); crush.
-           apply FirstGamma with (gpre := nil); crush.
-           apply d_in_First_Z.
-        -- inv H1.
-           ++ apply FollowNullable.
-              apply Y_nullable.
-           ++ inv H0.
-Qed. (* got it! *)
+    + apply FollowRight with (x1 := "Z")
+                             (gpre := [NT "X"])
+                             (gsuf := [NT "Z"]); crush.
+      apply FirstGamma with (gpre := nil); crush.
+      apply a_in_First_Z.
+    + apply FollowRight with (x1 := "Z")
+                             (gpre := [NT "X"])
+                             (gsuf := [NT "Z"]); crush.
+      apply FirstGamma with (gpre := nil); crush.
+      apply d_in_First_Z.
+    + apply FollowNullable.
+      apply Y_nullable.
+Qed. 
 
 (* The next tests use Grammar 3.11, shown here:
 
