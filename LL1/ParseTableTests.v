@@ -42,6 +42,7 @@ Ltac crush :=
          | |- LookaheadSet.In _ _ =>
            repeat (try (apply InA_cons_hd; reflexivity); apply InA_cons_tl)
          | |- Utils.isNT (NT _) = true => auto
+         | |- _ /\ _ => split
          end.
 
 Ltac crush' :=
@@ -67,13 +68,21 @@ Ltac crush' :=
 
    {X, Y}                              
 
-*)
+ *)
+
+Definition fromSymList ys :=
+  fold_right SymbolSet.add SymbolSet.empty ys.
+
+Definition g312NullableSet := fromSymList [NT "X"; NT "Y"].
+
+(*
 Definition g312NullableSet :=
   (SymbolSet.add
      (NT "X")
      (SymbolSet.add
         (NT "Y")
         SymbolSet.empty)).
+ *)
 
 Example Y_nullable :
   (@nullable_sym g312) (NT "Y").
@@ -110,6 +119,11 @@ Proof.
     + apply IHnullable_sym; auto.
     + apply IHnullable_sym0; auto.
 Qed.
+
+Example g312NullableSetCorrect :
+  nullable_set_for g312NullableSet g312.
+Proof.
+Abort. (* to do *)
 
 (* Tests of FIRST set definitions *)
 
@@ -198,26 +212,26 @@ Proof.
     + inv H.
     + crush.
       * crush'.
-        exists acdSet; split; crush.
+        exists acdSet; crush.
       * crush'.
         -- crush'.
            crush'.
-           exists acdSet; split; crush.
+           exists acdSet; crush.
         -- crush'.
-           exists acdSet; split; crush.
+           exists acdSet; crush.
         -- crush'.
            ++ crush'.
-              exists acdSet; split; crush.
+              exists acdSet; crush.
            ++ crush'.
               ** apply IHfirst_sym; crush.
               ** apply IHfirst_sym; crush.
       * crush'.
-        exists cSet; split; crush.
+        exists cSet; crush.
       * crush'.
         crush'.
-        exists acSet; split; crush.
+        exists acSet; crush.
       * crush'.
-        exists acSet; split; crush.
+        exists acSet; crush.
   - unfold first_set_minimal; intros.
     copy_and_find_In H.
     crush.
@@ -284,7 +298,7 @@ Proof.
       crush'.
       * apply IHfirst_sym; crush.
       * crush'.
-        exists cSet; split; crush.
+        exists cSet; crush.
   - unfold first_set_minimal; intros.
     unfold Ac_first_set in *.
     copy_and_find_In H.
@@ -367,8 +381,8 @@ Proof.
       * pose proof Z_not_nullable as Hz.
         apply Hz in H3.
         congruence.
-      * exists yFollow; split; crush.
-      * exists xFollow; split; crush.
+      * exists yFollow; crush.
+      * exists xFollow; crush.
     + crush.
       * crush'.
       * crush'.
@@ -377,17 +391,17 @@ Proof.
            ++ inv H.
               apply what's_in_yFirst in H3.
               crush.
-              exists xFollow; split; crush.
+              exists xFollow; crush.
            ++ inv H.
               destruct gpre.
               ** inv H4.
                  apply what's_in_zFirst in H3.
                  crush.
-                 --- exists xFollow; split; crush.
+                 --- exists xFollow; crush.
                  --- inv H0.
-                     +++ exists xFollow; split; crush.
+                     +++ exists xFollow; crush.
                      +++ inv H1.
-                         *** exists xFollow; split; crush.
+                         *** exists xFollow; crush.
                          *** inv H0.
               ** crush.
                  inv H4.
@@ -398,11 +412,11 @@ Proof.
               ** inv H.
                  apply what's_in_zFirst in H3.
                  crush.
-                 --- exists yFollow; split; crush.
+                 --- exists yFollow; crush.
                  --- inv H0.
-                     +++ exists yFollow; split; crush.
+                     +++ exists yFollow; crush.
                      +++ inv H2.
-                         *** exists yFollow; split; crush.
+                         *** exists yFollow; crush.
                          *** inv H0.
               ** inv H.
                  symmetry in H4; crush.
@@ -426,19 +440,20 @@ Proof.
         destruct IHfollow_sym as [xFollow [Hs Hl]].
         inv Hs.
         crush.
-        -- exists yFollow; split; crush.
+        -- exists yFollow; crush.
         -- inv H2.
-           ++ exists yFollow; split; crush.
+           ++ exists yFollow; crush.
            ++ inv H3.
-              ** exists yFollow; split; crush.
+              ** exists yFollow; crush.
               ** inv H2.
-                 --- exists yFollow; split; crush.
+                 --- exists yFollow; crush.
                  --- inv H3.
       * crush'.
   - unfold follow_set_minimal; intros.
     unfold g312FollowSet in *.
     copy_and_find_In H.
     crush.
+    (* make these separate examples *)
     + apply FollowRight with (x1 := "Z")
                              (gpre := nil)
                              (gsuf := [NT "Y"; NT "Z"]); crush.

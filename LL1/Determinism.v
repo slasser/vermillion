@@ -48,15 +48,17 @@ Proof.
     intros word' rem' tr' Hsdp Happ.
     inv Hsdp.
     assert (gamma0 = gamma).
-    { destruct l as [Hfi | Hfo].
-      - destruct H0 as [Hfi' | Hfo'].
+    { destruct l as [Hin Hlk].
+      destruct H0 as [Hin' Hlk'].
+      destruct Hlk as [Hfi | Hfo].
+      - destruct Hlk' as [Hfi' | Hfo'].
         + rewrite <- Happ in Hfi'.
           destruct Htbl as [Hmin Hcom].
           unfold pt_complete in Hcom.
-          assert ((@lookahead_for g) (peek (word ++ rem)) (NT x) gamma).
-           { left; auto. }
-           assert ((@lookahead_for g) (peek (word ++ rem)) (NT x) gamma0).
-           { left; auto. }
+          assert ((@lookahead_for g) (peek (word ++ rem)) x gamma).
+           { split; auto. }
+           assert ((@lookahead_for g) (peek (word ++ rem)) x gamma0).
+           { split; auto. }
            apply Hcom in H.
            apply Hcom in H0.
            destruct H as [m [Hs Hl]].
@@ -65,28 +67,26 @@ Proof.
         + exfalso.
           destruct Hfo'.
           eapply no_first_follow_conflicts with (sym := NT x); eauto.
+          * pose proof Hfi as Hfi'.
+            rewrite <- Happ.
+            inv Hfi; econstructor; eauto.
           * econstructor; eauto.
-          * econstructor; eauto.
-          * inv H0.
-            rewrite Happ.
-            auto.
-      - destruct H0 as [Hfi' | Hfo'].
+      - destruct Hlk' as [Hfi' | Hfo'].
         + exfalso.
           destruct Hfo.
           eapply no_first_follow_conflicts with (sym := NT x); eauto.
-           * econstructor; eauto.
-           * econstructor; eauto.
-           * inv H0.
-             rewrite <- Happ.
-             auto.
+          * inv Hfi'.
+            rewrite Happ.
+            econstructor; eauto.
+           * eapply NullableSym with (ys := gamma); eauto. 
         + destruct Hfo; destruct Hfo'.
           destruct Htbl as [Hmin Hcom].
           unfold pt_complete in Hcom.
           rewrite <- Happ in H3.
-          assert (Hlk : (@lookahead_for g) (peek (word ++ rem)) (NT x) gamma).
-          { right; split; auto. }
-          assert (Hlk' : (@lookahead_for g) (peek (word ++ rem)) (NT x) gamma0).
-          { right; split; auto. }
+          assert (Hlk : (@lookahead_for g) (peek (word ++ rem)) x gamma).
+          { split; auto. }
+          assert (Hlk' : (@lookahead_for g) (peek (word ++ rem)) x gamma0).
+          { split; auto. }
           apply Hcom in Hlk.
           apply Hcom in Hlk'.
           destruct Hlk as [m [Hs Hl]].
@@ -114,3 +114,4 @@ Proof.
       subst; auto.
     + repeat rewrite app_assoc; auto.
 Qed.
+

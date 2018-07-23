@@ -6,6 +6,30 @@ Require Import LL1.Derivation.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
 Import ListNotations.
+
+(* New version *)
+Lemma eof_first_sym :
+  forall g la sym,
+    first_sym g la sym
+    -> la = EOF
+    -> False.
+Proof.
+  induction 1; intros; auto.
+  inv H.
+Qed.
+
+Lemma eof_first_gamma :
+  forall g la gamma,
+    first_gamma g la gamma
+    -> la = EOF
+    -> False.
+Proof.
+  intros.
+  inv H.
+  eapply eof_first_sym; eauto.
+Qed.
+
+(* Old version *)
 (*
 Lemma eof_fgamma :
   forall g la gamma,
@@ -27,6 +51,7 @@ Proof.
   - inv H.
   - apply IHfirst_gamma; trivial.
 Qed.
+*)
 
 Lemma nullable_middle_sym :
   forall g xs ys sym,
@@ -50,8 +75,10 @@ Proof.
   induction xs; intros.
   - simpl in H.
     inv H.
+    inv H2.
   - destruct a.
     + inv H.
+      inv H2.
     + inv H.
       eapply IHxs; eauto.
 Qed.
@@ -67,6 +94,51 @@ Proof.
     eapply IHxs; eauto.
 Qed.
 
+(* New version, without mutual induction *)
+Lemma no_first_follow_conflicts :
+  forall tbl g,
+    parse_table_for tbl g
+    -> forall la sym,
+      first_sym g la sym
+      -> nullable_sym g sym
+      -> follow_sym g la sym
+      -> False.
+Proof.
+  intros tbl g Htbl la sym Hfi.
+  induction Hfi; intros.
+  - inv H.
+  - inv H1.
+    assert (ys = gpre ++ y :: gsuf).
+    { destruct Htbl as [Hmin Hcom].
+      assert (Hlk : lookahead_for g la x (gpre ++ y :: gsuf)).
+      { unfold lookahead_for.
+        split; auto.
+        left.
+        econstructor; eauto. }
+      assert (Hlk' : lookahead_for g la x ys).
+      { unfold lookahead_for.
+        split; auto. }
+      unfold pt_complete in Hcom.
+      apply Hcom in Hlk.
+      apply Hcom in Hlk'.
+      destruct Hlk as [m [Hs Hl]].
+      destruct Hlk' as [m' [Hs' Hl']].
+      congruence. }
+    subst.
+    eapply IHHfi.
+    + apply nullable_middle_sym in H5; auto.
+    + destruct y.
+      * apply gamma_with_terminal_not_nullable in H5; inv H5.
+      * eapply FollowLeft; eauto.
+        assert (NT n :: gsuf = [NT n] ++ gsuf) by auto.
+        rewrite H1 in H5.
+        rewrite app_assoc in H5.
+        apply nullable_split in H5.
+        auto.
+Qed.
+
+(* Old, much more complicated version, with mutual induction *)
+(*
 Lemma no_first_follow_conflicts :
   forall tbl g,
     parse_table_for tbl g
@@ -157,17 +229,45 @@ Proof.
     + constructor; auto.
     + auto.
 Qed.
+*)
 
 Lemma lookahead_in_grammar :
   forall g la x gamma,
-    (@lookahead_for g) la (NT x) gamma
+    lookahead_for g la x gamma
     -> In (x, gamma) (productions g).
 Proof.
   intros.
-  destruct H as [Hfi | Hfo].
-  - inv Hfi; auto.
-  - destruct Hfo.
-    inv H; auto.
+  destruct H; auto.
+Qed.
+
+Lemma sym_derives_nil_nullable :
+  forall g sym wpre f wsuf,
+    (@sym_derives_prefix g) sym wpre f wsuf
+    -> wpre = nil
+    -> (@nullable_sym g) sym.
+Proof.
+  intros g sym wpre f wsuf Hder.
+  induction Hder using sdp_mutual_ind with
+      (P := fun sym wpre tr wsuf
+                (pf : sym_derives_prefix sym wpre tr wsuf) =>
+              wpre = nil
+              -> nullable_sym g sym)
+      (P0 := fun gamma wpre f wsuf
+                 (pf : gamma_derives_prefix gamma wpre f wsuf)
+             =>
+               wpre = nil
+               -> nullable_gamma g gamma); intros; subst.
+  - inv H.
+  - simpl in *.
+    econstructor.
+    + apply lookahead_in_grammar in l.
+      eauto.
+    + auto.
+  - constructor.
+  - apply app_eq_nil in H; destruct H; subst.
+    destruct IHHder; auto.
+    constructor; auto.
+    econstructor; eauto.
 Qed.
 
 Lemma gamma_derives_nil_nullable :
@@ -181,18 +281,18 @@ Proof.
       (P := fun sym wpre tr wsuf
                 (pf : sym_derives_prefix sym wpre tr wsuf) =>
               wpre = nil
-              -> nullable_sym sym)
+              -> nullable_sym g sym)
       (P0 := fun gamma wpre f wsuf
                  (pf : gamma_derives_prefix gamma wpre f wsuf)
              =>
                wpre = nil
-               -> nullable_gamma gamma); intros; subst.
+               -> nullable_gamma g gamma); intros; subst.
   - inv H.
-(*  - inv f; simpl in *.
-    eapply eof_fgamma in H2; eauto; inv H2. *)
-  - econstructor.
-    econstructor; eauto.
-    apply lookahead_in_grammar in l; auto.
+  - simpl in *.
+    econstructor.
+    + apply lookahead_in_grammar in l.
+      eauto.
+    + auto.
   - constructor.
   - apply app_eq_nil in H; destruct H; subst.
     destruct hdRoot as [y | x].
@@ -200,6 +300,55 @@ Proof.
     + econstructor; eauto.
 Qed.
 
+(* New version *)
+Lemma gamma_derives_cons_fg :
+  forall g gamma word f rem,
+    (@gamma_derives_prefix g) gamma word f rem
+    -> forall tok toks,
+      word = tok :: toks
+      -> (@first_gamma g) (LA tok) gamma.
+Proof.
+  intros g gamma word f rem Hder.
+  induction Hder using gdp_mutual_ind with
+      (P := fun sym word tr rem
+                (pf : sym_derives_prefix sym word tr rem) =>
+              forall tok toks,
+                word = tok :: toks
+                -> first_sym g (LA tok) sym)
+      (P0 := fun gamma word f rem
+                 (pf : gamma_derives_prefix gamma word f rem)
+             =>
+               forall tok toks,
+                 word = tok :: toks
+                 -> first_gamma g (LA tok) gamma); intros; subst.
+  - inv H; constructor.
+  - simpl in *.
+    specialize (IHHder tok toks).
+    destruct IHHder; auto.
+    econstructor; eauto.
+    apply lookahead_in_grammar in l.
+    eauto.
+  - inv H.
+  - destruct hdRoot.
+    + inv s.
+      inv H.
+      eapply FirstGamma with (gpre := nil); constructor.
+    + destruct wpre as [| ptok ptoks]; simpl in *.
+      * subst.
+        specialize (IHHder0 tok toks).
+        destruct IHHder0; auto.
+        eapply FirstGamma with (gpre := NT n :: gpre).
+        -- constructor; auto.
+           apply sym_derives_nil_nullable in s; auto.
+        -- auto.
+      * inv H.
+        eapply FirstGamma with (gpre := nil).
+        -- constructor.
+        -- eapply IHHder; eauto.
+Qed.
+
+(* Old version *)
+(*
 Lemma gamma_derives_cons_fg :
   forall g gamma word f rem,
     (@gamma_derives_prefix g) gamma word f rem
@@ -243,6 +392,7 @@ Proof.
         eapply FiGammaHd.
         eapply IHHder; eauto.
 Qed.
+ *)
 
 Lemma parse_t_ret_leaf :
   forall tbl y input fuel tree suffix,
@@ -277,7 +427,7 @@ Lemma tbl_entry_is_lookahead :
   forall tbl g x la gamma,
     parse_table_for tbl g
     -> parseTableLookup x la tbl = Some gamma
-    -> (@lookahead_for g) la (NT x) gamma.
+    -> (@lookahead_for g) la x gamma.
 Proof.
   intros tbl g x la gamma Htbl Hlkp.
   destruct Htbl as [Hmin Hcom].
@@ -288,37 +438,3 @@ Proof.
   - inv Hlkp.
 Qed.
 
-Lemma nullable_nonrec :
-  forall g sym,
-    (@nullable_sym g) sym
-    -> exists gamma,
-      (@nullable_prod g) sym gamma
-      /\ ~In sym gamma.
-Proof.
-  intros g sym.
-  induction 1 using nullable_sym_mutual_ind with
-      (P := fun sym gamma (pf : nullable_prod sym gamma) =>
-              exists gamma',
-                (@nullable_prod g) sym gamma'
-                /\ ~In sym gamma')
-      (P0 := fun gamma (pf : nullable_gamma gamma) =>
-               forall sym,
-                 In sym gamma
-                 -> exists gamma',
-                   nullable_prod sym gamma'
-                   /\ ~In sym gamma')
-      (P1 := fun sym (pf : nullable_sym sym) =>
-               exists gamma,
-                 (@nullable_prod g) sym gamma
-                 /\ ~In sym gamma); intros.
-  - destruct (List.In_dec symbol_eq_dec (NT x) ys).
-    + apply IHnullable_sym in i0.
-      eauto.
-    + exists ys.
-      split; auto.
-      constructor; auto.
-  - inv H.
-  - inv H0; eauto.
-  - eauto.
-Qed.
-*)
