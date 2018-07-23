@@ -112,9 +112,7 @@ Proof.
     { destruct Htbl as [Hmin Hcom].
       assert (Hlk : lookahead_for g la x (gpre ++ y :: gsuf)).
       { unfold lookahead_for.
-        split; auto.
-        left.
-        econstructor; eauto. }
+        split; auto. }
       assert (Hlk' : lookahead_for g la x ys).
       { unfold lookahead_for.
         split; auto. }
@@ -436,5 +434,16 @@ Proof.
   destruct (StringMap.find x tbl) as [m |] eqn:Hsf.
   - eapply Hmin; eauto.
   - inv Hlkp.
+Qed.
+
+Lemma first_gamma_first_sym :
+  forall g x la gamma,
+    In (x, gamma) g.(productions)
+    -> first_gamma g la gamma
+    -> first_sym g la (NT x).
+Proof.
+  intros g x la gamma Hin Hfg.
+  inv Hfg.
+  econstructor; eauto.
 Qed.
 

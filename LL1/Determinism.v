@@ -47,56 +47,52 @@ Proof.
   - (* NT case *)
     intros word' rem' tr' Hsdp Happ.
     inv Hsdp.
+    (* The two right-hand sides must be equal because the grammar is LL(1) *)
     assert (gamma0 = gamma).
     { destruct l as [Hin Hlk].
       destruct H0 as [Hin' Hlk'].
-      destruct Hlk as [Hfi | Hfo].
-      - destruct Hlk' as [Hfi' | Hfo'].
-        + rewrite <- Happ in Hfi'.
-          destruct Htbl as [Hmin Hcom].
-          unfold pt_complete in Hcom.
-          assert ((@lookahead_for g) (peek (word ++ rem)) x gamma).
-           { split; auto. }
-           assert ((@lookahead_for g) (peek (word ++ rem)) x gamma0).
-           { split; auto. }
-           apply Hcom in H.
-           apply Hcom in H0.
-           destruct H as [m [Hs Hl]].
-           destruct H0 as [m' [Hs' Hl']].
-           congruence.
-        + exfalso.
-          destruct Hfo'.
-          eapply no_first_follow_conflicts with (sym := NT x); eauto.
-          * pose proof Hfi as Hfi'.
-            rewrite <- Happ.
-            inv Hfi; econstructor; eauto.
-          * econstructor; eauto.
-      - destruct Hlk' as [Hfi' | Hfo'].
-        + exfalso.
-          destruct Hfo.
-          eapply no_first_follow_conflicts with (sym := NT x); eauto.
-          * inv Hfi'.
-            rewrite Happ.
-            econstructor; eauto.
-           * eapply NullableSym with (ys := gamma); eauto. 
-        + destruct Hfo; destruct Hfo'.
-          destruct Htbl as [Hmin Hcom].
-          unfold pt_complete in Hcom.
-          rewrite <- Happ in H3.
-          assert (Hlk : (@lookahead_for g) (peek (word ++ rem)) x gamma).
-          { split; auto. }
-          assert (Hlk' : (@lookahead_for g) (peek (word ++ rem)) x gamma0).
-          { split; auto. }
-          apply Hcom in Hlk.
-          apply Hcom in Hlk'.
-          destruct Hlk as [m [Hs Hl]].
-          destruct Hlk' as [m' [Hs' Hl']].
-          congruence. }
+      destruct Hlk as [Hfi | Hfo]; destruct Hlk' as [Hfi' | Hfo'].
+      - (* first-first case *)
+        rewrite <- Happ in Hfi'.
+        destruct Htbl as [Hmin Hcom].
+        assert ((@lookahead_for g) (peek (word ++ rem)) x gamma) by (split; auto).
+        assert ((@lookahead_for g) (peek (word ++ rem)) x gamma0) by (split; auto).
+        apply Hcom in H.
+        apply Hcom in H0.
+        destruct H as [m [Hs Hl]].
+        destruct H0 as [m' [Hs' Hl']].
+        congruence.
+      - (* first-follow conflict *)
+        exfalso.
+        destruct Hfo'.
+        eapply no_first_follow_conflicts with (sym := NT x); eauto.
+        rewrite <- Happ.
+        eapply first_gamma_first_sym with
+            (la := peek (word ++ rem))
+            (gamma := gamma); eauto.
+      - (* first-follow conflict *)
+        exfalso.
+        destruct Hfo.
+        eapply no_first_follow_conflicts with (sym := NT x); eauto.
+        rewrite Happ.
+        eapply first_gamma_first_sym; eauto.
+      - (* follow-follow case *)
+        destruct Hfo as [Hnu Hfo]; destruct Hfo' as [Hnu' Hfo'].
+        destruct Htbl as [Hmin Hcom].
+        unfold pt_complete in Hcom.
+        rewrite <- Happ in Hfo'.
+        assert (Hlk : (@lookahead_for g) (peek (word ++ rem)) x gamma)
+          by (split; auto).
+        assert (Hlk' : (@lookahead_for g) (peek (word ++ rem)) x gamma0)
+          by (split; auto).
+        apply Hcom in Hlk.
+        apply Hcom in Hlk'.
+        destruct Hlk as [m [Hs Hl]].
+        destruct Hlk' as [m' [Hs' Hl']].
+        congruence. }
     subst.
     eapply IHHder in H1; eauto.
-    destruct H1.
-    destruct H1.
-    subst; auto.
+    do 2 destruct H1; subst; auto.
 
   - (* nil case *)
     intros word' rem' f' Hgdp Happ.

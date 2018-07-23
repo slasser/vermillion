@@ -57,6 +57,8 @@ with nullable_gamma (g : grammar) : list symbol -> Prop :=
          -> nullable_gamma g tl
          -> nullable_gamma g (hd :: tl).
 
+Hint Constructors nullable_sym nullable_gamma.
+
 Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
   with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop.
 
@@ -110,11 +112,15 @@ Inductive first_sym (g : grammar) :
     -> first_sym g la y
     -> first_sym g la (NT x).
 
+Hint Constructors first_sym.
+
 Inductive first_gamma (g : grammar) : lookahead -> list symbol -> Prop :=
 | FirstGamma : forall gpre gsuf la y,
     nullable_gamma g gpre
     -> first_sym g la y
     -> first_gamma g la (gpre ++ y :: gsuf).
+
+Hint Constructors first_gamma.
 
 Definition first_set_complete fi g : Prop :=
   forall x la,
@@ -177,6 +183,8 @@ Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
     -> follow_sym g la (NT x1)
     -> follow_sym g la (NT x2).
 
+Hint Constructors follow_sym.
+
 Definition follow_set_complete fo g : Prop :=
   forall x y,
     (@follow_sym g) y x
@@ -214,3 +222,4 @@ Definition pt_complete tbl g :=
 
 Definition parse_table_for (tbl : parse_table) (g : grammar) :=
   pt_minimal tbl g /\ pt_complete tbl g.
+
