@@ -109,16 +109,16 @@ Proof.
   eapply NullableSym with (ys := []); crush.
 Qed.
 
+Hint Resolve Y_nullable.
+
 Example X_nullable :
   (@nullable_sym g312) (NT "X").
 Proof.
   eapply NullableSym with (ys := [NT "Y"]); crush.
-  apply Y_nullable.
 Qed.
 
-(* Nice -- with the new definitions of nullable_sym and
-   nullable_gamma, we were able to complete this example
-   without using a special "nullable_nonrec" lemma *)
+Hint Resolve X_nullable.
+
 Example Z_not_nullable :
   forall sym,
     (@nullable_sym g312) sym
@@ -132,6 +132,8 @@ Proof.
       (P0 := fun gamma (pf : nullable_gamma g312 gamma) =>
                In (NT "Z") gamma -> False); intros; crush.
 Qed.
+
+Hint Resolve Z_not_nullable.
 
 Example g312NullableSetCorrect :
   nullable_set_for g312NullableSet g312.
@@ -147,8 +149,6 @@ Proof.
   - unfold nullable_set_minimal; intros.
     unfold g312NullableSet in *; simpl in *.
     crush.
-    + apply Y_nullable.
-    + apply X_nullable.
 Qed.
 
 (* Tests of FIRST set definitions *)
@@ -175,18 +175,23 @@ Proof.
   apply FirstNT with (gpre := nil) (y := T "c") (gsuf := nil); crush.
 Qed.
 
+Hint Resolve c_in_First_Y.
+
 Example a_in_First_X :
   (@first_sym g312) (LA "a") (NT "X").
 Proof.
   apply FirstNT with (gpre := nil) (y := T "a") (gsuf := nil) ; crush.
 Qed.
 
+Hint Resolve a_in_First_X.
+
 Example c_in_First_X :
   (@first_sym g312) (LA "c") (NT "X").
 Proof.
   apply FirstNT with (gpre := nil) (y := NT "Y") (gsuf := nil); crush.
-  apply c_in_First_Y.
 Qed.
+
+Hint Resolve c_in_First_X.
 
 Example d_not_in_First_Y :
   ~(@first_sym g312) (LA "d") (NT "Y").
@@ -204,16 +209,17 @@ Example a_in_First_Z :
   (@first_sym g312) (LA "a") (NT "Z").
 Proof.
   apply FirstNT with (gpre := nil) (y := NT "X") (gsuf := [NT "Y"; NT "Z"]); crush.
-  apply a_in_First_X.
 Qed.
+
+Hint Resolve a_in_First_Z.
 
 Example c_in_First_Z :
   (@first_sym g312) (LA "c") (NT "Z").
 Proof.
   apply FirstNT with (gpre := [NT "X"]) (y := NT "Y") (gsuf := [NT "Z"]); crush.
-  - apply X_nullable.
-  - apply c_in_First_Y.
 Qed.
+
+Hint Resolve c_in_First_Z.
   
 Example d_in_First_Z :
   (@first_sym g312) (LA "d") (NT "Z").
@@ -221,7 +227,8 @@ Proof.
   apply FirstNT with (gpre := nil) (y := T "d") (gsuf := nil); crush.
 Qed.
 
-(* ellipsis to get the "with crush" part? *)
+Hint Resolve d_in_First_Z.
+
 Example g312FirstSetCorrect :
   first_set_for g312FirstSet g312.
 Proof with crush.
@@ -233,27 +240,15 @@ Proof with crush.
     induction H0; intros...
     + crush; exists acdSet...
     + crush.
-      * crush...
-        exists acdSet...
-      * crush...
-        exists acdSet...
-      * crush...
-        exists acdSet...
-    + crush...
-      exists cSet...
-    + crush...
-      exists acSet...
-    + crush...
-      exists acSet...
+      * crush... exists acdSet...
+      * crush... exists acdSet...
+      * crush... exists acdSet...
+    + crush... exists cSet...
+    + crush... exists acSet...
+    + crush... exists acSet...
   - unfold first_set_minimal; intros.
     simpl in H.
     copy_and_find_In H...
-    + apply c_in_First_X.
-    + apply a_in_First_X.
-    + apply c_in_First_Y.
-    + apply c_in_First_Z.
-    + apply a_in_First_Z. 
-    + apply d_in_First_Z.
 Qed.
 
 Definition g312FirstSetPlus :=
@@ -358,8 +353,73 @@ Proof.
   auto.
 Qed.
 
-(* Another possible approach -- use the "what's in xFirst"
-   strategy for the other cases *)
+Example c_in_Follow_X :
+  follow_sym g312 (LA "c") (NT "X").
+Proof.
+  apply FollowRight with (x1 := "Z") 
+                         (gpre := nil) 
+                         (gsuf := [NT "Y"; NT "Z"]); crush.
+  apply FirstGamma with (gpre := nil)
+                        (y := NT "Y"); crush.
+Qed.
+
+Hint Resolve c_in_Follow_X.
+
+Example a_in_Follow_X :
+  follow_sym g312 (LA "a") (NT "X").
+Proof.
+  apply FollowRight with (x1 := "Z")
+                         (gpre := nil)
+                         (gsuf := [NT "Y"; NT "Z"]); crush.
+  apply FirstGamma with (gpre := [NT "Y"]); crush.
+Qed.
+
+Hint Resolve a_in_Follow_X.
+
+Example d_in_Follow_X :
+  follow_sym g312 (LA "d") (NT "X").
+Proof.
+  apply FollowRight with (x1 := "Z")
+                         (gpre := nil)
+                         (gsuf := [NT "Y"; NT "Z"]); crush.
+  apply FirstGamma with (gpre := [NT "Y"]); crush.
+Qed.
+
+Hint Resolve d_in_Follow_X.
+
+Example c_in_Follow_Y :
+  follow_sym g312 (LA "c") (NT "Y").
+Proof.
+  apply FollowRight with (x1 := "Z")
+                         (gpre := [NT "X"])
+                         (gsuf := [NT "Z"]); crush.
+  apply FirstGamma with (gpre := nil); crush.
+Qed.
+
+Hint Resolve c_in_Follow_Y.
+
+Example a_in_Follow_Y :
+  follow_sym g312 (LA "a") (NT "Y").
+Proof.
+  apply FollowRight with (x1 := "Z")
+                         (gpre := [NT "X"])
+                         (gsuf := [NT "Z"]); crush.
+  apply FirstGamma with (gpre := nil); crush.
+Qed.
+
+Hint Resolve a_in_Follow_Y.
+
+Example d_in_Follow_Y :
+  follow_sym g312 (LA "d") (NT "Y").
+Proof.
+  apply FollowRight with (x1 := "Z")
+                         (gpre := [NT "X"])
+                         (gsuf := [NT "Z"]); crush.
+  apply FirstGamma with (gpre := nil); crush.
+Qed.
+  
+Hint Resolve d_in_Follow_Y.
+
 Example finiteFollowCorrect :
   follow_set_for g312FollowSet g312.
 Proof with crush.
@@ -393,46 +453,6 @@ Proof with crush.
   - unfold follow_set_minimal; intros.
     unfold g312FollowSet in *; simpl in *.
     copy_and_find_In H...
-    (* make these separate examples *)
-    + apply FollowRight with (x1 := "Z")
-                             (gpre := nil)
-                             (gsuf := [NT "Y"; NT "Z"]); crush.
-      apply FirstGamma with (gpre := nil)
-                            (y := NT "Y"); crush.
-      apply c_in_First_Y.
-    + apply FollowRight with (x1 := "Z")
-                             (gpre := nil)
-                             (gsuf := [NT "Y"; NT "Z"]); crush.
-      apply FirstGamma with (gpre := [NT "Y"]).
-      -- constructor; crush.
-         apply Y_nullable.
-      -- apply a_in_First_Z.
-    + apply FollowRight with (x1 := "Z")
-                             (gpre := nil)
-                             (gsuf := [NT "Y"; NT "Z"]); crush.
-      apply FirstGamma with (gpre := [NT "Y"]).
-      -- constructor; crush.
-         apply Y_nullable.
-      -- apply d_in_First_Z.
-    + apply FollowNullable.
-      apply X_nullable.
-    + apply FollowRight with (x1 := "Z")
-                             (gpre := [NT "X"])
-                             (gsuf := [NT "Z"]); crush.
-      apply FirstGamma with (gpre := nil); crush.
-      apply c_in_First_Z.
-    + apply FollowRight with (x1 := "Z")
-                             (gpre := [NT "X"])
-                             (gsuf := [NT "Z"]); crush.
-      apply FirstGamma with (gpre := nil); crush.
-      apply a_in_First_Z.
-    + apply FollowRight with (x1 := "Z")
-                             (gpre := [NT "X"])
-                             (gsuf := [NT "Z"]); crush.
-      apply FirstGamma with (gpre := nil); crush.
-      apply d_in_First_Z.
-    + apply FollowNullable.
-      apply Y_nullable.
 Qed. 
 
 (* The next tests use Grammar 3.11, shown here:
@@ -447,6 +467,8 @@ Qed.
    E -> num = num
 
  *)
+
+(* To do : find a way to write this lemma only once *)
 
 Lemma stringmap_find_in : forall k vT (v : vT) m,
     StringMap.find k m = Some v ->
@@ -464,8 +486,6 @@ Proof.
   unfold not. intro Hcontra. inv Hcontra.
 Qed.
 
-(* Fix the nonterminal and terminal types, and their
-   corresponding modules, before filling out this example *)
 Example g311ParseTableCorrect :
   parse_table_for g311ParseTable g311.
 Proof with crush.
