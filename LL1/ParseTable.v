@@ -57,6 +57,8 @@ with nullable_gamma (g : grammar) : list symbol -> Prop :=
          -> nullable_gamma g tl
          -> nullable_gamma g (hd :: tl).
 
+
+
 Hint Constructors nullable_sym nullable_gamma.
 
 Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
