@@ -45,7 +45,7 @@ Proof.
 Qed.
 
 Lemma NT_not_in_T_list :
-  forall (gamma : list symbol) (X : string),
+  forall (gamma : list symbol) (X : nonterminal),
     forallb isT gamma = true ->
     ~In (NT X) gamma.
 Proof.
@@ -61,7 +61,7 @@ Qed.
 
 Lemma T_list_neq_list_with_NT :
   forall (gamma prefix suffix : list symbol)
-         (X : string),
+         (X : nonterminal),
     forallb isT gamma = true ->
     gamma <> (prefix ++ NT X :: suffix)%list.
 Proof.
@@ -92,3 +92,4 @@ Proof.
   - unfold beqString.
     destruct (string_dec s s2); auto.
 Qed.
+

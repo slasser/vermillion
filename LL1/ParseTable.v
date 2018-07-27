@@ -26,11 +26,11 @@ End MDT_Lookahead.
 
 Module Lookahead_as_DT := Make_UDT(MDT_Lookahead).
 Module LaSet := MSetWeakList.Make Lookahead_as_DT.
-Module LookaheadSetFacts := WFactsOn Lookahead_as_DT LaSet.
-Module LookaheadSetEqProps := EqProperties LaSet.
+Module LaSetFacts := WFactsOn Lookahead_as_DT LaSet.
+Module LaSetEqProps := EqProperties LaSet.
 
 Module LaMap := FMapWeakList.Make Lookahead_as_DT.
-Module LookaheadMapFacts := WFacts_fun Lookahead_as_DT LaMap.
+Module LaMapFacts := WFacts_fun Lookahead_as_DT LaMap.
 
 Definition parse_table :=
   NtMap.t (LaMap.t (list symbol)).

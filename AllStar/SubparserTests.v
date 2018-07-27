@@ -29,8 +29,11 @@ Proof.
   unfold spClosure. simpl. reflexivity.
 Qed.
 
+(* nonterminal that doesn't appear in Grammar 3.12 *)
+Definition out_of_vocab := 42. 
+
 Example spClosureTest3 :
-  spClosure g312 (nonterminals (productions g312)) {| stack := [NT "out-of-vocab"]; pred := [T "d"] |} = nil.
+  spClosure g312 (nonterminals (productions g312)) {| stack := [NT out_of_vocab]; pred := [T "d"] |} = nil.
 Proof.
   unfold spClosure. simpl. reflexivity.
 Qed.
@@ -38,30 +41,30 @@ Qed.
 Example spClosureTest4 :
   spClosure g312
             (nonterminals (productions g312))
-            {| stack := [NT "X"; NT "Y"; NT "Z"];
-               pred := [NT "X"; NT "Y"; NT "Z"] |} =
+            {| stack := [NT X; NT Y; NT Z];
+               pred := [NT X; NT Y; NT Z] |} =
   [{|
-      stack := [T "c"; NT "Y"; NT "Z"];
-      pred := [NT "X"; NT "Y"; NT "Z"]
+      stack := [T "c"; NT Y; NT Z];
+      pred := [NT X; NT Y; NT Z]
    |};
    {|
-     stack := [T "a"; NT "Y"; NT "Z"];
-     pred := [NT "X"; NT "Y"; NT "Z"]
+     stack := [T "a"; NT Y; NT Z];
+     pred := [NT X; NT Y; NT Z]
    |}].
 Proof. compute. reflexivity. Qed.
 
 Example Z_abc : 
-  adaptivePredict g312 "Z" ["a"; "b"; "c"] nil =
-  Choice [NT "X"; NT "Y"; NT "Z"].
+  adaptivePredict g312 Z ["a"; "b"; "c"] nil =
+  Choice [NT X; NT Y; NT Z].
 Proof. compute. reflexivity. Qed. 
 
 Example Z_ababd :
-  adaptivePredict g312 "Z" ["a"; "b"; "a"; "b"; "d"] nil = 
-  Choice [NT "X"; NT "Y"; NT "Z"].
+  adaptivePredict g312 Z ["a"; "b"; "a"; "b"; "d"] nil = 
+  Choice [NT X; NT Y; NT Z].
 Proof. compute. reflexivity. Qed.
 
 Example X_a : 
-  exists sps, adaptivePredict g312 "X" ["a"] nil =
+  exists sps, adaptivePredict g312 X ["a"] nil =
               Conflict sps.
 Proof. eexists. compute. reflexivity. Qed.
 
@@ -69,5 +72,6 @@ Proof. eexists. compute. reflexivity. Qed.
    or should we report a conflict,
    or reject the grammar altogether? *)
 Example Z_d : 
-  adaptivePredict g312 "Z" ["d"] nil = Choice [].
+  adaptivePredict g312 Z ["d"] nil = Choice [].
 Proof. compute. Abort.
+

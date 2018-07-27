@@ -1,35 +1,42 @@
-Require Import List String.
-Require Import ExampleGrammars Grammar LL1.Parser ParseTable ParseTree.
+Require Import List.
+
+Require Import Lib.ExampleGrammars.
+Require Import Lib.Grammar.
+Require Import Lib.ParseTree.
+
+Require Import LL1.Parser.
+Require Import LL1.ParseTable.
+
 Import ListNotations.
-Open Scope string_scope.
 
 Example test1 :
-  parse g311ParseTable (NT "S") g311Sentence1 100 =
+  parse g311ParseTable (NT X) g311Sentence1 100 =
   (Some g311ParseTree1, nil).
 Proof. simpl. reflexivity. Qed.
 
 Definition x_y_grammar :=
-  [(NT "x", [NT "y"]);
-   (NT "y", [])].
+  [(NT X, [NT Y]);
+     (NT Y, [])].
 
 Definition x_map := 
-  LookaheadMap.add 
-    EOF [NT "y"]
-    (LookaheadMap.empty (list symbol)).
+  LaMap.add 
+    EOF [NT Y]
+    (LaMap.empty (list symbol)).
 
 Definition y_map := 
-  LookaheadMap.add 
+  LaMap.add 
     EOF nil
-    (LookaheadMap.empty (list symbol)).
+    (LaMap.empty (list symbol)).
 
 Definition x_y_parse_table :=
-  StringMap.add
-    "x" x_map
-    (StringMap.add
-       "y" y_map
-       (StringMap.empty (LookaheadMap.t (list symbol)))).
+  NtMap.add
+    X x_map
+    (NtMap.add
+       Y y_map
+       (NtMap.empty (LaMap.t (list symbol)))).
                 
 Example x_y_test1 :
-  parse x_y_parse_table (NT "x") nil 100 =
-  (Some (Node "x" [Node "y" []]), nil).
-Proof. simpl. reflexivity. Qed.
+  parse x_y_parse_table (NT X) nil 100 =
+  (Some (Node X [Node Y []]), nil).
+Proof. auto. Qed.
+

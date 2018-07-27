@@ -1,29 +1,29 @@
-Require Import List String.
+Require Import List.
 Require Import Grammar LL1.Parser ParseTree ParseTable
         Lib.Tactics.
 Import ListNotations.
 Open Scope list_scope.
 
 Inductive sym_derives_prefix {g : grammar} :
-  symbol -> list string -> tree -> list string -> Prop :=
+  symbol -> list terminal -> tree -> list terminal -> Prop :=
 | T_sdp : 
-    forall (y : string) (rem : list string),
+    forall (y : terminal) (rem : list terminal),
       sym_derives_prefix (T y) [y] (Leaf y) rem
 | NT_sdp :
-    forall (x : string) 
+    forall (x : nonterminal) 
            (gamma : list symbol)
-           (word rem : list string) 
+           (word rem : list terminal) 
            (subtrees : list tree),
       lookahead_for g (peek (word ++ rem)) x gamma
       -> gamma_derives_prefix gamma word subtrees rem
       -> sym_derives_prefix (NT x) word (Node x subtrees) rem
 with gamma_derives_prefix {g : grammar} : 
-       list symbol -> list string -> list tree -> list string -> Prop :=
+       list symbol -> list terminal -> list tree -> list terminal -> Prop :=
      | Nil_gdp : forall rem,
          gamma_derives_prefix [] [] [] rem
      | Cons_gdp : 
          forall (hdRoot : symbol)
-                (wpre wsuf rem : list string)
+                (wpre wsuf rem : list terminal)
                 (hdTree : tree)
                 (tlRoots : list symbol)
                 (tlTrees : list tree),
@@ -36,3 +36,4 @@ with gamma_derives_prefix {g : grammar} :
 
 Scheme sdp_mutual_ind := Induction for sym_derives_prefix Sort Prop
   with gdp_mutual_ind := Induction for gamma_derives_prefix Sort Prop.
+

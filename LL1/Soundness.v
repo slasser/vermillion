@@ -20,7 +20,7 @@ Lemma parse_correct' :
     parse_table_for tbl g
     -> forall (tr        : tree)
               (sym       : symbol)
-              (input rem : list string)
+              (input rem : list terminal)
               (fuel      : nat),
       parse tbl sym input fuel = (Some tr, rem)
       -> exists word,
@@ -39,7 +39,7 @@ Proof.
                 parse tbl sym input fuel =
                 (Some tr, rem)
                 -> exists word,
-                  word ++ rem = input
+                  app word rem = input
                   /\ sym_derives_prefix sym word tr rem)
       
       (Q := fun f =>
@@ -85,7 +85,8 @@ Proof.
               split; auto.
               eapply tbl_entry_is_lookahead in Hlkp; eauto.
               econstructor; eauto.
-              rewrite H.
+              (* rewrite H. *) (* Why doesn't this work anymore? *)
+              rewrite <- H in Hlkp.
               auto.
            ++ inv Hp.
         -- inv Hp.
@@ -134,7 +135,8 @@ Proof.
                  rewrite app_assoc.
                  auto.
               ** econstructor; eauto.
-                 rewrite Happ'.
+                 (* rewrite Happ'. *) (* why doesn't this work anymore? *)
+                 rewrite <- Happ' in Hder.
                  auto.
            ++ inv Hpf.
         -- inv Hpf.

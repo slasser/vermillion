@@ -7,14 +7,14 @@ Definition prog1 :=
   tokenize "if num == num then print num == num else print num == num".
 
 Example test1 :
-    parse g311 (NT "S") prog1 100 = (Some g311ParseTree1, nil).
+    parse g311 (NT X) prog1 100 = (Some g311ParseTree1, nil).
 Proof. reflexivity. Qed.
 
 Definition prog2 := tokenize "begin print num == num end".
 
 Example test2 :
   exists tr suf,
-    parse g311 (NT "S") prog2 100 = (Some tr, suf).
+    parse g311 (NT X) prog2 100 = (Some tr, suf).
 Proof. compute. repeat eexists. Qed.
 
 Definition prog3 :=
@@ -22,7 +22,7 @@ Definition prog3 :=
 
 Example test3 :
   exists tr suf,
-    parse g311 (NT "S") prog3 100 = (Some tr, suf).
+    parse g311 (NT X) prog3 100 = (Some tr, suf).
 Proof. compute. repeat eexists. Qed.
 
 Definition testProgram := prog3.
@@ -46,7 +46,7 @@ Compute testProgram.
 (* The first thing that adaptivePredict does is call 
    startState, which compute the initial DFA state for 
    prediction. *)
-Definition dfaState0 := startState g311 "S" nil.
+Definition dfaState0 := startState g311 X nil.
 Compute dfaState0.
 
 (* Next, the target function advances all of the subparsers 
@@ -61,5 +61,5 @@ Compute dfaState2.
    adaptivePredict should return the prediction associated 
    with that subparser. The adaptivePredict call below shows 
    that that's what it does. *)
-Compute adaptivePredict g311 "S" testProgram nil.
+Compute adaptivePredict g311 X testProgram nil.
 

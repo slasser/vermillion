@@ -10,7 +10,7 @@ Record subparser :=
 Definition beqSym s s2 :=
   match (s, s2) with
   | (T y, T y2) => beqString y y2
-  | (NT x, NT x2) => beqString x x2
+  | (NT x, NT x2) => beqNT x x2
   | (_, _) => false
   end.
 
@@ -260,7 +260,7 @@ Definition closure (g : grammar) (freeSyms : SymbolSet.t)
   flat_map (spClosure g freeSyms) sps.
 
 (* LL predict when stack0 is nil, SLL predict otherwise *)
-Definition startState (g : grammar) (x : string)
+Definition startState (g : grammar) (x : nonterminal)
                       (stack0 : list symbol) :
                       list subparser :=
   let sps := map (fun gamma =>
@@ -310,18 +310,18 @@ Fixpoint predict (g : grammar) (sps : list subparser)
    llPredict is the "initial stack" argument that they pass to
    startState. This will change when sllPredict starts using a 
    cache. *)
-Definition sllPredict (g : grammar) (x : string)
+Definition sllPredict (g : grammar) (x : nonterminal)
                       (input : list string) : pred_result :=
   let state0 := startState g x nil in
   predict g state0 input.
 
-Definition llPredict (g : grammar)  (x : string)
+Definition llPredict (g : grammar)  (x : nonterminal)
                      (input : list string)
                      (stack0 : list symbol) : pred_result :=
   let state0 := startState g x stack0 in
   predict g state0 input.
 
-Definition adaptivePredict (g : grammar) (x : string)
+Definition adaptivePredict (g : grammar) (x : nonterminal)
                            (input : list string)
                            (stack0 : list symbol) :
                            pred_result :=
@@ -330,3 +330,4 @@ Definition adaptivePredict (g : grammar) (x : string)
   | Conflict _ => llPredict g x input stack0
   | _ => sllPred
   end.
+

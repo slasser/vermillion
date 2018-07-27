@@ -1,10 +1,13 @@
 Require Import List.
+
 Require Import Lib.Grammar.
 Require Import Lib.ParseTree.
 Require Import Lib.Tactics.
+
 Require Import LL1.Derivation.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
+
 Import ListNotations.
 
 Lemma eof_first_sym :
@@ -234,7 +237,7 @@ Proof.
   destruct Htbl as [Hmin Hcom].
   unfold pt_minimal in Hmin.
   unfold parseTableLookup in Hlkp.
-  destruct (StringMap.find x tbl) as [m |] eqn:Hsf.
+  destruct (NtMap.find x tbl) as [m |] eqn:Hsf.
   - eapply Hmin; eauto.
   - inv Hlkp.
 Qed.

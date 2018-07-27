@@ -19,21 +19,6 @@ Definition production := (nonterminal * list symbol)%type.
 
 Record grammar := { productions : list production;
                     start : nonterminal }.
-(*
-Module MDT_String.
-  Definition t := string.
-  Definition eq_dec := string_dec.
-End MDT_String.
-
-Module StringAsDT := Make_UDT(MDT_String).
-
-Module StringSet := MSetWeakList.Make StringAsDT.
-Module StringSetFacts := WFactsOn StringAsDT StringSet.
-Module StringSetEqProps := EqProperties StringSet.
-
-Module StringMap := FMapWeakList.Make StringAsDT.
-Module StringMapFacts := WFacts_fun StringAsDT StringMap.
- *)
 
 Module NT_as_DT <: UsualDecidableType := Nat_as_OT.
 

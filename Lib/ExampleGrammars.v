@@ -4,32 +4,34 @@ Import ListNotations.
 Open Scope string_scope.
 
 (* Named nonterminal constants for convenience. *)
-Definition S := 0.
-Definition E := 1.
-Definition L := 2.
+Definition X := 0.
+Definition L := 1.
+Definition E := 2.
+Definition Y := 3.
+Definition Z := 4.
 
 (* Grammar 3.11 from "Modern Compiler Implementation in ML" *)
 Definition g311 : grammar :=
 {| productions :=
-     [(S, [T "if"; NT E; T "then"; NT S; T "else"; NT S]);
-      (S, [T "begin"; NT S; NT L]);
-      (S, [T "print"; NT E]);
+     [(X, [T "if"; NT E; T "then"; NT X; T "else"; NT X]);
+      (X, [T "begin"; NT X; NT L]);
+      (X, [T "print"; NT E]);
         
       (L, [T "end"]);
-      (L, [T ";"; NT S; NT L]);
+      (L, [T ";"; NT X; NT L]);
         
       (E, [T "num"; T "=="; T "num"])];
-   start := S |}.
+   start := X |}.
      
 (* Grammar 3.11 parse table definitions *)
 
-Definition S_map :=
+Definition X_map :=
   LaMap.add
     (LA "if")
-    [T "if"; NT E; T "then"; NT S; T "else"; NT S]
+    [T "if"; NT E; T "then"; NT X; T "else"; NT X]
     (LaMap.add
        (LA "begin")
-       [T "begin"; NT S; NT L]
+       [T "begin"; NT X; NT L]
        (LaMap.add
           (LA "print")
           [T "print"; NT E]
@@ -41,7 +43,7 @@ Definition L_map :=
     [T "end"]
     (LaMap.add
        (LA ";")
-       [T ";"; NT S; NT L]
+       [T ";"; NT X; NT L]
        (LaMap.empty (list symbol))).
 
 Definition E_map :=
@@ -52,7 +54,7 @@ Definition E_map :=
 
 Definition g311ParseTable :=
   NtMap.add
-    S S_map
+    X X_map
     (NtMap.add
        L L_map
        (NtMap.add
@@ -70,19 +72,15 @@ Definition g311Sentence1 :=
 
 Definition E_tree := Node E [Leaf "num"; Leaf "=="; Leaf "num"].
 
-Definition S_print_tree := Node S [Leaf "print"; E_tree].
+Definition X_print_tree := Node X [Leaf "print"; E_tree].
 
 Definition g311ParseTree1 :=
-  Node S [Leaf "if"; E_tree; Leaf "then";
-              S_print_tree;
+  Node X [Leaf "if"; E_tree; Leaf "then";
+              X_print_tree;
             Leaf "else";
-              S_print_tree].
+              X_print_tree].
 
 (* Grammar 3.12 from the same textbook *)
-
-Definition X := 3.
-Definition Y := 4.
-Definition Z := 5.
 
 Definition g312 : grammar :=
   {| productions :=
