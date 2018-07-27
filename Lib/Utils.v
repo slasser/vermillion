@@ -18,9 +18,11 @@ Definition isT sym :=
 Definition nullable nSet sym :=
   match sym with
   | T _  => false
-  | NT x => StringSet.mem x nSet
+  | NT x => NtSet.mem x nSet
   end.
 
+(* StringSet should be LookaheadSet, etc. *)
+(*
 Definition first fi sym :=
   match sym with
   | T y  => StringSet.singleton y
@@ -29,6 +31,7 @@ Definition first fi sym :=
             | None    => StringSet.empty
             end
   end.
+ *)
 
 Definition fixp {A} update (cmp : A -> A -> bool) x0 fuel :=
   let fix iter x fuel :=
@@ -40,13 +43,13 @@ Definition fixp {A} update (cmp : A -> A -> bool) x0 fuel :=
       end
   in iter x0 fuel.
 
+(*
 Definition getOrEmpty k m :=
-  match StringMap.find k m with
+  match NTmap.find k m with
   | Some v => v
   | None   => StringSet.empty
   end.
-
-(*Definition beqString sy sy2 := if StringAsDT.eq_dec sy sy2 then true else false. *)
+ *)
 
 Definition beqString s s2 := if string_dec s s2 then true else false.
 
@@ -93,16 +96,29 @@ Lemma beqSym_eq : forall x y,
     beqString x y = true <-> x = y.
 Proof.
   intros; split; intros.
-  - unfold beqString in H. destruct (StringMapFacts.eq_dec).
-    + subst; reflexivity.
-    + inversion H.
-  - unfold beqString. destruct (StringMapFacts.eq_dec).
-    + reflexivity.
-    + exfalso. apply n. assumption.
+  - unfold beqString in H.
+    destruct (string_dec x y); auto.
+    congruence.
+  - unfold beqString.
+    destruct (string_dec x y); auto.
 Qed.
 
-Definition rhss (g : grammar) (x : string) :=
-  map snd (filter (fun prod => beqString (fst prod) x) g.(productions)).
+Definition beqNT x x2 :=
+  if NT_as_DT.eq_dec x x2 then true else false.
+
+Lemma beqNT_eq : forall x y,
+    beqNT x y = true <-> x = y.
+Proof.
+  intros; split; intros.
+  - unfold beqNT in H.
+    destruct (NtMapFacts.eq_dec x y); auto.
+    congruence.
+  - unfold beqNT.
+    destruct (NtMapFacts.eq_dec x y); auto.
+Qed.
+
+Definition rhss (g : grammar) (x : nonterminal) :=
+  map snd (filter (fun prod => beqNT (fst prod) x) g.(productions)).
 
 Lemma rhss_in_grammar : forall g x gammas gamma,
     rhss g x = gammas ->
@@ -114,8 +130,8 @@ Proof.
   destruct H0 as [prod].
   destruct prod as (l, r); simpl in H; destruct H.
   rewrite filter_In in H0. destruct H0.
-  rewrite beqSym_eq in H1; simpl in H1.
-  subst. assumption.
+  rewrite beqNT_eq in H1; simpl in H1.
+  subst; auto.
 Qed.
 
 Definition removeOpt (x : symbol) (s : SymbolSet.t) :=
@@ -136,3 +152,4 @@ Definition nonterminals g :=
         SymbolSet.add (NT l) (addAll (filter isNT rs))
       end
   in  unionAll (map prodNTs g).
+

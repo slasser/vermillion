@@ -1,7 +1,6 @@
 Require Import FMaps.
 Require Import List.
 Require Import MSets.
-Require Import String.
 
 Require Import Lib.Grammar.
 Require Import Lib.Utils.
@@ -10,7 +9,7 @@ Import ListNotations.
 Open Scope list_scope.
 
 Inductive lookahead :=
-| LA  : string -> lookahead
+| LA  : terminal -> lookahead
 | EOF : lookahead.
 
 (* sets and maps for lookahead tokens *)
@@ -25,24 +24,24 @@ Module MDT_Lookahead.
   Definition eq_dec := lookahead_eq_dec.
 End MDT_Lookahead.
 
-Module LookaheadAsDT := Make_UDT(MDT_Lookahead).
-Module LookaheadSet := MSetWeakList.Make LookaheadAsDT.
-Module LookaheadSetFacts := WFactsOn LookaheadAsDT LookaheadSet.
-Module LookaheadSetEqProps := EqProperties LookaheadSet.
+Module Lookahead_as_DT := Make_UDT(MDT_Lookahead).
+Module LaSet := MSetWeakList.Make Lookahead_as_DT.
+Module LookaheadSetFacts := WFactsOn Lookahead_as_DT LaSet.
+Module LookaheadSetEqProps := EqProperties LaSet.
 
-Module LookaheadMap := FMapWeakList.Make LookaheadAsDT.
-Module LookaheadMapFacts := WFacts_fun LookaheadAsDT LookaheadMap.
+Module LaMap := FMapWeakList.Make Lookahead_as_DT.
+Module LookaheadMapFacts := WFacts_fun Lookahead_as_DT LaMap.
 
 Definition parse_table :=
-  StringMap.t (LookaheadMap.t (list symbol)).
+  NtMap.t (LaMap.t (list symbol)).
 
 Definition parseTableLookup
-           (x : string)
+           (x : nonterminal)
            (y : lookahead)
            (tbl : parse_table) : option (list symbol) :=
-  match StringMap.find x tbl with
+  match NtMap.find x tbl with
   | None => None
-  | Some tMap => LookaheadMap.find y tMap
+  | Some tMap => LaMap.find y tMap
   end.
 
 Inductive nullable_sym (g : grammar) : symbol -> Prop :=
@@ -99,16 +98,16 @@ Definition first_set_complete fi g : Prop :=
     -> first_sym g la x
     -> exists xFirst,
         SymbolMap.find x fi = Some xFirst
-        /\ LookaheadSet.In la xFirst.
+        /\ LaSet.In la xFirst.
 
 Definition first_set_minimal fi g : Prop :=
   forall x xFirst la,
     SymbolMap.find x fi = Some xFirst
-    -> LookaheadSet.In la xFirst
+    -> LaSet.In la xFirst
     -> first_sym g la x.
 
 Definition first_set_for fi g : Prop :=
-first_set_complete fi g /\ first_set_minimal fi g.
+  first_set_complete fi g /\ first_set_minimal fi g.
 
 Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
 | FollowNullable : forall sym,
@@ -131,12 +130,12 @@ Definition follow_set_complete fo g : Prop :=
     follow_sym g y x
     -> exists xFollow,
       SymbolMap.find x fo = Some xFollow
-      /\ LookaheadSet.In y xFollow.
+      /\ LaSet.In y xFollow.
 
 Definition follow_set_minimal fo g : Prop :=
   forall x xFollow y,
     SymbolMap.find x fo = Some xFollow
-    -> LookaheadSet.In y xFollow
+    -> LaSet.In y xFollow
     -> follow_sym g y x.
 
 Definition follow_set_for fo g : Prop :=
@@ -150,16 +149,16 @@ Definition lookahead_for g la x gamma :=
 
 Definition pt_minimal tbl g :=
   forall x la gamma laMap,
-    StringMap.find x tbl = Some laMap
-    -> LookaheadMap.find la laMap = Some gamma
+    NtMap.find x tbl = Some laMap
+    -> LaMap.find la laMap = Some gamma
     -> lookahead_for g la x gamma.
 
 Definition pt_complete tbl g :=
   forall x la gamma,
     lookahead_for g la x gamma
     -> exists laMap,
-      StringMap.find x tbl = Some laMap
-      /\ LookaheadMap.find la laMap = Some gamma.
+      NtMap.find x tbl = Some laMap
+      /\ LaMap.find la laMap = Some gamma.
 
 Definition parse_table_for (tbl : parse_table) (g : grammar) :=
   pt_minimal tbl g /\ pt_complete tbl g.

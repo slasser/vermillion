@@ -3,24 +3,24 @@ Require Import Grammar ParseTree.
 Import ListNotations.
 
 Inductive derivesTree {g : grammar} : 
-  symbol -> list string -> tree -> Prop :=
+  symbol -> list terminal -> tree -> Prop :=
 | derivesT : 
-    forall (y : string),
+    forall (y : terminal),
       derivesTree (T y) [y] (Leaf y)
 | derivesNT : 
-    forall (x : string) 
+    forall (x : nonterminal) 
            (gamma : list symbol) 
-           (tokens : list string) 
+           (tokens : list terminal) 
            (subtrees : list tree),
       In (x, gamma) g.(productions)
       -> derivesForest gamma tokens subtrees
       -> derivesTree (NT x) tokens (Node x subtrees)
 with derivesForest {g : grammar} : 
-       list symbol -> list string -> list tree -> Prop :=
+       list symbol -> list terminal -> list tree -> Prop :=
      | derivesNil : derivesForest [] [] []
      | derivesCons : 
          forall (hdRoot : symbol)
-                (prefix suffix : list string)
+                (prefix suffix : list terminal)
                 (hdTree : tree)
                 (tlRoots : list symbol)
                 (tlTrees : list tree),

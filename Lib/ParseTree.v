@@ -1,9 +1,9 @@
-Require Import String List.
+Require Import List.
 Require Import Grammar.
 
 Inductive tree :=
-| Leaf : string -> tree
-| Node : string -> list tree -> tree.
+| Leaf : terminal -> tree
+| Node : nonterminal -> list tree -> tree.
 
 Definition isNode (tr : tree) : bool :=
   match tr with
@@ -43,3 +43,4 @@ Section tree_nested_ind.
     end.
   
 End tree_nested_ind.
+
