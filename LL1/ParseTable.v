@@ -35,7 +35,7 @@ Module LaMapFacts := WFacts_fun Lookahead_as_DT LaMap.
 Definition parse_table :=
   NtMap.t (LaMap.t (list symbol)).
 
-Definition parseTableLookup
+Definition pt_lookup
            (x : nonterminal)
            (y : lookahead)
            (tbl : parse_table) : option (list symbol) :=
@@ -61,16 +61,16 @@ Hint Constructors nullable_sym nullable_gamma.
 Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
   with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop.
 
+Definition nullable_set_sound (nu : SymbolSet.t)
+           (g  : grammar) : Prop :=
+  forall x, SymbolSet.In (NT x) nu -> nullable_sym g (NT x).
+
 Definition nullable_set_complete (nu : SymbolSet.t)
                                  (g  : grammar) : Prop :=
   forall x, nullable_sym g (NT x) -> SymbolSet.In (NT x) nu.
 
-Definition nullable_set_minimal (nu : SymbolSet.t)
-                                (g  : grammar) : Prop :=
-  forall x, SymbolSet.In (NT x) nu -> nullable_sym g (NT x).
-
 Definition nullable_set_for nu g : Prop :=
-nullable_set_complete nu g /\ nullable_set_minimal nu g.
+nullable_set_sound nu g /\ nullable_set_complete nu g.
 
 Inductive first_sym (g : grammar) :
   lookahead -> symbol -> Prop :=
@@ -92,7 +92,13 @@ Inductive first_gamma (g : grammar) : lookahead -> list symbol -> Prop :=
 
 Hint Constructors first_gamma.
 
-Definition first_set_complete fi g : Prop :=
+Definition first_map_sound fi g : Prop :=
+  forall x xFirst la,
+    SymbolMap.find x fi = Some xFirst
+    -> LaSet.In la xFirst
+    -> first_sym g la x.
+
+Definition first_map_complete fi g : Prop :=
   forall x la,
     isNT x = true
     -> first_sym g la x
@@ -100,14 +106,8 @@ Definition first_set_complete fi g : Prop :=
         SymbolMap.find x fi = Some xFirst
         /\ LaSet.In la xFirst.
 
-Definition first_set_minimal fi g : Prop :=
-  forall x xFirst la,
-    SymbolMap.find x fi = Some xFirst
-    -> LaSet.In la xFirst
-    -> first_sym g la x.
-
-Definition first_set_for fi g : Prop :=
-  first_set_complete fi g /\ first_set_minimal fi g.
+Definition first_map_for fi g : Prop :=
+  first_map_sound fi g /\ first_map_complete fi g.
 
 Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
 | FollowNullable : forall sym,
@@ -125,41 +125,54 @@ Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
 
 Hint Constructors follow_sym.
 
-Definition follow_set_complete fo g : Prop :=
+Definition follow_map_sound fo g : Prop :=
+  forall x xFollow y,
+    SymbolMap.find x fo = Some xFollow
+    -> LaSet.In y xFollow
+    -> follow_sym g y x.
+
+Definition follow_map_complete fo g : Prop :=
   forall x y,
     follow_sym g y x
     -> exists xFollow,
       SymbolMap.find x fo = Some xFollow
       /\ LaSet.In y xFollow.
 
-Definition follow_set_minimal fo g : Prop :=
-  forall x xFollow y,
-    SymbolMap.find x fo = Some xFollow
-    -> LaSet.In y xFollow
-    -> follow_sym g y x.
+Definition follow_map_for fo g : Prop :=
+follow_map_sound fo g /\ follow_map_complete fo g.
 
-Definition follow_set_for fo g : Prop :=
-follow_set_complete fo g /\ follow_set_minimal fo g.
-
-Definition lookahead_for g la x gamma :=
+Definition lookahead_for la x gamma g :=
   In (x, gamma) g.(productions)
   /\ (first_gamma g la gamma
       \/ (nullable_gamma g gamma
           /\ follow_sym g la (NT x))).
 
-Definition pt_minimal tbl g :=
+Definition lookahead_set_sound laSet x gamma g :=
+  forall la,
+    LaSet.In la laSet
+    -> lookahead_for la x gamma g.
+
+Definition lookahead_set_complete laSet x gamma g :=
+  forall la,
+    lookahead_for la x gamma g
+    -> LaSet.In la laSet.
+
+Definition lookahead_set_for laSet x gamma g :=
+  lookahead_set_sound laSet x gamma g /\ lookahead_set_complete laSet x gamma g.
+
+Definition pt_sound tbl g :=
   forall x la gamma laMap,
     NtMap.find x tbl = Some laMap
     -> LaMap.find la laMap = Some gamma
-    -> lookahead_for g la x gamma.
+    -> lookahead_for la x gamma g.
 
 Definition pt_complete tbl g :=
-  forall x la gamma,
-    lookahead_for g la x gamma
+  forall la x gamma,
+    lookahead_for la x gamma g
     -> exists laMap,
       NtMap.find x tbl = Some laMap
       /\ LaMap.find la laMap = Some gamma.
 
 Definition parse_table_for (tbl : parse_table) (g : grammar) :=
-  pt_minimal tbl g /\ pt_complete tbl g.
+  pt_sound tbl g /\ pt_complete tbl g.
 

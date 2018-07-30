@@ -45,7 +45,7 @@ Proof.
     exists (S fuel); simpl.
     apply Hcom in l.
     destruct l as [m [Hs Hl]].
-    unfold parseTableLookup; rewrite Hs; rewrite Hl.
+    unfold pt_lookup; rewrite Hs; rewrite Hl.
     rewrite H; auto.
 
   - (* nil case *)

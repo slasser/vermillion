@@ -72,7 +72,7 @@ Proof.
     + destruct sym as [y | x].
       * apply parse_t_ret_leaf in Hp; inv Hp.
       * simpl in Hp. 
-        destruct (parseTableLookup x (peek input) tbl)
+        destruct (pt_lookup x (peek input) tbl)
           as [ys |] eqn:Hlkp.
         -- destruct (parseForest tbl ys input fuel)
             as [subres input'] eqn:Hpf.

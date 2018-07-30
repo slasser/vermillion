@@ -122,7 +122,7 @@ Fixpoint parse (tbl : parse_table)
       | true => (Some (Leaf y), input')
       end
     | (NT x, _) =>
-      match parseTableLookup x (peek input) tbl with
+      match pt_lookup x (peek input) tbl with
       | None => (None, input)
       | Some gamma =>
         match parseForest tbl gamma input n with

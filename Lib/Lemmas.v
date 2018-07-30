@@ -9,6 +9,14 @@ Proof.
   unfold not. intro Hcontra. inv Hcontra.
 Qed.
 
+Lemma ntmap_find_in : forall k vT (v : vT) m,
+    NtMap.find k m = Some v ->
+    NtMap.In k m.
+Proof.
+  intros. rewrite NtMapFacts.in_find_iff. rewrite H.
+  unfold not. intro Hcontra. inv Hcontra.
+Qed.
+
 Ltac copy_and_find_In H :=
   let Hfind := fresh "Hfind" in
   let Heq   := fresh "Heq" in 

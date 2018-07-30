@@ -58,7 +58,7 @@ Proof.
       * destruct sym as [y | x].
         -- apply parse_t_ret_leaf in Hparse. inv Hparse.
         -- simpl; simpl in Hparse.
-           destruct (parseTableLookup x (peek input) tbl)
+           destruct (pt_lookup x (peek input) tbl)
             as [gamma |] eqn:Hlookup.
            ++ destruct (parseForest tbl gamma input fuel)
                as (subresult, input') eqn:Hpf.
@@ -199,7 +199,7 @@ Proof.
       * destruct sym as [y | x].
         { apply parse_t_ret_leaf in Hparse. inv Hparse. }
         { simpl; simpl in Hparse.
-          destruct (parseTableLookup x (peek input) tbl)
+          destruct (pt_lookup x (peek input) tbl)
             as [gamma |] eqn:Hlookup.
           { destruct (parseForest tbl gamma input fuel)
               as (subresult, input') eqn:Hpf.

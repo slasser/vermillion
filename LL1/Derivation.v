@@ -14,7 +14,7 @@ Inductive sym_derives_prefix {g : grammar} :
            (gamma : list symbol)
            (word rem : list terminal) 
            (subtrees : list tree),
-      lookahead_for g (peek (word ++ rem)) x gamma
+      lookahead_for (peek (word ++ rem)) x gamma g
       -> gamma_derives_prefix gamma word subtrees rem
       -> sym_derives_prefix (NT x) word (Node x subtrees) rem
 with gamma_derives_prefix {g : grammar} : 

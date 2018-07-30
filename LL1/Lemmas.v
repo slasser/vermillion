@@ -10,6 +10,14 @@ Require Import LL1.ParseTable.
 
 Import ListNotations.
 
+Lemma lookaheadmap_find_in : forall k vT (v : vT) m,
+    LaMap.find k m = Some v ->
+    LaMap.In k m.
+Proof.
+  intros. rewrite LaMapFacts.in_find_iff. rewrite H.
+  unfold not. intro Hcontra. inv Hcontra.
+Qed.
+
 Lemma eof_first_sym :
   forall g la sym,
     first_sym g la sym
@@ -88,10 +96,10 @@ Proof.
   - inv H1.
     assert (ys = gpre ++ y :: gsuf).
     { destruct Htbl as [Hmin Hcom].
-      assert (Hlk : lookahead_for g la x (gpre ++ y :: gsuf)).
+      assert (Hlk : lookahead_for la x (gpre ++ y :: gsuf) g).
       { unfold lookahead_for.
         split; auto. }
-      assert (Hlk' : lookahead_for g la x ys).
+      assert (Hlk' : lookahead_for la x ys g).
       { unfold lookahead_for.
         split; auto. }
       unfold pt_complete in Hcom.
@@ -115,7 +123,7 @@ Qed.
 
 Lemma lookahead_in_grammar :
   forall g la x gamma,
-    lookahead_for g la x gamma
+    lookahead_for la x gamma g
     -> In (x, gamma) (productions g).
 Proof.
   intros.
@@ -219,7 +227,7 @@ Lemma parse_nt_ret_node :
 Proof.
   intros. destruct fuel.
   - simpl in H. inv H.
-  - simpl in H. destruct (parseTableLookup x (peek input) tbl).
+  - simpl in H. destruct (pt_lookup x (peek input) tbl).
     + destruct (parseForest tbl l input fuel). 
       destruct o. 
       * inv H. trivial.
@@ -230,15 +238,15 @@ Qed.
 Lemma tbl_entry_is_lookahead :
   forall tbl g x la gamma,
     parse_table_for tbl g
-    -> parseTableLookup x la tbl = Some gamma
-    -> lookahead_for g la x gamma.
+    -> pt_lookup x la tbl = Some gamma
+    -> lookahead_for la x gamma g.
 Proof.
   intros tbl g x la gamma Htbl Hlkp.
-  destruct Htbl as [Hmin Hcom].
-  unfold pt_minimal in Hmin.
-  unfold parseTableLookup in Hlkp.
+  destruct Htbl as [Hsou Hcom].
+  unfold pt_sound in Hsou.
+  unfold pt_lookup in Hlkp.
   destruct (NtMap.find x tbl) as [m |] eqn:Hsf.
-  - eapply Hmin; eauto.
+  - eapply Hsou; eauto.
   - inv Hlkp.
 Qed.
 

@@ -55,8 +55,8 @@ Proof.
       - (* first-first case *)
         rewrite <- Happ in Hfi'.
         destruct Htbl as [Hmin Hcom].
-        assert ((@lookahead_for g) (peek (word ++ rem)) x gamma) by (split; auto).
-        assert ((@lookahead_for g) (peek (word ++ rem)) x gamma0) by (split; auto).
+        assert (lookahead_for (peek (word ++ rem)) x gamma g) by (split; auto).
+        assert (lookahead_for (peek (word ++ rem)) x gamma0 g) by (split; auto).
         apply Hcom in H.
         apply Hcom in H0.
         destruct H as [m [Hs Hl]].
@@ -81,9 +81,9 @@ Proof.
         destruct Htbl as [Hmin Hcom].
         unfold pt_complete in Hcom.
         rewrite <- Happ in Hfo'.
-        assert (Hlk : (@lookahead_for g) (peek (word ++ rem)) x gamma)
+        assert (Hlk : lookahead_for (peek (word ++ rem)) x gamma g)
           by (split; auto).
-        assert (Hlk' : (@lookahead_for g) (peek (word ++ rem)) x gamma0)
+        assert (Hlk' : lookahead_for (peek (word ++ rem)) x gamma0 g)
           by (split; auto).
         apply Hcom in Hlk.
         apply Hcom in Hlk'.

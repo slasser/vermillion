@@ -8,6 +8,7 @@ Require Import Lib.Lemmas.
 Require Import Lib.Tactics.
 Require Import Lib.Utils.
 
+Require Import LL1.Lemmas.
 Require Import LL1.ParseTable.
 
 Import ListNotations.
@@ -64,7 +65,7 @@ Ltac crush' :=
          | |- Utils.isNT (NT _) = true => auto
          | |- first_gamma _ (LA ?s) (T ?s :: _) \/ _ =>
            left; apply FirstGamma with (gpre := nil)
-         | |- lookahead_for _ (LA _) _ _ => unfold lookahead_for
+         | |- lookahead_for (LA _) _ _ _ => unfold lookahead_for
          (* simplifications *)
          | H : _ /\ _ |- _ => destruct H
          | |- ~_ => unfold not; intros
@@ -140,15 +141,15 @@ Example g312NullableSetCorrect :
 Proof.
   unfold nullable_set_for.
   split.
+  - unfold nullable_set_sound; intros.
+    unfold g312NullableSet in *; simpl in *.
+    crush.
   - unfold nullable_set_complete; intros.
     unfold g312NullableSet; simpl.
     inv H.
     crush.
     exfalso.
     eapply Z_not_nullable; eauto.
-  - unfold nullable_set_minimal; intros.
-    unfold g312NullableSet in *; simpl in *.
-    crush.
 Qed.
 
 (* Tests of FIRST set definitions *)
@@ -166,7 +167,7 @@ Definition mkSymbolMap (pairs : list (symbol * LaSet.t)) :=
              pairs.
 
 (* Correct FIRST set for Grammar 3.12 *)
-Definition g312FirstSet :=
+Definition g312FirstMap :=
   mkSymbolMap [(NT X, acSet); (NT Y, cSet); (NT Z, acdSet)].
 
 Example c_in_First_Y :
@@ -229,13 +230,15 @@ Qed.
 
 Hint Resolve d_in_First_Z.
 
-Example g312FirstSetCorrect :
-  first_set_for g312FirstSet g312.
+Example g312FirstMapCorrect :
+  first_map_for g312FirstMap g312.
 Proof with crush.
-  unfold g312FirstSet.
-  unfold first_set_for; split.
-  - (* prove that g312FirstSet is complete *)
-    unfold first_set_complete; intros.
+  unfold g312FirstMap.
+  unfold first_map_for; split.
+  - unfold first_map_sound; intros.
+    simpl in H.
+    copy_and_find_In H...
+  - unfold first_map_complete; intros.
     revert H.
     induction H0; intros...
     + crush; exists acdSet...
@@ -246,29 +249,26 @@ Proof with crush.
     + crush... exists cSet...
     + crush... exists acSet...
     + crush... exists acSet...
-  - unfold first_set_minimal; intros.
-    simpl in H.
-    copy_and_find_In H...
 Qed.
 
-Definition g312FirstSetPlus :=
+Definition g312FirstMapPlus :=
   mkSymbolMap [(NT X, acdSet); (* d shouldn't be in there! *)
                (NT Y, cSet);
                (NT Z, acdSet)].  
 
-Example nonMinimalFirstSetIncorrect :
-  ~first_set_for g312FirstSetPlus g312.
+Example nonMinimalFirstMapIncorrect :
+  ~first_map_for g312FirstMapPlus g312.
 Proof with crush.
   crush.
-  unfold first_set_for in H.
-  destruct H as [_ Hmin].
-  unfold first_set_minimal in Hmin.
-  specialize Hmin with (x := NT X)
+  unfold first_map_for in H.
+  destruct H as [Hsou _].
+  unfold first_map_sound in Hsou.
+  specialize Hsou with (x := NT X)
                        (xFirst := acdSet)
                        (la := LA "d").
   assert (H : ~(@first_sym g312) (LA "d") (NT X)) by repeat crush.
   apply H.
-  apply Hmin...
+  apply Hsou...
 Qed.
 
 Definition Xc_grammar :=
@@ -276,23 +276,23 @@ Definition Xc_grammar :=
                      (X, [])];
      start := X |}.
 
-Definition Xc_first_set :=
+Definition Xc_first_map :=
   mkSymbolMap [(NT X, cSet)].
 
 Example Xc_first_correct :
-  first_set_for Xc_first_set Xc_grammar.
+  first_map_for Xc_first_map Xc_grammar.
 Proof with crush.
-  unfold first_set_for; split.
-  - unfold first_set_complete; intros.
+  unfold first_map_for; split.
+  - unfold first_map_sound; intros.
+    unfold Xc_first_map in *; simpl in *.
+    copy_and_find_In H...
+    apply FirstNT with (gpre := [NT X]) (y := T "c") (gsuf := nil)...
+    apply NullableSym with (ys := [])...
+  - unfold first_map_complete; intros.
     revert H.
     induction H0; intros...
     crush...
     exists cSet...
-  - unfold first_set_minimal; intros.
-    unfold Xc_first_set in *; simpl in *.
-    copy_and_find_In H...
-    apply FirstNT with (gpre := [NT X]) (y := T "c") (gsuf := nil)...
-    apply NullableSym with (ys := [])...
 Qed.
 
 (* tests of FOLLOW definitions *)
@@ -301,7 +301,7 @@ Definition xFollow := LaSet.add EOF acdSet.
 Definition yFollow := LaSet.add EOF acdSet.
 
 (* Correct FOLLOW set for Grammar 3.12 *)
-Definition g312FollowSet :=
+Definition g312FollowMap :=
   mkSymbolMap [(NT X, xFollow); (NT Y, yFollow)].
 
 Example what's_in_xFirst :
@@ -310,10 +310,10 @@ Example what's_in_xFirst :
     -> LaSet.In la acSet.
 Proof.
   intros.
-  pose proof g312FirstSetCorrect as Hc.
-  unfold first_set_for in Hc.
-  destruct Hc as [Hcom _].
-  unfold first_set_complete in Hcom.
+  pose proof g312FirstMapCorrect as Hc.
+  unfold first_map_for in Hc.
+  destruct Hc as [_ Hcom].
+  unfold first_map_complete in Hcom.
   apply Hcom in H; auto.
   destruct H as [xFirst [Hs Hf]].
   inv Hs.
@@ -326,10 +326,10 @@ Example what's_in_yFirst :
     -> LaSet.In la cSet.
 Proof.
   intros.
-  pose proof g312FirstSetCorrect as Hc.
-  unfold first_set_for in Hc.
-  destruct Hc as [Hcom _].
-  unfold first_set_complete in Hcom.
+  pose proof g312FirstMapCorrect as Hc.
+  unfold first_map_for in Hc.
+  destruct Hc as [_ Hcom].
+  unfold first_map_complete in Hcom.
   apply Hcom in H; auto.
   destruct H as [yFirst [Hs Hf]].
   inv Hs.
@@ -342,10 +342,10 @@ Example what's_in_zFirst :
     -> LaSet.In la acdSet.
 Proof.
   intros.
-  pose proof g312FirstSetCorrect as Hc.
-  unfold first_set_for in Hc.
-  destruct Hc as [Hcom _].
-  unfold first_set_complete in Hcom.
+  pose proof g312FirstMapCorrect as Hc.
+  unfold first_map_for in Hc.
+  destruct Hc as [_ Hcom].
+  unfold first_map_complete in Hcom.
   apply Hcom in H; auto.
   destruct H as [zFirst [Hs Hf]].
   inv Hs.
@@ -420,10 +420,13 @@ Qed.
 Hint Resolve d_in_Follow_Y.
 
 Example finiteFollowCorrect :
-  follow_set_for g312FollowSet g312.
+  follow_map_for g312FollowMap g312.
 Proof with crush.
-  unfold follow_set_for. split.
-  - unfold follow_set_complete; intros.
+  unfold follow_map_for. split.
+  - unfold follow_map_sound; intros.
+    unfold g312FollowMap in *; simpl in *.
+    copy_and_find_In H...
+  - unfold follow_map_complete; intros.
     induction H.
     + inv H...
       * exfalso. 
@@ -449,9 +452,6 @@ Proof with crush.
         -- crush.
     + crush; try solve [crush].
       destruct IHfollow_sym as [zFollow [Hs Hl]]...
-  - unfold follow_set_minimal; intros.
-    unfold g312FollowSet in *; simpl in *.
-    copy_and_find_In H...
 Qed. 
 
 (* The next tests use Grammar 3.11, shown here:
@@ -467,33 +467,15 @@ Qed.
 
  *)
 
-(* To do : find a way to write this lemma only once *)
-
-Lemma stringmap_find_in : forall k vT (v : vT) m,
-    NtMap.find k m = Some v ->
-    NtMap.In k m.
-Proof.
-  intros. rewrite NtMapFacts.in_find_iff. rewrite H.
-  unfold not. intro Hcontra. inv Hcontra.
-Qed.
-
-Lemma lookaheadmap_find_in : forall k vT (v : vT) m,
-    LaMap.find k m = Some v ->
-    LaMap.In k m.
-Proof.
-  intros. rewrite LaMapFacts.in_find_iff. rewrite H.
-  unfold not. intro Hcontra. inv Hcontra.
-Qed.
-
 Example g311ParseTableCorrect :
   parse_table_for g311ParseTable g311.
 Proof with crush.
   unfold parse_table_for.
   split.
-  - unfold pt_minimal; intros.
+  - unfold pt_sound; intros.
     unfold g311ParseTable in *.
     pose proof H as H'.
-    apply stringmap_find_in in H'...
+    apply ntmap_find_in in H'...
     + unfold X in *; unfold X_map in *.
       pose proof H0 as H0'.
       apply lookaheadmap_find_in in H0...
