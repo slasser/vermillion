@@ -18,6 +18,32 @@ Proof.
   unfold not. intro Hcontra. inv Hcontra.
 Qed.
 
+Lemma pt_lookup_exists :
+  forall x la tbl gamma,
+    pt_lookup x la tbl = Some gamma
+    -> exists laMap,
+      NtMap.find x tbl = Some laMap
+      /\ LaMap.find la laMap = Some gamma.
+Proof.
+  intros x la tbl gamma Hlkp.
+  unfold pt_lookup in Hlkp.
+  destruct (NtMap.find x tbl) as [m |] eqn:Hnf; eauto.
+  congruence.
+Qed.
+
+Lemma pt_lookup_in :
+  forall x la tbl gamma,
+    pt_lookup x la tbl = Some gamma
+    -> NtMap.In x tbl.
+Proof.
+  intros x la tbl gamma Hlkp.
+  unfold pt_lookup in Hlkp.
+  destruct (NtMap.find x tbl) eqn:Hnf.
+  - rewrite NtMapFacts.in_find_iff.
+    unfold not; intros; congruence.
+  - congruence.
+Qed.
+
 Lemma eof_first_sym :
   forall g la sym,
     first_sym g la sym
@@ -105,8 +131,6 @@ Proof.
       unfold pt_complete in Hcom.
       apply Hcom in Hlk.
       apply Hcom in Hlk'.
-      destruct Hlk as [m [Hs Hl]].
-      destruct Hlk' as [m' [Hs' Hl']].
       congruence. }
     subst.
     eapply IHHfi.
@@ -244,10 +268,7 @@ Proof.
   intros tbl g x la gamma Htbl Hlkp.
   destruct Htbl as [Hsou Hcom].
   unfold pt_sound in Hsou.
-  unfold pt_lookup in Hlkp.
-  destruct (NtMap.find x tbl) as [m |] eqn:Hsf.
-  - eapply Hsou; eauto.
-  - inv Hlkp.
+  apply Hsou; auto.
 Qed.
 
 Lemma first_gamma_first_sym :

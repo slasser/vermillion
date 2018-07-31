@@ -44,8 +44,7 @@ Proof.
     destruct IHHder as [fuel].
     exists (S fuel); simpl.
     apply Hcom in l.
-    destruct l as [m [Hs Hl]].
-    unfold pt_lookup; rewrite Hs; rewrite Hl.
+    rewrite l.
     rewrite H; auto.
 
   - (* nil case *)

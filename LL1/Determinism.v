@@ -59,8 +59,6 @@ Proof.
         assert (lookahead_for (peek (word ++ rem)) x gamma0 g) by (split; auto).
         apply Hcom in H.
         apply Hcom in H0.
-        destruct H as [m [Hs Hl]].
-        destruct H0 as [m' [Hs' Hl']].
         congruence.
       - (* first-follow conflict *)
         exfalso.
@@ -87,8 +85,6 @@ Proof.
           by (split; auto).
         apply Hcom in Hlk.
         apply Hcom in Hlk'.
-        destruct Hlk as [m [Hs Hl]].
-        destruct Hlk' as [m' [Hs' Hl']].
         congruence. }
     subst.
     eapply IHHder in H1; eauto.

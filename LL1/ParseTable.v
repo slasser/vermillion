@@ -161,17 +161,14 @@ Definition lookahead_set_for laSet x gamma g :=
   lookahead_set_sound laSet x gamma g /\ lookahead_set_complete laSet x gamma g.
 
 Definition pt_sound tbl g :=
-  forall x la gamma laMap,
-    NtMap.find x tbl = Some laMap
-    -> LaMap.find la laMap = Some gamma
+  forall x la gamma,
+    pt_lookup x la tbl = Some gamma
     -> lookahead_for la x gamma g.
 
 Definition pt_complete tbl g :=
   forall la x gamma,
     lookahead_for la x gamma g
-    -> exists laMap,
-      NtMap.find x tbl = Some laMap
-      /\ LaMap.find la laMap = Some gamma.
+    -> pt_lookup x la tbl = Some gamma.
 
 Definition parse_table_for (tbl : parse_table) (g : grammar) :=
   pt_sound tbl g /\ pt_complete tbl g.
