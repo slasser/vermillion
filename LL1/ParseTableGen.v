@@ -8,15 +8,26 @@ Require Import LL1.ParseTable.
 
 Import ListNotations.
 
-Definition p_l_pair := (production * LaSet.t)%type.
-
+(* Deprecated *)
+(*
+Definition prod_la_pair := (production * LaSet.t)%type.
 Definition p_l_pair_wf (g : grammar) (p : p_l_pair) :=
   match p with
   | ((x, gamma), laSet) => lookahead_set_for laSet x gamma g
   end.
-
 Definition p_l_pairs_wf (ps : list p_l_pair) (g : grammar) :=
   Forall (p_l_pair_wf g) ps.
+ *)
+
+Inductive pairs_wf (g : grammar) :
+  list production -> list LaSet.t -> Prop :=
+| Pairs_wf_nil  : pairs_wf g [] []
+| Pairs_wf_cons : forall p_tl l_tl laSet x gamma,
+    pairs_wf g p_tl l_tl
+    -> lookahead_set_for laSet x gamma g
+    -> pairs_wf g ((x, gamma) :: p_tl) (laSet :: l_tl).
+
+Definition empty_pt := NtMap.empty (LaMap.t (list symbol)).
 
 Definition singletonLaMap la gamma :=
   LaMap.add la gamma (LaMap.empty (list symbol)).
@@ -60,22 +71,31 @@ Definition tbl_correct_for_pl_pairs tbl ps g :=
   /\ tbl_sound_for_pl_pairs tbl ps
   /\ tbl_complete_for_pl_pairs tbl ps.
 
-Lemma tbl_correct_for_pl_pairs_parse_table_for :
+Conjecture empty_or_not :
+  forall tbl,
+    tbl = empty_pt
+    \/ exists x,
+      NtMap.In x tbl.
+
+Conjecture tbl_correct_for_pl_pairs_parse_table_for :
   forall ps tbl g,
     tbl_correct_for_pl_pairs tbl ps g <-> parse_table_for tbl g.
+(*
 Proof.
   induction ps.
   - intros tbl g.
     split.
     + (* prove tbl is empty *)
       intros Htcf.
-      unfold tbl_correct_for_pl_pairs in Htcf.
-      destruct Htcf as [Hwf [Hts Htc]].
-      unfold parse_table_for.
-      split.
-      * unfold pt_sound; intros.
+      assert (tbl = empty_pt).
+      { unfold empty_pt.
+        unfold tbl_correct_for_pl_pairs in Htcf.
+        destruct Htcf as [Hwf [Hts Htc]].
         unfold tbl_sound_for_pl_pairs in Hts.
-
+        pose proof empty_or_not as H.
+        destruct (H tbl); auto.
+*)        
+  
 (*
 Lemma addEntries_preserves_invariant :
   forall laSet g p ps x gamma tbl tbl',
@@ -106,24 +126,25 @@ subst.
               eapply IHelts; eauto.
 *)
 
-Definition empty_pt := NtMap.empty (LaMap.t (list symbol)).
-
 Definition mkParseTable (productions_with_la_sets : list p_l_pair) :=
   fold_right addEntries (Some empty_pt) productions_with_la_sets.
 
 Lemma mkParseTable_correct : 
-  forall (productions_and_la_sets : list p_l_pair)
+  forall (ps : list p_l_pair)
          (tbl : parse_table)
          (g : grammar),
-    pl_pairs_wf productions_and_la_sets g
-    -> mkParseTable productions_and_la_sets = Some tbl
+    p_l_pairs_wf ps g
+    -> mkParseTable ps = Some tbl
        <-> parse_table_for tbl g.
 Proof.
-  intros productions_and_la_sets tbl g Hwf.
+  intros ps tbl g Hwf.
   split.
   - (* prove mkParseTable sound -- if it returns parse table tbl,
  tbl is a parse table for g *)
     intros Hmk.
+    apply tbl_correct_for_pl_pairs_parse_table_for with
+        (ps := ps).
+    
 
 (*
 Lemma mkParseTable_correct : 
