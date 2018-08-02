@@ -8,7 +8,6 @@ Require Import LL1.ParseTable.
 
 Import ListNotations.
 
-(* Deprecated *)
 Definition prod_la_pair := (production * LaSet.t)%type.
 Definition prod_la_pair_wf (g : grammar) (p : prod_la_pair) :=
   match p with
@@ -46,20 +45,6 @@ Definition addEntries (p : prod_la_pair) (o : option parse_table) :=
 Definition mkParseTable (productions_with_la_sets : list prod_la_pair) :=
   fold_right addEntries (Some empty_pt) productions_with_la_sets.
 
-Definition tbl_contains_entry tbl x gamma la :=
-  pt_lookup x la tbl = Some gamma.
-
-Definition tbl_correct_for_prod_laSet_pair tbl p :=
-  match p with
-  | ((x, gamma), laSet) =>
-    forall la,
-      tbl_contains_entry tbl x gamma la <-> LaSet.In la laSet
-  end.
-
-(* Wrong -- we need an if and only if here! *)
-Definition tbl_correct_for_prod_laSet_pairs' tbl ps :=
-  Forall (tbl_correct_for_prod_laSet_pair tbl) ps.
-
 Definition tbl_sound_wrt_pairs tbl ps :=
   forall x gamma la,
     pt_lookup x la tbl = Some gamma
@@ -75,7 +60,7 @@ Definition tbl_complete_wrt_pairs tbl ps :=
 Definition tbl_correct_wrt_pairs tbl ps :=
   tbl_sound_wrt_pairs tbl ps /\ tbl_complete_wrt_pairs tbl ps.
 
-Lemma invariant_implies_parse_table_for :
+Lemma invariant_iff_parse_table_for :
   forall g ps tbl,
     g.(productions) = map fst ps
     -> prod_la_pairs_wf ps g
@@ -157,84 +142,88 @@ Proof.
       apply H; auto.
 Qed.
 
-Definition tbl_sound_for_pl_pairs tbl pls :=
+Lemma addEntry_None_eq_None :
   forall x la gamma,
-    pt_lookup x la tbl = Some gamma
-    -> exists laSet,
-      In ((x, gamma), laSet) pls
-      /\ LaSet.In la laSet.
-
-Definition tbl_complete_for_pl_pairs tbl pls :=
-  forall x gamma la laSet,
-    In ((x, gamma), laSet) pls
-    -> LaSet.In la laSet
-    -> pt_lookup x la tbl = Some gamma.
-
-Definition tbl_correct_for_pl_pairs tbl ps g :=
-  prod_la_pairs_wf ps g
-  /\ tbl_sound_for_pl_pairs tbl ps
-  /\ tbl_complete_for_pl_pairs tbl ps.
-
-Conjecture empty_or_not :
-  forall tbl,
-    tbl = empty_pt
-    \/ exists x,
-      NtMap.In x tbl.
-
-Conjecture tbl_correct_for_pl_pairs_parse_table_for :
-  forall ps tbl g,
-    tbl_correct_for_pl_pairs tbl ps g <-> parse_table_for tbl g.
-(*
+    addEntry x la gamma None = None.
 Proof.
-  induction ps.
-  - intros tbl g.
-    split.
-    + (* prove tbl is empty *)
-      intros Htcf.
-      assert (tbl = empty_pt).
-      { unfold empty_pt.
-        unfold tbl_correct_for_pl_pairs in Htcf.
-        destruct Htcf as [Hwf [Hts Htc]].
-        unfold tbl_sound_for_pl_pairs in Hts.
-        pose proof empty_or_not as H.
-        destruct (H tbl); auto.
-*)        
-  
-(*
+  auto.
+Qed.
+
+Lemma addEntries_None_eq_None :
+  forall p,
+    addEntries p None = None.
+Proof.
+  intros p.
+  destruct p as ((x, gamma), laSet); simpl.
+  induction (LaSet.elements laSet); simpl; auto.
+  rewrite IHl.
+  apply addEntry_None_eq_None.
+Qed.
+
+Lemma addEntries_preserves_Some :
+  forall p ps tbl,
+    addEntries p (mkParseTable ps) = Some tbl
+    -> exists tbl',
+      mkParseTable ps = Some tbl'.
+Proof.
+  intros.
+  destruct (mkParseTable ps) as [tbl' |].
+  + exists tbl'; auto.
+  + rewrite addEntries_None_eq_None in H; inv H.
+Qed.
+
 Lemma addEntries_preserves_invariant :
-  forall laSet g p ps x gamma tbl tbl',
-    p = ((x, gamma), laSet)
-    -> pl_pairs_wf g (p :: ps)
-    -> tbl_correct_for_pl_pairs tbl ps 
-    -> addEntries p (Some tbl) = Some tbl'
-    -> tbl_correct_for_pl_pairs tbl' (p :: ps).
+  forall tbl' tbl p ps,
+    tbl_correct_wrt_pairs tbl' ps
+    -> addEntries p (Some tbl') = Some tbl
+    -> tbl_correct_wrt_pairs tbl (p :: ps).
 Proof.
-  intros laSet.
-  remember (LaSet.elements laSet) as elts.
-  generalize dependent laSet.
-  induction elts; intros laSet Helts g p ps x gamma tbl tbl' Heq Htc Had.
-  - subst.
-    admit.
-  - unfold pl_pairs_wf in Htc. 
-    inv Htc.
-subst.
-    unfold addEntries in Had. 
-    rewrite <- Helts in Had.
-    simpl in Had.
-    destruct (fold_right (fun la o => addEntry x la gamma o) (Some tbl) elts) eqn:Htl.
-    + unfold addEntry in Had.
-      destruct (NtMap.find x p) eqn:Hnf.
-      * destruct (LaMap.find a t) eqn:Hlf.
-        -- destruct (list_eq_dec symbol_eq_dec gamma l).
-           ++ inv Had.
-              eapply IHelts; eauto.
-*)
+Admitted.
 
+Lemma mkParseTable_satisfies_invariant :
+  forall ps g tbl,
+    prod_la_pairs_wf ps g
+    -> mkParseTable ps = Some tbl
+    -> tbl_correct_wrt_pairs tbl ps.
+Proof.
+  intros ps. 
+  induction ps as [| p ps]; intros g tbl Hwf Hmk; simpl in *.
+  - inv Hmk.
+    unfold tbl_correct_wrt_pairs.
+    split.
+    + unfold tbl_sound_wrt_pairs.
+      intros x gamma la Hlk.
+      unfold pt_lookup in Hlk.
+      destruct (NtMap.find x empty_pt) eqn:Hnf.
+      * rewrite NtMapFacts.empty_o in Hnf; inv Hnf.
+      * inv Hlk.
+    + unfold tbl_complete_wrt_pairs.
+      intros x gamma la laSet Hin; inv Hin.
+  - pose proof Hmk as Hmk'.
+    apply addEntries_preserves_Some in Hmk.
+    destruct Hmk as [tbl' Hmk].
+    rewrite Hmk in Hmk'.
+    inv Hwf.
+    eapply addEntries_preserves_invariant; eauto.
+Qed.
+
+Lemma mkParseTable_sound :
+  forall ps g tbl,
+    g.(productions) = map fst ps
+    -> prod_la_pairs_wf ps g
+    -> mkParseTable ps = Some tbl
+    -> parse_table_for tbl g.
+Proof.
+  intros ps g tbl Hfst Hwf Hmk.
+  eapply invariant_iff_parse_table_for; eauto.
+  eapply mkParseTable_satisfies_invariant; eauto.
+Qed.
+  
 Lemma mkParseTable_correct : 
   forall (ps : list prod_la_pair)
          (tbl : parse_table)
          (g : grammar),
-    pairs_wf g ps
+    prod_la_pairs_wf g ps
     -> mkParseTable ps = Some tbl
        <-> parse_table_for tbl g.
 Proof.
