@@ -9,23 +9,13 @@ Require Import LL1.ParseTable.
 Import ListNotations.
 
 (* Deprecated *)
-(*
 Definition prod_la_pair := (production * LaSet.t)%type.
-Definition p_l_pair_wf (g : grammar) (p : p_l_pair) :=
+Definition prod_la_pair_wf (g : grammar) (p : prod_la_pair) :=
   match p with
   | ((x, gamma), laSet) => lookahead_set_for laSet x gamma g
   end.
-Definition p_l_pairs_wf (ps : list p_l_pair) (g : grammar) :=
-  Forall (p_l_pair_wf g) ps.
- *)
-
-Inductive pairs_wf (g : grammar) :
-  list production -> list LaSet.t -> Prop :=
-| Pairs_wf_nil  : pairs_wf g [] []
-| Pairs_wf_cons : forall p_tl l_tl laSet x gamma,
-    pairs_wf g p_tl l_tl
-    -> lookahead_set_for laSet x gamma g
-    -> pairs_wf g ((x, gamma) :: p_tl) (laSet :: l_tl).
+Definition prod_la_pairs_wf (ps : list prod_la_pair) (g : grammar) :=
+  Forall (prod_la_pair_wf g) ps.
 
 Definition empty_pt := NtMap.empty (LaMap.t (list symbol)).
 
@@ -47,11 +37,125 @@ Definition addEntry (x : nonterminal) (la : lookahead) (gamma : list symbol) (o 
     end
   end.
 
-Definition addEntries (p : p_l_pair) (o : option parse_table) :=
+Definition addEntries (p : prod_la_pair) (o : option parse_table) :=
   match p with
   | ((x, gamma), laSet) =>
     fold_right (fun la o => addEntry x la gamma o) o (LaSet.elements laSet)
   end.
+
+Definition mkParseTable (productions_with_la_sets : list prod_la_pair) :=
+  fold_right addEntries (Some empty_pt) productions_with_la_sets.
+
+Definition tbl_contains_entry tbl x gamma la :=
+  pt_lookup x la tbl = Some gamma.
+
+Definition tbl_correct_for_prod_laSet_pair tbl p :=
+  match p with
+  | ((x, gamma), laSet) =>
+    forall la,
+      tbl_contains_entry tbl x gamma la <-> LaSet.In la laSet
+  end.
+
+(* Wrong -- we need an if and only if here! *)
+Definition tbl_correct_for_prod_laSet_pairs' tbl ps :=
+  Forall (tbl_correct_for_prod_laSet_pair tbl) ps.
+
+Definition tbl_sound_wrt_pairs tbl ps :=
+  forall x gamma la,
+    pt_lookup x la tbl = Some gamma
+    -> exists laSet,
+      In ((x, gamma), laSet) ps /\ LaSet.In la laSet.
+
+Definition tbl_complete_wrt_pairs tbl ps :=
+  forall x gamma la laSet,
+    In ((x, gamma), laSet) ps
+    -> LaSet.In la laSet
+    -> pt_lookup x la tbl = Some gamma.
+
+Definition tbl_correct_wrt_pairs tbl ps :=
+  tbl_sound_wrt_pairs tbl ps /\ tbl_complete_wrt_pairs tbl ps.
+
+Lemma invariant_implies_parse_table_for :
+  forall g ps tbl,
+    g.(productions) = map fst ps
+    -> prod_la_pairs_wf ps g
+    -> tbl_correct_wrt_pairs tbl ps
+       <-> parse_table_for tbl g.
+Proof.
+  intros g ps tbl Heq Hwf.
+  split.
+  - intros Hinv.
+    destruct Hinv as [Hts Htc].
+    unfold parse_table_for.
+    split.
+    + unfold pt_sound.
+      intros x la gamma Hlk.
+      unfold tbl_sound_wrt_pairs in Hts.
+      apply Hts in Hlk.
+      destruct Hlk as [laSet [Hpin Hlin]].
+      unfold prod_la_pairs_wf in Hwf.
+      rewrite Forall_forall in Hwf.
+      apply Hwf in Hpin.
+      unfold prod_la_pair_wf in Hpin.
+      unfold lookahead_set_for in Hpin.
+      destruct Hpin; auto.
+    + unfold pt_complete.
+      intros la x gamma Hlk.
+      pose proof Hlk as Hlk'.
+      unfold lookahead_for in Hlk.
+      destruct Hlk as [Hin Hlk].
+      pose proof in_map_iff.
+      specialize H with (y := (x, gamma)) (f := fst) (l := ps).
+      rewrite <- Heq in H.
+      apply H in Hin.
+      destruct Hin as [pr [Hfst Hin]].
+      destruct pr as (prod, laSet).
+      destruct prod as (y, gamma').
+      inv Hfst.
+      unfold tbl_complete_wrt_pairs in Htc.
+      eapply Htc; eauto.
+      unfold prod_la_pairs_wf in Hwf.
+      rewrite Forall_forall in Hwf.
+      apply Hwf in Hin.
+      inv Hin.
+      apply H1; auto.
+  - intros Hpt.
+    unfold tbl_correct_wrt_pairs.
+    destruct Hpt as [Hsou Hcom].
+    split.
+    + unfold tbl_sound_wrt_pairs.
+      intros x gamma la Hlk.
+      pose proof Hlk as Hlk'.
+      unfold pt_sound in Hsou.
+      apply Hsou in Hlk.
+      unfold prod_la_pairs_wf in Hwf.
+      rewrite Forall_forall in Hwf.
+      destruct Hlk as [Hin Hlk].
+      pose proof in_map_iff.
+      specialize H with (y := (x, gamma)) (f := fst) (l := ps).
+      rewrite <- Heq in H.
+      apply H in Hin.
+      destruct Hin as [pr [Hfst Hin]].
+      destruct pr as (prod, laSet).
+      destruct prod as (y, gamma').
+      inv Hfst.
+      pose proof Hin as Hin'.
+      apply Hwf in Hin.
+      unfold prod_la_pair_wf in Hin.
+      unfold lookahead_set_for in Hin.
+      destruct Hin as [Hls Hlc].
+      exists laSet; split; auto.
+    + unfold tbl_complete_wrt_pairs.
+      intros x gamma la laSet Hin Hla.
+      unfold pt_complete in Hcom.
+      apply Hcom.
+      unfold prod_la_pairs_wf in Hwf.
+      rewrite Forall_forall in Hwf.
+      apply Hwf in Hin.
+      unfold prod_la_pair_wf in Hin.
+      destruct Hin.
+      apply H; auto.
+Qed.
 
 Definition tbl_sound_for_pl_pairs tbl pls :=
   forall x la gamma,
@@ -67,7 +171,7 @@ Definition tbl_complete_for_pl_pairs tbl pls :=
     -> pt_lookup x la tbl = Some gamma.
 
 Definition tbl_correct_for_pl_pairs tbl ps g :=
-  p_l_pairs_wf ps g
+  prod_la_pairs_wf ps g
   /\ tbl_sound_for_pl_pairs tbl ps
   /\ tbl_complete_for_pl_pairs tbl ps.
 
@@ -126,14 +230,11 @@ subst.
               eapply IHelts; eauto.
 *)
 
-Definition mkParseTable (productions_with_la_sets : list p_l_pair) :=
-  fold_right addEntries (Some empty_pt) productions_with_la_sets.
-
 Lemma mkParseTable_correct : 
-  forall (ps : list p_l_pair)
+  forall (ps : list prod_la_pair)
          (tbl : parse_table)
          (g : grammar),
-    p_l_pairs_wf ps g
+    pairs_wf g ps
     -> mkParseTable ps = Some tbl
        <-> parse_table_for tbl g.
 Proof.
