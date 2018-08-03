@@ -12,6 +12,26 @@ Inductive lookahead :=
 | LA  : terminal -> lookahead
 | EOF : lookahead.
 
+Definition pt_key := (nonterminal * lookahead)%type.
+
+Definition pt_key_eq_dec :
+  forall k k2 : pt_key,
+    {k = k2} + {k <> k2}.
+Proof. repeat decide equality. Defined.
+
+Module MDT_PtKey.
+  Definition t := pt_key.
+  Definition eq_dec := pt_key_eq_dec.
+End MDT_PtKey.
+
+Module PtKey_as_DT := Make_UDT(MDT_PtKey).
+
+Module ParseTable := FMapWeakList.Make PtKey_as_DT.
+
+Module ParseTableFacts := WFacts_fun PtKey_as_DT ParseTable.
+
+Definition parse_table := ParseTable.t (list symbol).
+
 (* sets and maps for lookahead tokens *)
 
 Definition lookahead_eq_dec :
@@ -32,17 +52,11 @@ Module LaSetEqProps := EqProperties LaSet.
 Module LaMap := FMapWeakList.Make Lookahead_as_DT.
 Module LaMapFacts := WFacts_fun Lookahead_as_DT LaMap.
 
-Definition parse_table :=
-  NtMap.t (LaMap.t (list symbol)).
-
 Definition pt_lookup
-           (x : nonterminal)
-           (y : lookahead)
+           (x   : nonterminal)
+           (la  : lookahead)
            (tbl : parse_table) : option (list symbol) :=
-  match NtMap.find x tbl with
-  | None => None
-  | Some tMap => LaMap.find y tMap
-  end.
+  ParseTable.find (x, la) tbl.
 
 Inductive nullable_sym (g : grammar) : symbol -> Prop :=
 | NullableSym : forall x ys,

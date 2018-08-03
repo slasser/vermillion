@@ -10,6 +10,16 @@ Require Import LL1.ParseTable.
 
 Import ListNotations.
 
+Lemma pt_find_in :
+  forall k A (v : A) m,
+    ParseTable.find k m = Some v
+    -> ParseTable.In k m.
+Proof.
+  intros.
+  rewrite ParseTableFacts.in_find_iff.
+  rewrite H; congruence.
+Qed.
+
 Lemma lookaheadmap_find_in : forall k vT (v : vT) m,
     LaMap.find k m = Some v ->
     LaMap.In k m.
@@ -18,6 +28,7 @@ Proof.
   unfold not. intro Hcontra. inv Hcontra.
 Qed.
 
+(* Maybe not needed after change to parse table type
 Lemma pt_lookup_exists :
   forall x la tbl gamma,
     pt_lookup x la tbl = Some gamma
@@ -30,18 +41,16 @@ Proof.
   destruct (NtMap.find x tbl) as [m |] eqn:Hnf; eauto.
   congruence.
 Qed.
+ *)
 
 Lemma pt_lookup_in :
   forall x la tbl gamma,
     pt_lookup x la tbl = Some gamma
-    -> NtMap.In x tbl.
+    -> ParseTable.In (x, la) tbl.
 Proof.
   intros x la tbl gamma Hlkp.
   unfold pt_lookup in Hlkp.
-  destruct (NtMap.find x tbl) eqn:Hnf.
-  - rewrite NtMapFacts.in_find_iff.
-    unfold not; intros; congruence.
-  - congruence.
+  apply ParseTableFacts.in_find_iff; congruence.
 Qed.
 
 Lemma eof_first_sym :

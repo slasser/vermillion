@@ -22,44 +22,6 @@ Definition g311 : grammar :=
         
       (E, [T "num"; T "=="; T "num"])];
    start := X |}.
-     
-(* Grammar 3.11 parse table definitions *)
-
-Definition X_map :=
-  LaMap.add
-    (LA "if")
-    [T "if"; NT E; T "then"; NT X; T "else"; NT X]
-    (LaMap.add
-       (LA "begin")
-       [T "begin"; NT X; NT L]
-       (LaMap.add
-          (LA "print")
-          [T "print"; NT E]
-          (LaMap.empty (list symbol)))).
-
-Definition L_map :=
-  LaMap.add
-    (LA "end")
-    [T "end"]
-    (LaMap.add
-       (LA ";")
-       [T ";"; NT X; NT L]
-       (LaMap.empty (list symbol))).
-
-Definition E_map :=
-  LaMap.add
-    (LA "num")
-    [T "num"; T "=="; T "num"]
-    (LaMap.empty (list symbol)).
-
-Definition g311ParseTable :=
-  NtMap.add
-    X X_map
-    (NtMap.add
-       L L_map
-       (NtMap.add
-          E E_map
-          (NtMap.empty (LaMap.t (list symbol))))).
 
 (* For testing purposes, a valid sentence in L(g311) 
    and its derivation tree *)
@@ -91,4 +53,10 @@ Definition g312 : grammar :=
         (X, [NT Y]);
         (X, [T "a"])];
      start := Z |}.
+
+(* Another simple grammar for testing purposes *)
+
+Definition xy_grammar :=
+  [(NT X, [NT Y]);
+   (NT Y, [])].
 

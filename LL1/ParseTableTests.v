@@ -8,6 +8,7 @@ Require Import Lib.Lemmas.
 Require Import Lib.Tactics.
 Require Import Lib.Utils.
 
+Require Import LL1.ExampleParseTables.
 Require Import LL1.Lemmas.
 Require Import LL1.ParseTable.
 
@@ -16,6 +17,7 @@ Import ListNotations.
 Ltac crush' :=
   repeat match goal with
          (* inversions *)
+         | H : _ \/ _ |- _ => inv H
          | H : _ :: _ = _ :: _ |- _ => inv H
          | H : isNT (T _) = true |- _ => inv H
          | H : InA _ _ _ |- _ => inv H
@@ -33,10 +35,14 @@ Ltac crush' :=
          | H : first_sym _ _ (NT _) |- _ => inv H
          | H : first_gamma _ _ (_ :: _) |- _ => inv H
          | H : first_gamma _ _ [] |- _ => inv H
+         | H : ParseTable.In _ (ParseTable.add _ _ _) |- _ =>
+           apply ParseTableFacts.add_in_iff in H; inv H
          | H : SymbolMap.In _ (SymbolMap.add _ _ _) |- _ =>
            apply SymbolMapFacts.add_in_iff in H; inv H
          | H : SymbolMap.In _ (SymbolMap.empty _) |- _ =>
            apply SymbolMapFacts.empty_in_iff in H; inv H
+         | H : ParseTable.In _ (ParseTable.empty _) |- _ =>
+           apply ParseTableFacts.empty_in_iff in H; inv H
          | H : NtMap.In _ (NtMap.add _ _ _) |- _ =>
            apply NtMapFacts.add_in_iff in H; inv H
          | H : LaMap.In _ (LaMap.add _ _ _) |- _ =>
@@ -53,6 +59,7 @@ Ltac crush' :=
          | H : SymbolSet.In _ _ |- _ => inv H
          | H : NtMap.In _ (NtMap.empty _) |- _ =>
            apply NtMapFacts.empty_in_iff in H; inv H
+         | H : ParseTable.find (_, LA _) _ = Some _ |- _ => inv H
          (* goals *)
          | |- In _ _ => repeat (try (left; reflexivity); right)
          | |- nullable_gamma _ _ => constructor
@@ -472,21 +479,11 @@ Example g311ParseTableCorrect :
 Proof with crush.
   unfold parse_table_for.
   split.
-  - unfold pt_sound; intros.
-    unfold g311ParseTable in *.
-    apply pt_lookup_exists in H.
-    destruct H as [m [Hnf Hlf]].
-    pose proof Hnf as Hnf'.
-    apply ntmap_find_in in Hnf...
-    + unfold X in *; unfold X_map in *.
-      pose proof Hlf as Hlf'.
-      apply lookaheadmap_find_in in Hlf...
-    + unfold L in *; unfold L_map in *.
-      pose proof Hlf as Hlf'.
-      apply lookaheadmap_find_in in Hlf'...
-    + unfold E in *; unfold E_map in *.
-      pose proof Hlf as Hlf'.
-      apply lookaheadmap_find_in in Hlf'...
+  - unfold pt_sound; intros x la gamma H.
+    unfold pt_lookup in H.
+    unfold g311ParseTable in H; simpl in H.
+    pose proof H as H'.
+    apply pt_find_in in H'...
   - unfold pt_complete; intros.
     unfold lookahead_for in H; destruct H as [Hin [Hfi | Hfo]]...
     + crush... 
