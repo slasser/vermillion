@@ -58,6 +58,13 @@ Definition pt_lookup
            (tbl : parse_table) : option (list symbol) :=
   ParseTable.find (x, la) tbl.
 
+Definition pt_add
+           (x : nonterminal)
+           (la : lookahead)
+           (gamma : list symbol)
+           (tbl : parse_table) : parse_table :=
+  ParseTable.add (x, la) gamma tbl.
+
 Inductive nullable_sym (g : grammar) : symbol -> Prop :=
 | NullableSym : forall x ys,
     In (x, ys) g.(productions)
