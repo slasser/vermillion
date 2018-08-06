@@ -369,7 +369,106 @@ Proof.
       unfold pt_lookup in Hf'; congruence.
     + auto.
 Qed.
-    
+
+Lemma invariant_not_in_add :
+  forall tbl tbl' ps x gamma la,
+    tbl_correct_wrt_pairs tbl ps
+    -> tbl_correct_wrt_pairs tbl' ((x, gamma, la) :: ps)
+    -> ~In ((x, gamma), la) ps
+    -> tbl_correct_wrt_pairs (pt_add x la gamma tbl) (((x, gamma), la) :: ps).
+Proof.
+  intros tbl tbl' ps x gamma la Htc Htc' Hin.
+  intros x' gamma' la'.
+  split.
+  - intros Hlk.
+    unfold pt_lookup, pt_add in Hlk.
+    destruct (ParseTableFacts.eq_dec (x, la) (x', la')).
+    + inv e.
+      rewrite ParseTableFacts.add_eq_o in Hlk; auto.
+      inv Hlk.
+      left; auto.
+    + rewrite ParseTableFacts.add_neq_o in Hlk; auto.
+      apply Htc in Hlk.
+      right; auto.
+  - intros Hin'.
+    unfold pt_lookup, pt_add.
+    inv Hin'.
+    + inv H.
+      rewrite ParseTableFacts.add_eq_o; auto.
+    + destruct (ParseTableFacts.eq_dec (x, la) (x', la')).
+      * inv e.
+        apply invariant_cons_eq_gammas with (gamma' := gamma') in Htc'; auto.
+        congruence.
+      * rewrite ParseTableFacts.add_neq_o; auto.
+        apply Htc; auto.
+Qed.
+
+Lemma add_preserves_equal :
+  forall tbl tbl' x la gamma,
+    ParseTable.Equal tbl tbl'
+    -> ParseTable.Equal (pt_add x la gamma tbl) (pt_add x la gamma tbl').
+Proof.
+  intros tbl tbl' x la gamma Heq.
+  unfold ParseTable.Equal.
+  intros (x', la').
+  unfold pt_add.
+  destruct (ParseTableFacts.eq_dec (x, la) (x', la')).
+  - inv e.
+    repeat rewrite ParseTableFacts.add_eq_o; auto.
+  - repeat rewrite ParseTableFacts.add_neq_o; auto.
+Qed.
+
+
+Lemma addEntry_duplicate_doesn't_change_table :
+  forall tbl ps x gamma la,
+    tbl_correct_wrt_pairs tbl ps
+    -> In (x, gamma, la) ps
+    -> addEntry (x, gamma, la) (Some tbl) = Some tbl.
+Proof.
+  intros tbl ps x gamma la Htc Hin.
+  unfold addEntry.
+  apply Htc in Hin.
+  rewrite Hin.
+  (* lemma? *)
+  destruct (list_eq_dec symbol_eq_dec gamma gamma); [auto | congruence].
+Qed.
+
+Lemma equal_preserves_invariant :
+  forall tbl tbl' ps,
+    tbl_correct_wrt_pairs tbl ps
+    -> ParseTable.Equal tbl tbl'
+    -> tbl_correct_wrt_pairs tbl' ps.
+Proof.
+  intros tbl tbl' ps Htc Heq.
+  auto.
+  unfold tbl_correct_wrt_pairs in Htc.
+  unfold pt_lookup in Htc.
+  intros x gamma la.
+  split; [intros Hlk | intros Hin].
+  - apply Htc.
+    unfold ParseTable.Equal in Heq.
+    rewrite Heq; auto.
+  - unfold pt_lookup. 
+    rewrite <- Heq.
+    apply Htc; auto.
+Qed.
+
+Lemma addEntry_new_entry_pt_add :
+  forall tbl tbl' ps x gamma la,
+    tbl_correct_wrt_pairs tbl ps
+    -> tbl_correct_wrt_pairs tbl' ((x, gamma, la) :: ps)
+    -> ~ In ((x, gamma), la) ps
+    -> addEntry ((x, gamma), la) (Some tbl) = Some (pt_add x la gamma tbl).
+Proof.
+  intros tbl tbl' ps x gamma la Htc Htc' Hin.
+  unfold addEntry.
+  destruct (pt_lookup x la tbl) as [gamma' |] eqn:Hlk.
+  - apply Htc in Hlk. 
+    apply invariant_cons_eq_gammas with (gamma' := gamma') in Htc'; auto.
+    congruence.
+  - auto.
+Qed.
+
 Lemma mkParseTable_complete_wrt_invariant :
   forall ps tbl,
     tbl_correct_wrt_pairs tbl ps
@@ -388,19 +487,27 @@ Proof.
     apply IHps in Htc.
     destruct Htc as [pre_tbl' [Hpreq Hpremk]].
     destruct (in_dec prod_la_pair_dec ((x, gamma), la) ps).
-    + (* duplicate -- entry is already in table *)
-      exists pre_tbl'; split.
+    + exists pre_tbl'; split.
       * apply invariant_cons_duplicate_invariant_tail in Htc'; auto.
         apply ParseTableFacts.Equal_trans with (m' := pre_tbl); auto.
         eapply invariant_tables_eq; eauto.
       * simpl.
         rewrite Hpremk.
-        admit. (* lemma *)
+        eapply addEntry_duplicate_doesn't_change_table; eauto.
+        eapply equal_preserves_invariant; eauto.
     + exists (pt_add x la gamma pre_tbl'); split.
-      * admit.
+      * eapply invariant_not_in_add in Htc''; eauto.
+        apply add_preserves_equal with 
+            (x := x)
+            (la := la)
+            (gamma := gamma) in Hpreq; eauto.
+        apply invariant_tables_eq with (tbl := post_tbl) in Htc''; auto.
+        apply ParseTableFacts.Equal_trans with (m' := pt_add x la gamma pre_tbl); auto.
       * simpl.
-        admit.
-Admitted.
+        rewrite Hpremk.
+        eapply addEntry_new_entry_pt_add; eauto.
+        eapply equal_preserves_invariant; eauto.
+Qed.
 
 Lemma mkParseTable_complete :
   forall (ps  : list prod_la_pair)
