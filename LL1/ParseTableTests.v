@@ -21,6 +21,7 @@ Ltac crush' :=
          | H : _ :: _ = _ :: _ |- _ => inv H
          | H : isNT (T _) = true |- _ => inv H
          | H : InA _ _ _ |- _ => inv H
+         | H : T _ = NT _ |- _ => inv H
          | H : NT _ = NT _ |- _ => inv H
          | H : In _ _ |- _ => inv H
          | H : (String _ _, _) = (String _ _, _) |- _ => inv H
@@ -37,26 +38,26 @@ Ltac crush' :=
          | H : first_gamma _ _ [] |- _ => inv H
          | H : ParseTable.In _ (ParseTable.add _ _ _) |- _ =>
            apply ParseTableFacts.add_in_iff in H; inv H
-         | H : SymbolMap.In _ (SymbolMap.add _ _ _) |- _ =>
-           apply SymbolMapFacts.add_in_iff in H; inv H
-         | H : SymbolMap.In _ (SymbolMap.empty _) |- _ =>
-           apply SymbolMapFacts.empty_in_iff in H; inv H
-         | H : ParseTable.In _ (ParseTable.empty _) |- _ =>
-           apply ParseTableFacts.empty_in_iff in H; inv H
          | H : NtMap.In _ (NtMap.add _ _ _) |- _ =>
            apply NtMapFacts.add_in_iff in H; inv H
+         | H : NtMap.In _ (NtMap.empty _) |- _ =>
+           apply NtMapFacts.empty_in_iff in H; inv H
+         | H : ParseTable.In _ (ParseTable.empty _) |- _ =>
+           apply ParseTableFacts.empty_in_iff in H; inv H
          | H : LaMap.In _ (LaMap.add _ _ _) |- _ =>
            apply LaMapFacts.add_in_iff in H; inv H
          | H : LaMap.In _ (LaMap.empty _) |- _ =>
            apply LaMapFacts.empty_in_iff in H; inv H
-         | H : SymbolMap.find (NT _) _ = Some _ |- _ =>
+         | H : NtMap.find _ _ = Some _ |- _ =>
            inv H
+             (*
          | H : NtMap.find O _ = Some _ |- _ => inv H
          | H : NtMap.find (S _)%nat _ = Some _ |- _ => inv H
+              *)
          | H : LaMap.find (LA _) _ = Some _ |- _ =>
            inv H
          | H : LaSet.In _ _ |- _ => inv H
-         | H : SymbolSet.In _ _ |- _ => inv H
+         | H : NtSet.In _ _ |- _ => inv H
          | H : NtMap.In _ (NtMap.empty _) |- _ =>
            apply NtMapFacts.empty_in_iff in H; inv H
          | H : ParseTable.find (_, LA _) _ = Some _ |- _ => inv H
@@ -64,10 +65,9 @@ Ltac crush' :=
          | |- In _ _ => repeat (try (left; reflexivity); right)
          | |- nullable_gamma _ _ => constructor
          | |- first_sym _ _ _ => constructor
-         | |- SymbolMap.find (NT _) _ = _ => auto
          | |- LaSet.In _ _ =>
            repeat (try (apply InA_cons_hd; reflexivity); apply InA_cons_tl)
-         | |- SymbolSet.In _ _ =>
+         | |- NtSet.In _ _ =>
            repeat (try (apply InA_cons_hd; reflexivity); apply InA_cons_tl)
          | |- Utils.isNT (NT _) = true => auto
          | |- first_gamma _ (LA ?s) (T ?s :: _) \/ _ =>
@@ -106,10 +106,10 @@ Ltac crush :=
 
  *)
 
-Definition mkSymbolSet (ys : list symbol) :=
-  fold_right SymbolSet.add SymbolSet.empty ys.
+Definition mkNtSet (xs : list nonterminal) :=
+  fold_right NtSet.add NtSet.empty xs.
 
-Definition g312NullableSet := mkSymbolSet [NT X; NT Y].
+Definition g312NullableSet := mkNtSet [X; Y].
 
 Example Y_nullable :
   (@nullable_sym g312) (NT Y).
@@ -166,21 +166,21 @@ Definition cSet   := LaSet.singleton (LA "c").
 Definition acSet  := LaSet.add (LA "a") cSet.
 Definition acdSet := LaSet.add (LA "d") acSet.
 
-Definition mkSymbolMap (pairs : list (symbol * LaSet.t)) :=
+Definition mkNtLaMap (pairs : list (nonterminal * LaSet.t)) :=
   fold_right (fun pr m => match pr with
-                          | (sym, se) => SymbolMap.add sym se m
+                          | (x, se) => NtMap.add x se m
                           end)
-             (SymbolMap.empty LaSet.t)
+             (NtMap.empty LaSet.t)
              pairs.
 
 (* Correct FIRST set for Grammar 3.12 *)
 Definition g312FirstMap :=
-  mkSymbolMap [(NT X, acSet); (NT Y, cSet); (NT Z, acdSet)].
+  mkNtLaMap [(X, acSet); (Y, cSet); (Z, acdSet)].
 
 Example c_in_First_Y :
   (@first_sym g312) (LA "c") (NT Y).
 Proof.
-  apply FirstNT with (gpre := nil) (y := T "c") (gsuf := nil); crush.
+  apply FirstNT with (gpre := nil) (s := T "c") (gsuf := nil); crush.
 Qed.
 
 Hint Resolve c_in_First_Y.
@@ -188,7 +188,7 @@ Hint Resolve c_in_First_Y.
 Example a_in_First_X :
   (@first_sym g312) (LA "a") (NT X).
 Proof.
-  apply FirstNT with (gpre := nil) (y := T "a") (gsuf := nil) ; crush.
+  apply FirstNT with (gpre := nil) (s := T "a") (gsuf := nil) ; crush.
 Qed.
 
 Hint Resolve a_in_First_X.
@@ -196,7 +196,7 @@ Hint Resolve a_in_First_X.
 Example c_in_First_X :
   (@first_sym g312) (LA "c") (NT X).
 Proof.
-  apply FirstNT with (gpre := nil) (y := NT Y) (gsuf := nil); crush.
+  apply FirstNT with (gpre := nil) (s := NT Y) (gsuf := nil); crush.
 Qed.
 
 Hint Resolve c_in_First_X.
@@ -216,7 +216,7 @@ Qed.
 Example a_in_First_Z :
   (@first_sym g312) (LA "a") (NT Z).
 Proof.
-  apply FirstNT with (gpre := nil) (y := NT X) (gsuf := [NT Y; NT Z]); crush.
+  apply FirstNT with (gpre := nil) (s := NT X) (gsuf := [NT Y; NT Z]); crush.
 Qed.
 
 Hint Resolve a_in_First_Z.
@@ -224,7 +224,7 @@ Hint Resolve a_in_First_Z.
 Example c_in_First_Z :
   (@first_sym g312) (LA "c") (NT Z).
 Proof.
-  apply FirstNT with (gpre := [NT X]) (y := NT Y) (gsuf := [NT Z]); crush.
+  apply FirstNT with (gpre := [NT X]) (s := NT Y) (gsuf := [NT Z]); crush.
 Qed.
 
 Hint Resolve c_in_First_Z.
@@ -232,7 +232,7 @@ Hint Resolve c_in_First_Z.
 Example d_in_First_Z :
   (@first_sym g312) (LA "d") (NT Z).
 Proof.
-  apply FirstNT with (gpre := nil) (y := T "d") (gsuf := nil); crush.
+  apply FirstNT with (gpre := nil) (s := T "d") (gsuf := nil); crush.
 Qed.
 
 Hint Resolve d_in_First_Z.
@@ -245,23 +245,23 @@ Proof with crush.
   - unfold first_map_sound; intros.
     simpl in H.
     copy_and_find_In H...
-  - unfold first_map_complete; intros.
-    revert H.
-    induction H0; intros...
+  - unfold first_map_complete.
+    intros la sym x Hfi.
+    induction Hfi; intros...
     + crush; exists acdSet...
     + crush.
+      * crush; exists acdSet...
+      * crush; exists acdSet...
       * crush... exists acdSet...
-      * crush... exists acdSet...
-      * crush... exists acdSet...
-    + crush... exists cSet...
-    + crush... exists acSet...
-    + crush... exists acSet...
+    + crush; exists cSet...
+    + crush; exists acSet...
+    + crush; exists acSet...
 Qed.
 
 Definition g312FirstMapPlus :=
-  mkSymbolMap [(NT X, acdSet); (* d shouldn't be in there! *)
-               (NT Y, cSet);
-               (NT Z, acdSet)].  
+  mkNtLaMap [(X, acdSet); (* d shouldn't be in there! *)
+             (Y, cSet);
+             (Z, acdSet)].  
 
 Example nonMinimalFirstMapIncorrect :
   ~first_map_for g312FirstMapPlus g312.
@@ -270,7 +270,7 @@ Proof with crush.
   unfold first_map_for in H.
   destruct H as [Hsou _].
   unfold first_map_sound in Hsou.
-  specialize Hsou with (x := NT X)
+  specialize Hsou with (x := X)
                        (xFirst := acdSet)
                        (la := LA "d").
   assert (H : ~(@first_sym g312) (LA "d") (NT X)) by repeat crush.
@@ -284,7 +284,7 @@ Definition Xc_grammar :=
      start := X |}.
 
 Definition Xc_first_map :=
-  mkSymbolMap [(NT X, cSet)].
+  mkNtLaMap [(X, cSet)].
 
 Example Xc_first_correct :
   first_map_for Xc_first_map Xc_grammar.
@@ -293,11 +293,11 @@ Proof with crush.
   - unfold first_map_sound; intros.
     unfold Xc_first_map in *; simpl in *.
     copy_and_find_In H...
-    apply FirstNT with (gpre := [NT X]) (y := T "c") (gsuf := nil)...
+    apply FirstNT with (gpre := [NT X]) (s := T "c") (gsuf := nil)...
     apply NullableSym with (ys := [])...
-  - unfold first_map_complete; intros.
-    revert H.
-    induction H0; intros...
+  - unfold first_map_complete.
+    intros la sym x Hfi.
+    induction Hfi; intros...
     crush...
     exists cSet...
 Qed.
@@ -309,7 +309,7 @@ Definition yFollow := LaSet.add EOF acdSet.
 
 (* Correct FOLLOW set for Grammar 3.12 *)
 Definition g312FollowMap :=
-  mkSymbolMap [(NT X, xFollow); (NT Y, yFollow)].
+  mkNtLaMap [(X, xFollow); (Y, yFollow)].
 
 Example what's_in_xFirst :
   forall la,
@@ -321,7 +321,7 @@ Proof.
   unfold first_map_for in Hc.
   destruct Hc as [_ Hcom].
   unfold first_map_complete in Hcom.
-  apply Hcom in H; auto.
+  eapply Hcom in H; eauto.
   destruct H as [xFirst [Hs Hf]].
   inv Hs.
   auto.
@@ -337,7 +337,7 @@ Proof.
   unfold first_map_for in Hc.
   destruct Hc as [_ Hcom].
   unfold first_map_complete in Hcom.
-  apply Hcom in H; auto.
+  eapply Hcom in H; eauto.
   destruct H as [yFirst [Hs Hf]].
   inv Hs.
   auto.
@@ -353,7 +353,7 @@ Proof.
   unfold first_map_for in Hc.
   destruct Hc as [_ Hcom].
   unfold first_map_complete in Hcom.
-  apply Hcom in H; auto.
+  eapply Hcom in H; eauto.
   destruct H as [zFirst [Hs Hf]].
   inv Hs.
   auto.
@@ -366,7 +366,7 @@ Proof.
                          (gpre := nil) 
                          (gsuf := [NT Y; NT Z]); crush.
   apply FirstGamma with (gpre := nil)
-                        (y := NT Y); crush.
+                        (s := NT Y); crush.
 Qed.
 
 Hint Resolve c_in_Follow_X.
@@ -433,8 +433,10 @@ Proof with crush.
   - unfold follow_map_sound; intros.
     unfold g312FollowMap in *; simpl in *.
     copy_and_find_In H...
-  - unfold follow_map_complete; intros.
-    induction H.
+  - unfold follow_map_complete.
+    intros s x la Hfo.
+    revert x.
+    induction Hfo; intros.
     + inv H...
       * exfalso. 
         eapply Z_not_nullable; eauto. 
@@ -457,8 +459,13 @@ Proof with crush.
               exists yFollow...
            ++ crush.
         -- crush.
-    + crush; try solve [crush].
-      destruct IHfollow_sym as [zFollow [Hs Hl]]...
+    + crush...
+      * exfalso; eapply Z_not_nullable; eauto.
+      * crush...
+        exfalso; eapply Z_not_nullable; eauto.
+      * specialize (IHHfo X).
+        destruct IHHfo as [xFollow [Hnf Hli]]; auto.
+        crush; exists yFollow...
 Qed. 
 
 (* The next tests use Grammar 3.11, shown here:

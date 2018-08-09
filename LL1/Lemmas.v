@@ -129,9 +129,9 @@ Proof.
   induction Hfi; intros.
   - inv H.
   - inv H1.
-    assert (ys = gpre ++ y :: gsuf).
+    assert (ys = gpre ++ s :: gsuf).
     { destruct Htbl as [Hmin Hcom].
-      assert (Hlk : lookahead_for la x (gpre ++ y :: gsuf) g).
+      assert (Hlk : lookahead_for la x (gpre ++ s :: gsuf) g).
       { unfold lookahead_for.
         split; auto. }
       assert (Hlk' : lookahead_for la x ys g).
@@ -144,7 +144,7 @@ Proof.
     subst.
     eapply IHHfi.
     + apply nullable_middle_sym in H5; auto.
-    + destruct y.
+    + destruct s.
       * apply gamma_with_terminal_not_nullable in H5; inv H5.
       * eapply FollowLeft; eauto.
         assert (NT n :: gsuf = [NT n] ++ gsuf) by auto.

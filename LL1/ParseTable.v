@@ -82,52 +82,54 @@ Hint Constructors nullable_sym nullable_gamma.
 Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
   with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop.
 
-Definition nullable_set_sound (nu : SymbolSet.t)
-           (g  : grammar) : Prop :=
-  forall x, SymbolSet.In (NT x) nu -> nullable_sym g (NT x).
+Definition nullable_set_sound (nu : NtSet.t) (g  : grammar) : Prop :=
+  forall x, NtSet.In x nu -> nullable_sym g (NT x).
 
-Definition nullable_set_complete (nu : SymbolSet.t)
-                                 (g  : grammar) : Prop :=
-  forall x, nullable_sym g (NT x) -> SymbolSet.In (NT x) nu.
+Definition nullable_set_complete (nu : NtSet.t) (g  : grammar) : Prop :=
+  forall x, nullable_sym g (NT x) -> NtSet.In x nu.
 
-Definition nullable_set_for nu g : Prop :=
+Definition nullable_set_for (nu : NtSet.t) (g : grammar) : Prop :=
 nullable_set_sound nu g /\ nullable_set_complete nu g.
 
 Inductive first_sym (g : grammar) :
   lookahead -> symbol -> Prop :=
-| FirstT : forall s,
-    first_sym g (LA s) (T s)
-| FirstNT : forall x y la gpre gsuf,
-    In (x, gpre ++ y :: gsuf) g.(productions)
+| FirstT : forall y,
+    first_sym g (LA y) (T y)
+| FirstNT : forall x gpre s gsuf la,
+    In (x, gpre ++ s :: gsuf) g.(productions)
     -> nullable_gamma g gpre
-    -> first_sym g la y
+    -> first_sym g la s
     -> first_sym g la (NT x).
 
 Hint Constructors first_sym.
 
 Inductive first_gamma (g : grammar) : lookahead -> list symbol -> Prop :=
-| FirstGamma : forall gpre gsuf la y,
+| FirstGamma : forall gpre la s gsuf,
     nullable_gamma g gpre
-    -> first_sym g la y
-    -> first_gamma g la (gpre ++ y :: gsuf).
+    -> first_sym g la s
+    -> first_gamma g la (gpre ++ s :: gsuf).
 
 Hint Constructors first_gamma.
 
-Definition first_map_sound fi g : Prop :=
+Definition nt_ls_map := NtMap.t LaSet.t.
+
+Definition first_map_sound (fi : nt_ls_map) (g : grammar) : Prop :=
   forall x xFirst la,
-    SymbolMap.find x fi = Some xFirst
+    NtMap.find x fi = Some xFirst
     -> LaSet.In la xFirst
-    -> first_sym g la x.
+    -> first_sym g la (NT x).
 
-Definition first_map_complete fi g : Prop :=
-  forall x la,
-    isNT x = true
-    -> first_sym g la x
+(* We want a symbol in the first_sym hypothesis
+   instead of an (NT x) so that induction is stronger *)
+Definition first_map_complete (fi : nt_ls_map) (g : grammar) : Prop :=
+  forall la sym x,
+    first_sym g la sym
+    -> sym = NT x
     -> exists xFirst,
-        SymbolMap.find x fi = Some xFirst
-        /\ LaSet.In la xFirst.
+      NtMap.find x fi = Some xFirst
+      /\ LaSet.In la xFirst.
 
-Definition first_map_for fi g : Prop :=
+Definition first_map_for (fi : nt_ls_map) (g : grammar) : Prop :=
   first_map_sound fi g /\ first_map_complete fi g.
 
 Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
@@ -146,47 +148,60 @@ Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
 
 Hint Constructors follow_sym.
 
-Definition follow_map_sound fo g : Prop :=
-  forall x xFollow y,
-    SymbolMap.find x fo = Some xFollow
-    -> LaSet.In y xFollow
-    -> follow_sym g y x.
+Definition follow_map_sound (fo : nt_ls_map) (g : grammar) : Prop :=
+  forall x xFollow la,
+    NtMap.find x fo = Some xFollow
+    -> LaSet.In la xFollow
+    -> follow_sym g la (NT x).
 
-Definition follow_map_complete fo g : Prop :=
-  forall x y,
-    follow_sym g y x
+Definition follow_map_complete (fo : nt_ls_map) (g : grammar) : Prop :=
+  forall s x la,
+    follow_sym g la s
+    -> s = NT x
     -> exists xFollow,
-      SymbolMap.find x fo = Some xFollow
-      /\ LaSet.In y xFollow.
+      NtMap.find x fo = Some xFollow
+      /\ LaSet.In la xFollow.
 
-Definition follow_map_for fo g : Prop :=
+Definition follow_map_for (fo : nt_ls_map) (g : grammar) : Prop :=
 follow_map_sound fo g /\ follow_map_complete fo g.
 
-Definition lookahead_for la x gamma g :=
+Definition lookahead_for
+           (la : lookahead)
+           (x : nonterminal)
+           (gamma : list symbol)
+           (g : grammar) : Prop :=
   In (x, gamma) g.(productions)
   /\ (first_gamma g la gamma
       \/ (nullable_gamma g gamma
           /\ follow_sym g la (NT x))).
 
-Definition lookahead_set_sound laSet x gamma g :=
-  forall la,
-    LaSet.In la laSet
-    -> lookahead_for la x gamma g.
+Definition lookahead_set_sound
+           (laSet : LaSet.t)
+           (x     : nonterminal)
+           (gamma : list symbol)
+           (g     : grammar) : Prop :=
+  forall la, LaSet.In la laSet -> lookahead_for la x gamma g.
 
-Definition lookahead_set_complete laSet x gamma g :=
-  forall la,
-    lookahead_for la x gamma g
-    -> LaSet.In la laSet.
+Definition lookahead_set_complete
+           (laSet : LaSet.t)
+           (x     : nonterminal)
+           (gamma : list symbol)
+           (g     : grammar) : Prop :=
+  forall la, lookahead_for la x gamma g -> LaSet.In la laSet.
 
-Definition lookahead_set_for laSet x gamma g :=
+Definition lookahead_set_for
+           (laSet : LaSet.t)
+           (x     : nonterminal)
+           (gamma : list symbol)
+           (g     : grammar) : Prop :=
   lookahead_set_sound laSet x gamma g /\ lookahead_set_complete laSet x gamma g.
 
-Definition pt_sound tbl g :=
+Definition pt_sound (tbl : parse_table) (g : grammar) :=
   forall x la gamma,
     pt_lookup x la tbl = Some gamma
     -> lookahead_for la x gamma g.
 
-Definition pt_complete tbl g :=
+Definition pt_complete (tbl : parse_table) (g : grammar) :=
   forall la x gamma,
     lookahead_for la x gamma g
     -> pt_lookup x la tbl = Some gamma.
