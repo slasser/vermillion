@@ -6,13 +6,11 @@ Require Import Lib.Tactics.
 
 Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
+
 Require Import LL1.Proofs.Lemmas.
 
+Require Import LL1.Proofs.ParseTableGen.mkParseTableEntries_Correctness.
 Import ListNotations.
-
-Definition pt_entries_correct ps g :=
-  forall x la gamma,
-    In (x, la, gamma) ps <-> lookahead_for la x gamma g.
 
 Definition tbl_correct_wrt_pairs (tbl : parse_table) (ps : list pt_entry) :=
   forall x gamma la,

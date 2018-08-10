@@ -55,8 +55,11 @@ Definition mkEntriesForProd nu fi fo (prod : production) : list pt_entry :=
   let fol := followLookahead nu fo x gamma in
   fromLookaheadList x gamma (fil ++ fol).
 
+Definition mkParseTableEntries' nu fi fo ps :=
+  flat_map (mkEntriesForProd nu fi fo) ps.
+
 Definition mkParseTableEntries nu fi fo g :=
-  flat_map (mkEntriesForProd nu fi fo) g.(productions).
+  mkParseTableEntries' nu fi fo g.(productions).
 
 (* Build a parse table from a (correct) list of parse table entries *)
 
