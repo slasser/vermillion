@@ -8,9 +8,9 @@ Require Import Lib.Tactics.
 Require Import Lib.Utils.
 
 Require Import LL1.Derivation.
-Require Import LL1.Lemmas.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
+Require Import LL1.Proofs.Lemmas.
 
 Import ListNotations.
 

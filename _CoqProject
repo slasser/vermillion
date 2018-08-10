@@ -9,20 +9,27 @@ Lib/ParseTree.v
 Lib/Tactics.v
 Lib/Utils.v
 
-LL1/Completeness.v
 LL1/Derivation.v
-LL1/Determinism.v
-LL1/ExampleParseTables.v
-LL1/Lemmas.v
-LL1/Monotonicity.v
 LL1/Parser.v
-LL1/ParserTests.v
 LL1/ParseTable.v
 LL1/ParseTableGen.v
-LL1/ParseTableTests.v
-LL1/Soundness.v
+
+LL1/Tests/ExampleParseTables.v
+LL1/Tests/ParserTests.v
+LL1/Tests/ParseTableTests.v
+
+LL1/Proofs/Lemmas.v
+
+LL1/Proofs/LL1_Grammar/Determinism.v
+
+LL1/Proofs/Parser/Completeness.v
+LL1/Proofs/Parser/Monotonicity.v
+LL1/Proofs/Parser/Soundness.v
+
+LL1/Proofs/ParseTableGen/mkParseTable_Correctness.v
 
 AllStar/Parser.v
 AllStar/ParserTests.v
 AllStar/Subparser.v
 AllStar/SubparserTests.v
+

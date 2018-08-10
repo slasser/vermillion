@@ -28,21 +28,6 @@ Proof.
   unfold not. intro Hcontra. inv Hcontra.
 Qed.
 
-(* Maybe not needed after change to parse table type
-Lemma pt_lookup_exists :
-  forall x la tbl gamma,
-    pt_lookup x la tbl = Some gamma
-    -> exists laMap,
-      NtMap.find x tbl = Some laMap
-      /\ LaMap.find la laMap = Some gamma.
-Proof.
-  intros x la tbl gamma Hlkp.
-  unfold pt_lookup in Hlkp.
-  destruct (NtMap.find x tbl) as [m |] eqn:Hnf; eauto.
-  congruence.
-Qed.
- *)
-
 Lemma pt_lookup_in :
   forall x la tbl gamma,
     pt_lookup x la tbl = Some gamma

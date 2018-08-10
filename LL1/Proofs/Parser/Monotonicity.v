@@ -6,9 +6,9 @@ Require Import Lib.Grammar.
 Require Import Lib.ParseTree.
 Require Import Lib.Tactics.
 
-Require Import LL1.Lemmas.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
+Require Import LL1.Proofs.Lemmas.
 
 Lemma parse_fuel_monotonic :
   forall (tr : tree)

@@ -4,9 +4,9 @@ Require Import Lib.ExampleGrammars.
 Require Import Lib.Grammar.
 Require Import Lib.ParseTree.
 
-Require Import LL1.ExampleParseTables.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
+Require Import LL1.Tests.ExampleParseTables.
 
 Import ListNotations.
 
