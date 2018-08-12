@@ -17,7 +17,10 @@ Defined.
 
 (* Build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
-Fixpoint firstLookahead (nu : NtSet.t) (fi : nt_ls_map) (gamma : list symbol) :
+Definition fromLookaheadList x gamma las : list pt_entry :=
+  map (fun la => (x, la, gamma)) las.
+
+Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : nt_ls_map) :
   list lookahead :=
   match gamma with 
   | [] => []
@@ -27,18 +30,21 @@ Fixpoint firstLookahead (nu : NtSet.t) (fi : nt_ls_map) (gamma : list symbol) :
                   | Some s => LaSet.elements s
                   | None => []
                   end
-    in  if NtSet.mem x nu then xFirst ++ firstLookahead nu fi gamma' else xFirst
+    in  if NtSet.mem x nu then xFirst ++ firstGamma gamma' nu fi else xFirst
   end.
 
-Fixpoint nullableGamma (nu : NtSet.t) (gamma : list symbol) : bool :=
+Definition mkFirstEntries x gamma nu fi :=
+  fromLookaheadList x gamma (firstGamma gamma nu fi).
+
+Fixpoint nullableGamma (gamma : list symbol) (nu : NtSet.t) : bool :=
   match gamma with 
   | [] => true
   | T _ :: _ => false
-  | NT x :: gamma' => if NtSet.mem x nu then nullableGamma nu gamma' else false
+  | NT x :: gamma' => if NtSet.mem x nu then nullableGamma gamma' nu else false
   end.
 
-Definition followLookahead nu fo x gamma :=
-  if nullableGamma nu gamma then
+Definition followLookahead x gamma nu fo :=
+  if nullableGamma gamma nu then
     match NtMap.find x fo with 
     | Some s => LaSet.elements s
     | None => []
@@ -46,14 +52,12 @@ Definition followLookahead nu fo x gamma :=
   else 
     [].
 
-Definition fromLookaheadList x gamma las : list pt_entry :=
-  map (fun la => (x, la, gamma)) las.
+Definition mkFollowEntries x gamma nu fo :=
+  fromLookaheadList x gamma (followLookahead x gamma nu fo).
 
 Definition mkEntriesForProd nu fi fo (prod : production) : list pt_entry :=
   let (x, gamma) := prod in
-  let fil := firstLookahead nu fi gamma in
-  let fol := followLookahead nu fo x gamma in
-  fromLookaheadList x gamma (fil ++ fol).
+  mkFirstEntries x gamma nu fi ++ mkFollowEntries x gamma nu fo.
 
 Definition mkParseTableEntries' nu fi fo ps :=
   flat_map (mkEntriesForProd nu fi fo) ps.

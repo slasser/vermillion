@@ -32,7 +32,7 @@ Proof.
       apply Hwf.
       apply Htc; auto.
     + unfold pt_complete.
-      intros la x gamma Hlk.
+      intros la x gamma Hin Hlf.
       apply Htc.
       apply Hwf; auto.
   - intros Hpt.
@@ -44,8 +44,9 @@ Proof.
       apply Hwf.
       apply Hsou; auto.
     + intros Hin.
-      apply Hcom.
-      apply Hwf; auto.
+      apply Hwf in Hin.
+      destruct Hin as [Hin Hlf].
+      apply Hcom; auto.
 Qed.
 
 (* mkParseTable soundness *)

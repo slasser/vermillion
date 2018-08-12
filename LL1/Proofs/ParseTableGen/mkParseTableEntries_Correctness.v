@@ -70,8 +70,71 @@ Proof.
   intros x la gamma nu fi fo p Hin.
   destruct p as (x', gamma').
   unfold mkEntriesForProd in Hin.
-  eapply fromLookaheadList_preserves_prod; eauto.
+  apply in_app_or in Hin.
+  inv Hin; eapply fromLookaheadList_preserves_prod; eauto.
 Qed.
+
+Lemma first_gamma_nu_tail :
+  forall g la x syms,
+    nullable_sym g (NT x)
+    -> first_gamma g la syms
+    -> first_gamma g la (NT x :: syms).
+Proof.
+Admitted.
+
+Lemma firstGamma_correct :
+  forall g la nu fi gamma,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> In la (firstGamma gamma nu fi)
+       <-> first_gamma g la gamma.
+Proof.
+  intros g la nu fi gamma Hns Hfm.
+  split.
+  - intros Hin.
+    induction gamma as [| sym syms]; simpl in *.
+    + inv Hin.
+    + destruct sym as [y | x].
+      * inv Hin.
+        -- apply FirstGamma with (gpre := nil); auto.
+        -- inv H.
+      * destruct (NtSet.mem x nu) eqn:Hmem.
+        -- destruct (NtMap.find x fi) as [fiSet |] eqn:Hfind.
+           ++ apply in_app_or in Hin.
+              inv Hin.
+              ** (* la is in FIRST(X) *)
+                 destruct Hfm as [Hsou Hcom].
+                 unfold first_map_sound in Hsou.
+                 apply Hsou with (la := la) in Hfind.
+                 --- apply FirstGamma with (gpre := nil); auto.
+                 --- admit.
+              ** apply first_gamma_nu_tail; auto.
+                 destruct Hns as [Hsou Hcom].
+                 apply Hsou.
+                 apply NtSet.mem_spec; auto.
+           ++ simpl in *.
+              apply first_gamma_nu_tail; auto.
+              destruct Hns as [Hsou Hcom].
+              apply Hsou.
+              apply NtSet.mem_spec; auto.
+        -- destruct (NtMap.find x fi) as [fiSet |] eqn:Hfind.
+           ++ destruct Hfm as [Hsou com].
+              eapply Hsou in Hfind.
+              apply FirstGamma with (gpre := nil); auto.
+              apply Hfind.
+              admit.
+           ++ inv Hin.
+  - admit.
+Admitted.
+         
+Lemma mkFirstEntries_sound :
+  forall g nu fi x la gamma,
+    In (x, la, gamma) (mkFirstEntries x gamma nu fi)
+    -> first_gamma g la gamma.
+Proof.
+  intros g nu fi x la gamma Hin.
+  unfold mkFirstEntries in Hin.
+Admitted.
 
 Lemma mkEntriesForProd_sound :
   forall g nu fi fo p x la gamma,
@@ -79,7 +142,14 @@ Lemma mkEntriesForProd_sound :
     -> lookahead_for la x gamma g.
 Proof.
   intros g nu fi fo p x la gamma Hin.
+  pose proof Hin as Hin'.
+  apply mkEntriesForProd_preserves_prod in Hin'; subst.
   unfold mkEntriesForProd in Hin.
+  apply in_app_or in Hin.
+  inv Hin.
+  - left.
+    eapply mkFirstEntries_sound; eauto.
+  - admit.
 Admitted.
 
 Lemma mkParseTableEntries'_sound :
