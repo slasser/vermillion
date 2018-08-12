@@ -6,6 +6,8 @@ Require Import Lib.Tactics.
 Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
 
+Import ListNotations.
+
 Definition pt_entries_correct ps g :=
   forall x la gamma,
     In (x, la, gamma) ps <-> lookahead_for la x gamma g.
@@ -54,15 +56,56 @@ Proof.
     + apply Hspec; auto.
 Qed.
 
+Lemma empty_entries_correct_wrt_empty_productions :
+  forall g,
+    entries_correct_wrt_productions [] [] g.
+Proof.
+  intros g.
+  split; [intros Hin | intros [Hin _]]; inv Hin.
+Qed.
+
+Lemma fromLookaheadList_preserves_prod :
+  forall x x' la gamma gamma' las,
+    In (x, la, gamma) (fromLookaheadList x' gamma' las)
+    -> (x, gamma) = (x', gamma').
+Proof.
+  intros x x' la gamma gamma' las Hin.
+  induction las as [| la' las]; simpl in *.
+  - inv Hin.
+  - inv Hin.
+    + inv H; auto.
+    + apply IHlas; auto.
+Qed.
+
+Lemma mkEntriesForProd_preserves_prod :
+  forall x la gamma nu fi fo p,
+    In (x, la, gamma) (mkEntriesForProd nu fi fo p)
+    -> (x, gamma) = p.
+Proof.
+  intros x la gamma nu fi fo p Hin.
+  destruct p as (x', gamma').
+  unfold mkEntriesForProd in Hin.
+  eapply fromLookaheadList_preserves_prod; eauto.
+Qed.
+
+Lemma mkEntriesForProd_sound :
+  forall g nu fi fo p x la gamma,
+    In (x, la, gamma) (mkEntriesForProd nu fi fo p)
+    -> lookahead_for la x gamma g.
+Proof.
+  intros g nu fi fo p x la gamma Hin.
+  unfold mkEntriesForProd in Hin.
+  unfold lookahead_for.
+Admitted.
+
 Lemma mkParseTableEntries'_sound :
   forall g nu fi fo ps es,
     mkParseTableEntries' nu fi fo ps = es
     -> entries_correct_wrt_productions es ps g.
 Proof.
   intros g nu fi fo ps.
-  induction ps as [| p ps]; intros es Hmk.
-  - simpl in *; subst.
-    admit.
+  induction ps as [| p ps]; intros es Hmk; simpl in *; subst.
+  - apply empty_entries_correct_wrt_empty_productions.
   - simpl in *.
     unfold entries_correct_wrt_productions.
     intros x la gamma.
@@ -70,7 +113,11 @@ Proof.
     + subst.
       apply in_app_or in Hin.
       destruct Hin.
-      * admit. (* need a lemma about mkEntriesForProd *)
+      * split.
+        -- left.
+           destruct p as (x', gamma').
+           apply mkEntriesForProd_preserves_prod in H; auto.
+        -- admit.
       * specialize IHps with
           (es := mkParseTableEntries' nu fi fo ps).
         unfold entries_correct_wrt_productions in IHps.
