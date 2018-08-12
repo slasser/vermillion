@@ -43,7 +43,7 @@ Proof.
   - (* NT case *)
     destruct IHHder as [fuel].
     exists (S fuel); simpl.
-    apply Hcom in l.
+    apply Hcom in l; auto.
     rewrite l.
     rewrite H; auto.
 

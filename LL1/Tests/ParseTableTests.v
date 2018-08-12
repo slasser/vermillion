@@ -50,10 +50,6 @@ Ltac crush' :=
            apply LaMapFacts.empty_in_iff in H; inv H
          | H : NtMap.find _ _ = Some _ |- _ =>
            inv H
-             (*
-         | H : NtMap.find O _ = Some _ |- _ => inv H
-         | H : NtMap.find (S _)%nat _ = Some _ |- _ => inv H
-              *)
          | H : LaMap.find (LA _) _ = Some _ |- _ =>
            inv H
          | H : LaSet.In _ _ |- _ => inv H
@@ -61,6 +57,7 @@ Ltac crush' :=
          | H : NtMap.In _ (NtMap.empty _) |- _ =>
            apply NtMapFacts.empty_in_iff in H; inv H
          | H : ParseTable.find (_, LA _) _ = Some _ |- _ => inv H
+         | H : lookahead_for _ _ _ _ |- _ => inv H
          (* goals *)
          | |- In _ _ => repeat (try (left; reflexivity); right)
          | |- nullable_gamma _ _ => constructor
@@ -492,7 +489,7 @@ Proof with crush.
     pose proof H as H'.
     apply pt_find_in in H'...
   - unfold pt_complete; intros.
-    unfold lookahead_for in H; destruct H as [Hin [Hfi | Hfo]]...
+    destruct H as [Hfi | Hfo]...
     + crush... 
     + crush... 
     + crush... 

@@ -117,14 +117,12 @@ Proof.
     assert (ys = gpre ++ s :: gsuf).
     { destruct Htbl as [Hmin Hcom].
       assert (Hlk : lookahead_for la x (gpre ++ s :: gsuf) g).
-      { unfold lookahead_for.
-        split; auto. }
+      { unfold lookahead_for; auto. }
       assert (Hlk' : lookahead_for la x ys g).
-      { unfold lookahead_for.
-        split; auto. }
+      { unfold lookahead_for; auto. }
       unfold pt_complete in Hcom.
-      apply Hcom in Hlk.
-      apply Hcom in Hlk'.
+      apply Hcom in Hlk; auto.
+      apply Hcom in Hlk'; auto.
       congruence. }
     subst.
     eapply IHHfi.
@@ -137,15 +135,6 @@ Proof.
         rewrite app_assoc in H5.
         apply nullable_split in H5.
         auto.
-Qed.
-
-Lemma lookahead_in_grammar :
-  forall g la x gamma,
-    lookahead_for la x gamma g
-    -> In (x, gamma) (productions g).
-Proof.
-  intros.
-  destruct H; auto.
 Qed.
 
 Lemma sym_derives_nil_nullable :
@@ -167,10 +156,7 @@ Proof.
                -> nullable_gamma g gamma); intros; subst.
   - inv H.
   - simpl in *.
-    econstructor.
-    + apply lookahead_in_grammar in l.
-      eauto.
-    + auto.
+    econstructor; eauto.
   - constructor.
   - apply app_eq_nil in H; destruct H; subst.
     destruct IHHder; auto.
@@ -203,8 +189,6 @@ Proof.
     specialize (IHHder tok toks).
     destruct IHHder; auto.
     econstructor; eauto.
-    apply lookahead_in_grammar in l.
-    eauto.
   - inv H.
   - destruct hdRoot.
     + inv s.

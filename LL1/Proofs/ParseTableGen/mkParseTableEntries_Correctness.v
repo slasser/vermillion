@@ -10,28 +10,14 @@ Import ListNotations.
 
 Definition pt_entries_correct ps g :=
   forall x la gamma,
-    In (x, la, gamma) ps <-> lookahead_for la x gamma g.
-(*
-Definition entries_correct_wrt_production g es x gamma :=
-  forall la, In (x, la, gamma) es <-> lookahead_for la x gamma g.
- *)
+    In (x, la, gamma) ps
+    <-> In (x, gamma) g.(productions)
+        /\ lookahead_for la x gamma g.
 
 (* invariant relating a list of entries to a list of productions *)
 Definition entries_correct_wrt_productions es ps g :=
   forall x la gamma,
     In (x, la, gamma) es <-> In (x, gamma) ps /\ lookahead_for la x gamma g.
-
-(*
-Inductive entries_correct_wrt_productions (g : grammar) :
-  list pt_entry -> list production -> Prop :=
-| EntriesCorrect_nil : 
-    entries_correct_wrt_productions g nil nil
-| EntriesCorrect_cons :
-    forall front_entries back_entries x gamma ps,
-      entries_correct_wrt_productions g back_entries ps
-      -> entries_correct_wrt_production g front_entries x gamma
-      -> entries_correct_wrt_productions g (front_entries ++ back_entries) ((x, gamma) :: ps).
- *)
 
 Lemma invariant_iff_pt_entries_correct :
   forall es g,
@@ -41,11 +27,10 @@ Proof.
   split; [intros Hinv | intros Hspec].
   - unfold entries_correct_wrt_productions, pt_entries_correct in *.
     intros x la gamma.
-    split; [intros Hin | intros Hlf].
+    split; [intros Hin | intros [Hin Hlf]].
     + apply Hinv in Hin.
       destruct Hin; auto.
-    + apply Hinv; split; auto.
-      destruct Hlf; auto.
+    + apply Hinv; auto.
   - unfold pt_entries_correct, entries_correct_wrt_productions in *.
     intros x la gamma.
     split; [intros Hin | intros [Hin Hlf]].
@@ -95,7 +80,6 @@ Lemma mkEntriesForProd_sound :
 Proof.
   intros g nu fi fo p x la gamma Hin.
   unfold mkEntriesForProd in Hin.
-  unfold lookahead_for.
 Admitted.
 
 Lemma mkParseTableEntries'_sound :
@@ -148,5 +132,4 @@ Proof.
   unfold mkParseTableEntries in Hmk.
   eapply mkParseTableEntries'_sound; eauto.
 Qed.
-    
-    
+

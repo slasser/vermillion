@@ -49,16 +49,14 @@ Proof.
     inv Hsdp.
     (* The two right-hand sides must be equal because the grammar is LL(1) *)
     assert (gamma0 = gamma).
-    { destruct l as [Hin Hlk].
-      destruct H0 as [Hin' Hlk'].
-      destruct Hlk as [Hfi | Hfo]; destruct Hlk' as [Hfi' | Hfo'].
+    { destruct l as [Hfi | Hfo]; destruct H1 as [Hfi' | Hfo'].
       - (* first-first case *)
         rewrite <- Happ in Hfi'.
         destruct Htbl as [Hmin Hcom].
-        assert (lookahead_for (peek (word ++ rem)) x gamma g) by (split; auto).
-        assert (lookahead_for (peek (word ++ rem)) x gamma0 g) by (split; auto).
-        apply Hcom in H.
-        apply Hcom in H0.
+        assert (lookahead_for (peek (word ++ rem)) x gamma g) by (left; auto).
+        assert (lookahead_for (peek (word ++ rem)) x gamma0 g) by (left; auto).
+        apply Hcom in H; auto.
+        apply Hcom in H1; auto.
         congruence.
       - (* first-follow conflict *)
         exfalso.
@@ -80,15 +78,15 @@ Proof.
         unfold pt_complete in Hcom.
         rewrite <- Happ in Hfo'.
         assert (Hlk : lookahead_for (peek (word ++ rem)) x gamma g)
-          by (split; auto).
+          by (right; auto).
         assert (Hlk' : lookahead_for (peek (word ++ rem)) x gamma0 g)
-          by (split; auto).
-        apply Hcom in Hlk.
-        apply Hcom in Hlk'.
+          by (right; auto).
+        apply Hcom in Hlk; auto.
+        apply Hcom in Hlk'; auto.
         congruence. }
     subst.
-    eapply IHHder in H1; eauto.
-    do 2 destruct H1; subst; auto.
+    eapply IHHder in H2; eauto.
+    do 2 destruct H2; subst; auto.
 
   - (* nil case *)
     intros word' rem' f' Hgdp Happ.

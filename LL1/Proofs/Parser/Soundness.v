@@ -81,13 +81,13 @@ Proof.
               apply IHpf in Hpf; clear IHpf.
               destruct Hpf as [word].
               destruct H.
+              subst.
               exists word.
               split; auto.
-              eapply tbl_entry_is_lookahead in Hlkp; eauto.
+              destruct Htbl as [Hsou _].
+              apply Hsou in Hlkp.
+              destruct Hlkp as [Hin Hlf].
               econstructor; eauto.
-              (* rewrite H. *) (* Why doesn't this work anymore? *)
-              rewrite <- H in Hlkp.
-              auto.
            ++ inv Hp.
         -- inv Hp.
 

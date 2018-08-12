@@ -170,10 +170,9 @@ Definition lookahead_for
            (x : nonterminal)
            (gamma : list symbol)
            (g : grammar) : Prop :=
-  In (x, gamma) g.(productions)
-  /\ (first_gamma g la gamma
-      \/ (nullable_gamma g gamma
-          /\ follow_sym g la (NT x))).
+  first_gamma g la gamma
+  \/ (nullable_gamma g gamma
+      /\ follow_sym g la (NT x)).
 
 Definition lookahead_set_sound
            (laSet : LaSet.t)
@@ -199,11 +198,13 @@ Definition lookahead_set_for
 Definition pt_sound (tbl : parse_table) (g : grammar) :=
   forall x la gamma,
     pt_lookup x la tbl = Some gamma
-    -> lookahead_for la x gamma g.
+    -> In (x, gamma) g.(productions)
+       /\ lookahead_for la x gamma g.
 
 Definition pt_complete (tbl : parse_table) (g : grammar) :=
   forall la x gamma,
-    lookahead_for la x gamma g
+    In (x, gamma) g.(productions)
+    -> lookahead_for la x gamma g
     -> pt_lookup x la tbl = Some gamma.
 
 Definition parse_table_for (tbl : parse_table) (g : grammar) :=
