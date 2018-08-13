@@ -74,19 +74,18 @@ Proof.
 Qed.
 
 Lemma gamma_with_terminal_not_nullable :
-  forall g xs y zs,
-    nullable_gamma g (xs ++ T y :: zs)
-    -> False.
+  forall g gpre y gsuf,
+    ~ nullable_gamma g (gpre ++ T y :: gsuf).
 Proof.
-  induction xs; intros.
-  - simpl in H.
-    inv H.
-    inv H2.
-  - destruct a.
-    + inv H.
-      inv H2.
-    + inv H.
-      eapply IHxs; eauto.
+  unfold not.
+  induction gpre as [| sym syms]; intros y gsuf Hnu; simpl in *.
+  - inv Hnu.
+    inv H1.
+  - destruct sym.
+    + inv Hnu.
+      inv H1.
+    + inv Hnu.
+      eapply IHsyms; eauto.
 Qed.
 
 Lemma nullable_split :
