@@ -20,7 +20,7 @@ Defined.
 Definition fromLookaheadList x gamma las : list pt_entry :=
   map (fun la => (x, la, gamma)) las.
 
-Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : nt_ls_map) :
+Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
   list lookahead :=
   match gamma with 
   | [] => []

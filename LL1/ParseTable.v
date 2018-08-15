@@ -82,13 +82,15 @@ Hint Constructors nullable_sym nullable_gamma.
 Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
   with nullable_gamma_mutual_ind := Induction for nullable_gamma Sort Prop.
 
-Definition nullable_set_sound (nu : NtSet.t) (g  : grammar) : Prop :=
+Definition nullable_set := NtSet.t.
+
+Definition nullable_set_sound (nu : nullable_set) (g  : grammar) : Prop :=
   forall x, NtSet.In x nu -> nullable_sym g (NT x).
 
-Definition nullable_set_complete (nu : NtSet.t) (g  : grammar) : Prop :=
+Definition nullable_set_complete (nu : nullable_set) (g  : grammar) : Prop :=
   forall x, nullable_sym g (NT x) -> NtSet.In x nu.
 
-Definition nullable_set_for (nu : NtSet.t) (g : grammar) : Prop :=
+Definition nullable_set_for (nu : nullable_set) (g : grammar) : Prop :=
 nullable_set_sound nu g /\ nullable_set_complete nu g.
 
 Inductive first_sym (g : grammar) :
@@ -111,9 +113,9 @@ Inductive first_gamma (g : grammar) : lookahead -> list symbol -> Prop :=
 
 Hint Constructors first_gamma.
 
-Definition nt_ls_map := NtMap.t LaSet.t.
+Definition first_map := NtMap.t LaSet.t.
 
-Definition first_map_sound (fi : nt_ls_map) (g : grammar) : Prop :=
+Definition first_map_sound (fi : first_map) (g : grammar) : Prop :=
   forall x xFirst la,
     NtMap.find x fi = Some xFirst
     -> LaSet.In la xFirst
@@ -121,7 +123,7 @@ Definition first_map_sound (fi : nt_ls_map) (g : grammar) : Prop :=
 
 (* We want a symbol in the first_sym hypothesis
    instead of an (NT x) so that induction is stronger *)
-Definition first_map_complete (fi : nt_ls_map) (g : grammar) : Prop :=
+Definition first_map_complete (fi : first_map) (g : grammar) : Prop :=
   forall la sym x,
     first_sym g la sym
     -> sym = NT x
@@ -129,7 +131,7 @@ Definition first_map_complete (fi : nt_ls_map) (g : grammar) : Prop :=
       NtMap.find x fi = Some xFirst
       /\ LaSet.In la xFirst.
 
-Definition first_map_for (fi : nt_ls_map) (g : grammar) : Prop :=
+Definition first_map_for (fi : first_map) (g : grammar) : Prop :=
   first_map_sound fi g /\ first_map_complete fi g.
 
 Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
@@ -148,13 +150,15 @@ Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
 
 Hint Constructors follow_sym.
 
-Definition follow_map_sound (fo : nt_ls_map) (g : grammar) : Prop :=
+Definition follow_map := NtMap.t LaSet.t.
+
+Definition follow_map_sound (fo : follow_map) (g : grammar) : Prop :=
   forall x xFollow la,
     NtMap.find x fo = Some xFollow
     -> LaSet.In la xFollow
     -> follow_sym g la (NT x).
 
-Definition follow_map_complete (fo : nt_ls_map) (g : grammar) : Prop :=
+Definition follow_map_complete (fo : follow_map) (g : grammar) : Prop :=
   forall s x la,
     follow_sym g la s
     -> s = NT x
@@ -162,7 +166,7 @@ Definition follow_map_complete (fo : nt_ls_map) (g : grammar) : Prop :=
       NtMap.find x fo = Some xFollow
       /\ LaSet.In la xFollow.
 
-Definition follow_map_for (fo : nt_ls_map) (g : grammar) : Prop :=
+Definition follow_map_for (fo : follow_map) (g : grammar) : Prop :=
 follow_map_sound fo g /\ follow_map_complete fo g.
 
 Definition lookahead_for

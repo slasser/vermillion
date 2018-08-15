@@ -483,7 +483,11 @@ Proof.
 Qed.
   
 Lemma mkParseTableEntries_sound :
-  forall g nu fi fo es,
+  forall (g : grammar)
+         (nu : nullable_set)
+         (fi : first_map)
+         (fo : follow_map) 
+         (es : list pt_entry),
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
