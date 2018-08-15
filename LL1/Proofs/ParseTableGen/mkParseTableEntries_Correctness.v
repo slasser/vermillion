@@ -17,23 +17,23 @@ Definition pt_entries_correct ps g :=
         /\ lookahead_for la x gamma g.
 
 (* invariant relating a list of entries to a list of productions *)
-Definition entries_correct_wrt_productions es ps g :=
+Definition pt_entries_correct_wrt_productions es ps g :=
   forall x la gamma,
     In (x, la, gamma) es <-> In (x, gamma) ps /\ lookahead_for la x gamma g.
 
 Lemma invariant_iff_pt_entries_correct :
   forall es g,
-    entries_correct_wrt_productions es (productions g) g <-> pt_entries_correct es g.
+    pt_entries_correct_wrt_productions es (productions g) g <-> pt_entries_correct es g.
 Proof.
   intros es g.
   split; [intros Hinv | intros Hspec].
-  - unfold entries_correct_wrt_productions, pt_entries_correct in *.
+  - unfold pt_entries_correct_wrt_productions, pt_entries_correct in *.
     intros x la gamma.
     split; [intros Hin | intros [Hin Hlf]].
     + apply Hinv in Hin.
       destruct Hin; auto.
     + apply Hinv; auto.
-  - unfold pt_entries_correct, entries_correct_wrt_productions in *.
+  - unfold pt_entries_correct, pt_entries_correct_wrt_productions in *.
     intros x la gamma.
     split; [intros Hin | intros [Hin Hlf]].
     + split.
@@ -45,7 +45,7 @@ Qed.
 
 Lemma empty_entries_correct_wrt_empty_productions :
   forall g,
-    entries_correct_wrt_productions [] [] g.
+    pt_entries_correct_wrt_productions [] [] g.
 Proof.
   intros g.
   split; [intros Hin | intros [Hin _]]; inv Hin.
@@ -296,18 +296,18 @@ Qed.
 
 Lemma fromLookaheadList_preserves_in :
   forall x la gamma las,
-    In (x, la, gamma) (fromLookaheadList x gamma las)
-    -> In la las.
+    In (x, la, gamma) (fromLookaheadList x gamma las) <-> In la las.
 Proof.
-  intros x la gamma las Hin.
-  induction las; simpl in *.
-  - inv Hin.
-  - inv Hin.
-    + inv H; auto.
-    + right; auto.
+  intros x la gamma las.
+  split; intros Hin.
+  - induction las; simpl in *; auto.
+    inv Hin; auto.
+    inv H; auto.
+  - induction las; simpl in *; auto.
+    inv Hin; auto.
 Qed.
 
-Lemma fromLookaheadList_preserves_lookahead_for :
+Lemma fromLookaheadList_preserves_soundness :
   forall g x la gamma las,
     In (x, la, gamma) (fromLookaheadList x gamma las)
     -> (forall la', In la' las -> lookahead_for la' x gamma g)
@@ -326,7 +326,7 @@ Lemma mkFirstEntries_sound :
     -> lookahead_for la x gamma g.
 Proof.
   intros g nu fi x la gamma Hns Hfm Hin.
-  eapply fromLookaheadList_preserves_lookahead_for; eauto.
+  eapply fromLookaheadList_preserves_soundness; eauto.
   intros la' Hin'.
   left.
   eapply firstGamma_sound; eauto.
@@ -340,7 +340,7 @@ Lemma mkFollowEntries_sound :
     -> lookahead_for la x gamma g.
 Proof.
   intros g nu fo x la gamma Hns Hfm Hin.
-  eapply fromLookaheadList_preserves_lookahead_for; eauto.
+  eapply fromLookaheadList_preserves_soundness; eauto.
   intros la' Hin'.
   right.
   eapply followLookahead_sound; eauto.
@@ -364,6 +364,66 @@ Proof.
   - eapply mkFollowEntries_sound; eauto.
 Qed.
 
+Lemma fromLookaheadList_preserves_list_completeness :
+  forall P la las x gamma,
+    P la
+    -> (forall la', P la' -> In la' las)
+    -> In (x, la, gamma) (fromLookaheadList x gamma las).
+Proof.
+  intros P la las x gamma Hp Hcor.
+  apply fromLookaheadList_preserves_in; auto.
+Qed.
+
+Lemma mkFirstEntries_complete :
+  forall g nu fi x la gamma,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> first_gamma g la gamma
+    -> In (x, la, gamma) (mkFirstEntries x gamma nu fi).
+Proof.
+  intros g nu fi x la gamma Hnu Hfi Hfg.
+  unfold mkFirstEntries.
+  eapply fromLookaheadList_preserves_list_completeness with
+      (P := fun la => first_gamma g la gamma); auto.
+  intros la' Hfg'.
+  eapply firstGamma_complete; eauto.
+Qed.
+
+Lemma followLookahead_complete :
+  forall g nu fo x la gamma,
+    nullable_set_for nu g
+    -> follow_map_for fo g
+    -> nullable_gamma g gamma
+    -> follow_sym g la (NT x)
+    -> In la (followLookahead x gamma nu fo).
+Proof.
+  intros g nu fo x la gamma Hns Hfm Hng Hfs.
+  unfold followLookahead.
+  eapply nullableGamma_correct in Hng; eauto.
+  rewrite Hng.
+  destruct Hfm as [Hsou Hcom].
+  eapply Hcom in Hfs.
+  destruct Hfs as [xFollow [Hnf Hli]]; auto.
+  rewrite Hnf.
+  apply in_elements_iff_in_set; auto.
+Qed.
+
+Lemma mkFollowEntries_complete :
+  forall g nu fo x la gamma,
+    nullable_set_for nu g
+    -> follow_map_for fo g
+    -> nullable_gamma g gamma
+    -> follow_sym g la (NT x)
+    -> In (x, la, gamma) (mkFollowEntries x gamma nu fo).
+Proof.
+  intros g nu fo x la gamma Hns Hfm Hng Hfs.
+  unfold mkFollowEntries.
+  apply fromLookaheadList_preserves_list_completeness with
+      (P := fun la => follow_sym g la (NT x)); auto.
+    intros la' Hfs'.
+    eapply followLookahead_complete; eauto.
+Qed.
+
 Lemma mkEntriesForProd_complete :
   forall g nu fi fo x la gamma,
     nullable_set_for nu g
@@ -376,9 +436,10 @@ Proof.
   unfold mkEntriesForProd.
   apply in_or_app.
   inv Hlf.
-  - left; admit.
-  - right; admit.
-Admitted.
+  - left; eapply mkFirstEntries_complete; eauto.
+  - destruct H.
+    right; eapply mkFollowEntries_complete; eauto.
+Qed.
 
 Lemma mkParseTableEntries'_sound :
   forall g nu fi fo ps es,
@@ -386,13 +447,13 @@ Lemma mkParseTableEntries'_sound :
     -> first_map_for fi g
     -> follow_map_for fo g
     -> mkParseTableEntries' nu fi fo ps = es
-    -> entries_correct_wrt_productions es ps g.
+    -> pt_entries_correct_wrt_productions es ps g.
 Proof.
   intros g nu fi fo ps.
   induction ps as [| p ps]; intros es Hnu Hfi Hfo Hmk; simpl in *; subst.
   - apply empty_entries_correct_wrt_empty_productions.
   - simpl in *.
-    unfold entries_correct_wrt_productions.
+    unfold pt_entries_correct_wrt_productions.
     intros x la gamma.
     split; [intros Hin | intros [Hin Hlf]].
     + subst.
@@ -405,7 +466,7 @@ Proof.
         -- eapply mkEntriesForProd_sound; eauto.
       * specialize IHps with
           (es := mkParseTableEntries' nu fi fo ps).
-        unfold entries_correct_wrt_productions in IHps.
+        unfold pt_entries_correct_wrt_productions in IHps.
         apply IHps in H; auto.
         destruct H as [Hin Hlf].
         split; auto.
@@ -417,9 +478,9 @@ Proof.
         eapply mkEntriesForProd_complete; eauto.
       * right.
         specialize (IHps (mkParseTableEntries' nu fi fo ps)).
-        unfold entries_correct_wrt_productions in IHps.
+        unfold pt_entries_correct_wrt_productions in IHps.
         apply IHps; auto.
-Admitted.
+Qed.
   
 Lemma mkParseTableEntries_sound :
   forall g nu fi fo es,
