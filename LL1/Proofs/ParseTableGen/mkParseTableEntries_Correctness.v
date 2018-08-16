@@ -10,9 +10,9 @@ Require Import LL1.Proofs.Lemmas.
 
 Import ListNotations.
 
-Definition pt_entries_correct ps g :=
+Definition pt_entries_correct es g :=
   forall x la gamma,
-    In (x, la, gamma) ps
+    In (x, la, gamma) es
     <-> In (x, gamma) g.(productions)
         /\ lookahead_for la x gamma g.
 
@@ -22,25 +22,11 @@ Definition pt_entries_correct_wrt_productions es ps g :=
     In (x, la, gamma) es <-> In (x, gamma) ps /\ lookahead_for la x gamma g.
 
 Lemma invariant_iff_pt_entries_correct :
-  forall es g,
-    pt_entries_correct_wrt_productions es (productions g) g <-> pt_entries_correct es g.
+  forall g es,
+    pt_entries_correct_wrt_productions es (productions g) g 
+    <-> pt_entries_correct es g.
 Proof.
-  intros es g.
-  split; [intros Hinv | intros Hspec].
-  - unfold pt_entries_correct_wrt_productions, pt_entries_correct in *.
-    intros x la gamma.
-    split; [intros Hin | intros [Hin Hlf]].
-    + apply Hinv in Hin.
-      destruct Hin; auto.
-    + apply Hinv; auto.
-  - unfold pt_entries_correct, pt_entries_correct_wrt_productions in *.
-    intros x la gamma.
-    split; [intros Hin | intros [Hin Hlf]].
-    + split.
-      * apply Hspec in Hin.
-        destruct Hin; auto.
-      * apply Hspec; auto.
-    + apply Hspec; auto.
+  split; intros; auto.
 Qed.
 
 Lemma empty_entries_correct_wrt_empty_productions :
@@ -442,22 +428,21 @@ Proof.
 Qed.
 
 Lemma mkParseTableEntries'_sound :
-  forall g nu fi fo ps es,
+  forall g nu fi fo,
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
-    -> mkParseTableEntries' nu fi fo ps = es
-    -> pt_entries_correct_wrt_productions es ps g.
+    -> forall ps es,
+        mkParseTableEntries' nu fi fo ps = es
+        -> pt_entries_correct_wrt_productions es ps g.
 Proof.
-  intros g nu fi fo ps.
-  induction ps as [| p ps]; intros es Hnu Hfi Hfo Hmk; simpl in *; subst.
+  intros g nu fi fo Hnu Hfi Hfo ps.
+  induction ps as [| p ps]; intros es Hmk; simpl in *; subst.
   - apply empty_entries_correct_wrt_empty_productions.
-  - simpl in *.
-    unfold pt_entries_correct_wrt_productions.
+  - unfold pt_entries_correct_wrt_productions.
     intros x la gamma.
     split; [intros Hin | intros [Hin Hlf]].
-    + subst.
-      apply in_app_or in Hin.
+    + apply in_app_or in Hin.
       destruct Hin.
       * split.
         -- left.
@@ -500,3 +485,103 @@ Proof.
   eapply mkParseTableEntries'_sound; eauto.
 Qed.
 
+(* mkParseTableEntries completeness *)
+
+Definition lists_equivalent (A : Type) (l l' : list A) :=
+  forall x : A,
+    In x l <-> In x l'.
+
+Inductive entries_correct_invariant (g : grammar) :
+  list pt_entry -> list production -> Prop :=
+| EntriesCorrect_nil :
+    entries_correct_invariant g [] []
+| EntriesCorrect_cons :
+    forall front_entries back_entries x gamma ps,
+      entries_correct_invariant g back_entries ps
+      -> (forall x' la gamma',
+             In (x', la, gamma') front_entries 
+             <-> x = x'
+                 /\ gamma = gamma'
+                 /\ lookahead_for la x' gamma' g)
+      -> entries_correct_invariant g 
+                                   (front_entries ++ back_entries)
+                                   ((x, gamma) :: ps).
+
+Lemma eci_iff_pt4 :
+  forall g ps es,
+    entries_correct_invariant g es ps
+    -> pt_entries_correct_wrt_productions es ps g.
+Proof.
+  intros g ps.
+  induction ps; intros es Hinv.
+  - inv Hinv.
+    unfold pt_entries_correct; split; intros.
+    + inv H.
+    + destruct H.
+      inv H.
+  - inv Hinv.
+    unfold pt_entries_correct_wrt_productions.
+    intros x' la gamma'.
+    split.
+    + intros Hin.
+      apply in_app_or in Hin.
+      inv Hin.
+      * apply H3 in H.
+        destruct H as [Hg [Hh Hi]]; subst.
+        split; firstorder.
+      * apply IHps in H2.
+        unfold pt_entries_correct_wrt_productions in H2.
+        apply H2 in H.
+        destruct H.
+        split; [right; auto | auto].
+    + intros [Hin Hlf].
+      apply in_or_app.
+      inv Hin.
+      * inv H.
+        left.
+        apply H3; auto.
+      * apply IHps in H2.
+        unfold pt_entries_correct_wrt_productions in H2.
+        right.
+        apply H2; auto.
+Qed.
+    
+Lemma mkParseTableEntries'_complete :
+  forall g nu fi fo,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> follow_map_for fo g
+    -> forall ps es,
+        entries_correct_invariant g es ps
+          -> exists es',
+          lists_equivalent pt_entry es es'
+          /\ es' = mkParseTableEntries' nu fi fo ps.
+Proof.
+  intros g nu fi fo Hnu Hfi Hfo ps es Hinv.
+  induction Hinv.
+  - simpl. 
+    admit.
+  - destruct IHHinv as [back_entries' [Heq Hmk]].
+    simpl in *.
+Admitted.
+
+Lemma mkParseTableEntries_complete :
+  forall (g : grammar)
+         (nu : nullable_set)
+         (fi : first_map)
+         (fo : follow_map) 
+         (es : list pt_entry),
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> follow_map_for fo g
+    -> entries_correct_invariant g es (productions g)
+    -> exists es' : list pt_entry,
+        lists_equivalent pt_entry es es'
+        /\ es' = mkParseTableEntries nu fi fo g.
+Proof.
+  intros g nu fi fo es Hnu Hfi Hfo Hcor.
+  
+  unfold mkParseTableEntries'.
+  eapply mkParseTableEntries'_complete; eauto.
+Qed.
+  
