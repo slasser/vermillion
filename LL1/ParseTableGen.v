@@ -6,18 +6,18 @@ Require Import LL1.ParseTable.
 
 Import ListNotations.
 
-Definition pt_entry := (nonterminal * lookahead * list symbol)%type.
+Definition table_entry := (nonterminal * lookahead * list symbol)%type.
 
-Lemma pt_entry_dec :
-  forall p p2 : pt_entry,
-    {p = p2} + {p <> p2}.
+Lemma table_entry_dec :
+  forall e e2 : table_entry,
+    {e = e2} + {e <> e2}.
 Proof.
   repeat decide equality.
 Defined.
 
 (* Build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
-Definition fromLookaheadList x gamma las : list pt_entry :=
+Definition fromLookaheadList x gamma las : list table_entry :=
   map (fun la => (x, la, gamma)) las.
 
 Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
@@ -33,7 +33,7 @@ Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
     in  if NtSet.mem x nu then xFirst ++ firstGamma gamma' nu fi else xFirst
   end.
 
-Definition mkFirstEntries x gamma nu fi :=
+Definition firstEntries x gamma nu fi :=
   fromLookaheadList x gamma (firstGamma gamma nu fi).
 
 Fixpoint nullableGamma (gamma : list symbol) (nu : NtSet.t) : bool :=
@@ -52,24 +52,24 @@ Definition followLookahead x gamma nu fo :=
   else 
     [].
 
-Definition mkFollowEntries x gamma nu fo :=
+Definition followEntries x gamma nu fo :=
   fromLookaheadList x gamma (followLookahead x gamma nu fo).
 
-Definition mkEntriesForProd nu fi fo (prod : production) : list pt_entry :=
+Definition entriesForProd nu fi fo (prod : production) : list table_entry :=
   let (x, gamma) := prod in
-  mkFirstEntries x gamma nu fi ++ mkFollowEntries x gamma nu fo.
+  firstEntries x gamma nu fi ++ followEntries x gamma nu fo.
 
-Definition mkParseTableEntries' nu fi fo ps :=
-  flat_map (mkEntriesForProd nu fi fo) ps.
+Definition tableEntries' nu fi fo ps :=
+  flat_map (entriesForProd nu fi fo) ps.
 
-Definition mkParseTableEntries nu fi fo g :=
-  mkParseTableEntries' nu fi fo g.(productions).
+Definition tableEntries nu fi fo g :=
+  tableEntries' nu fi fo g.(productions).
 
 (* Build a parse table from a (correct) list of parse table entries *)
 
-Definition empty_pt := ParseTable.empty (list symbol).
+Definition empty_table := ParseTable.empty (list symbol).
 
-Definition addEntry (p : pt_entry) (o : option parse_table) :=
+Definition addEntry (p : table_entry) (o : option parse_table) :=
   match o with
   | None => None
   | Some tbl =>
@@ -83,6 +83,14 @@ Definition addEntry (p : pt_entry) (o : option parse_table) :=
     end
   end.
 
-Definition mkParseTable (ps : list pt_entry) :=
-  fold_right addEntry (Some empty_pt) ps.
+Definition tableFromEntries (ps : list table_entry) : option parse_table :=
+  fold_right addEntry (Some empty_table) ps.
+
+(* Combining all of the steps into a single function *)
+(* The type of this function will change as I add code for computing NULLABLE, etc. *)
+
+Definition mkParseTable g nu fi fo :=
+  let es := tableEntries nu fi fo g in
+  tableFromEntries es.
+  
 
