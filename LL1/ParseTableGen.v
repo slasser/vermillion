@@ -6,6 +6,96 @@ Require Import LL1.ParseTable.
 
 Import ListNotations.
 
+(* Compute the NULLABLE set for a grammar *)
+
+Fixpoint nullableGamma (gamma : list symbol) (nu : NtSet.t) : bool :=
+  match gamma with 
+  | [] => true
+  | T _ :: _ => false
+  | NT x :: gamma' => if NtSet.mem x nu then nullableGamma gamma' nu else false
+  end.
+
+Definition updateNu p acc:=
+  match (p, acc) with
+  | ((x, gamma), (candidates, nu)) =>
+     if NtSet.mem x candidates && nullableGamma gamma nu then
+       (NtSet.remove x candidates, NtSet.add x nu)
+     else
+       (candidates, nu)
+     end.
+
+Definition nullablePass ps acc :=
+  fold_right updateNu acc ps.
+
+(* Incomplete attempt to write mkNullableSet without fuel *)
+
+Definition card_order (p1 p2 : NtSet.t * NtSet.t) := 
+  let (candidates1, _) := p1 in 
+  let (candidates2, _) := p2 in
+  NtSet.cardinal candidates1 < NtSet.cardinal candidates2.
+
+Lemma card_order_wf' : 
+  forall n candidates nu, 
+    NtSet.cardinal candidates <= n
+    -> Acc card_order (candidates, nu).
+Proof.
+  induction n as [| n]; intros candidates1 nu1 Hle; constructor; 
+  intros (candidates2, nu2) Hco; unfold card_order in Hco; try omega.
+  apply IHn; omega.
+Defined.
+
+Lemma card_order_wf : well_founded card_order.
+Proof.
+  unfold well_founded; intros (candidates, nu).
+  eapply card_order_wf'; eauto.
+Defined.
+
+Definition mkNullableSet (ps : list production) : (NtSet.t * NtSet.t) -> NtSet.t.
+  refine (Fix card_order_wf
+              (fun _ => _)
+              (fun (pr : NtSet.t * NtSet.t) 
+                   (mkNullableSet : forall pr', card_order pr' pr -> NtSet.t) =>
+                 let (candidates, nu) := pr in
+                 let (candidates', nu') := nullablePass ps pr in
+                 if NtSet.eq_dec candidates candidates' then 
+                   nu' 
+                 else 
+                   mkNullableSet (candidates', nu') _)).
+Abort.
+
+Definition ntSetFromList (ls : list nonterminal) :=
+  fold_right NtSet.add NtSet.empty ls.
+
+Definition lhSet (g : grammar) :=
+  ntSetFromList (map fst (productions g)).
+
+Fixpoint mkNullableSet' (ps : list production) 
+                       (candidates nu : NtSet.t) 
+                       (fuel : nat) :=
+  match fuel with
+  | O => None 
+  | S n => 
+    let (candidates', nu') := nullablePass ps (candidates, nu) in
+    if NtSet.eq_dec candidates candidates' then
+      Some nu'
+    else
+      mkNullableSet' ps candidates' nu' n
+  end.
+
+Definition mkNullableSet (g : grammar) (fuel : nat) :=
+  mkNullableSet' (productions g) (lhSet g) NtSet.empty fuel.
+
+Lemma mkNullableSet_sound :
+  forall g fuel nu,
+    mkNullableSet g fuel = Some nu
+    -> nullable_set_for nu g.
+Proof.
+  intros g fuel nu Hmk.
+  unfold mkNullableSet in Hmk.
+Abort.
+
+(* Build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
+
 Definition table_entry := (nonterminal * lookahead * list symbol)%type.
 
 Lemma table_entry_dec :
