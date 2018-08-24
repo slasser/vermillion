@@ -1,6 +1,10 @@
+Require Import Bool.
 Require Import List.
+Require Import Omega.
+Require Import Program.Wf.
 
 Require Import Lib.Grammar.
+Require Import Lib.Tactics.
 
 Require Import LL1.ParseTable.
 
@@ -15,84 +19,289 @@ Fixpoint nullableGamma (gamma : list symbol) (nu : NtSet.t) : bool :=
   | NT x :: gamma' => if NtSet.mem x nu then nullableGamma gamma' nu else false
   end.
 
-Definition updateNu p acc:=
-  match (p, acc) with
-  | ((x, gamma), (candidates, nu)) =>
-     if NtSet.mem x candidates && nullableGamma gamma nu then
-       (NtSet.remove x candidates, NtSet.add x nu)
-     else
-       (candidates, nu)
-     end.
+Definition updateNu (p : production) (nu : NtSet.t) :=
+  let (x, gamma) := p in
+  if nullableGamma gamma nu then
+    NtSet.add x nu
+  else
+    nu.
 
-Definition nullablePass ps acc :=
-  fold_right updateNu acc ps.
+Definition nullablePass ps nu :=
+  fold_right updateNu nu ps.
 
 (* Incomplete attempt to write mkNullableSet without fuel *)
 
-Definition card_order (p1 p2 : NtSet.t * NtSet.t) := 
-  let (candidates1, _) := p1 in 
-  let (candidates2, _) := p2 in
-  NtSet.cardinal candidates1 < NtSet.cardinal candidates2.
+Definition card_order (s1 s2 : NtSet.t) := 
+  NtSet.cardinal s1 < NtSet.cardinal s2.
 
 Lemma card_order_wf' : 
-  forall n candidates nu, 
-    NtSet.cardinal candidates <= n
-    -> Acc card_order (candidates, nu).
+  forall n s, 
+    NtSet.cardinal s <= n
+    -> Acc card_order s.
 Proof.
-  induction n as [| n]; intros candidates1 nu1 Hle; constructor; 
-  intros (candidates2, nu2) Hco; unfold card_order in Hco; try omega.
+  induction n as [| n]; intros s Hle; constructor;
+  intros s2 Hco; unfold card_order in Hco; try omega.
   apply IHn; omega.
 Defined.
 
 Lemma card_order_wf : well_founded card_order.
 Proof.
-  unfold well_founded; intros (candidates, nu).
+  unfold well_founded; intros s.
   eapply card_order_wf'; eauto.
 Defined.
 
-Definition mkNullableSet (ps : list production) : (NtSet.t * NtSet.t) -> NtSet.t.
-  refine (Fix card_order_wf
-              (fun _ => _)
-              (fun (pr : NtSet.t * NtSet.t) 
-                   (mkNullableSet : forall pr', card_order pr' pr -> NtSet.t) =>
-                 let (candidates, nu) := pr in
-                 let (candidates', nu') := nullablePass ps pr in
-                 if NtSet.eq_dec candidates candidates' then 
-                   nu' 
-                 else 
-                   mkNullableSet (candidates', nu') _)).
+(* This isn't quite right -- we can prove that nu' is larger 
+   than nu for all recursive calls, but we need to show that 
+   the set difference (all grammar nonterminals - nu') is 
+   getting smaller. *) 
+Definition mkNullableSet (ps : list production) : NtSet.t.
+  refine (let iter := Fix card_order_wf
+                            (fun _ => _)
+                            (fun (nu : NtSet.t)
+                                 (iter : forall nu', card_order nu' nu -> NtSet.t) =>
+                               let nu' := nullablePass ps nu in
+                               if NtSet.eq_dec nu nu' then
+                                 nu'
+                               else
+                                 iter nu' _)
+          in  iter NtSet.empty).
 Abort.
+
+(* Another attempt at a fuel-less mkNullableSet,
+   this time with a different order *)
+
+Definition diff_order (s1 s2 s3 : NtSet.t) := 
+  NtSet.cardinal (NtSet.diff s1 s2) < NtSet.cardinal (NtSet.diff s1 s3).
+
+Lemma diff_order_wf' : 
+  forall n s1 s2, 
+    NtSet.cardinal (NtSet.diff s1 s2) <= n
+    -> Acc (diff_order s1) s2.
+Proof.
+  induction n as [| n]; intros s1 s2 Hle; constructor;
+  intros s3 Hdo; unfold diff_order in Hdo; try omega.
+  apply IHn; omega.
+Defined.
+
+Lemma diff_order_wf :
+  forall s1, well_founded (diff_order s1).
+Proof.
+  intros s1.
+  unfold well_founded; intros s2.
+  eapply diff_order_wf'; eauto.
+Defined.
 
 Definition ntSetFromList (ls : list nonterminal) :=
   fold_right NtSet.add NtSet.empty ls.
 
-Definition lhSet (g : grammar) :=
-  ntSetFromList (map fst (productions g)).
+Definition lhSet (ps : list production) :=
+  ntSetFromList (map fst ps).
 
-Fixpoint mkNullableSet' (ps : list production) 
-                       (candidates nu : NtSet.t) 
-                       (fuel : nat) :=
+(* Better, but we still don't have any information about the
+   relationship between (lhSet ps) and nu in the proof context *)
+Definition mkNullableSet (ps : list production) : NtSet.t.
+  refine (let init := NtSet.empty in
+          let iter := Fix (diff_order_wf (lhSet ps))
+                          (fun _ => _)
+                          (fun (nu : NtSet.t)
+                               (iter : forall nu', diff_order (lhSet ps) nu' nu -> NtSet.t) =>
+                             let nu' := nullablePass ps nu in
+                             if NtSet.eq_dec nu nu' then
+                               nu'
+                             else
+                               iter nu' _) in
+          iter init).
+  simpl in *.
+Abort.
+
+(*
+Lemma nullablePass_le :
+  forall ps nu nu',
+    nu' = nullablePass ps nu
+    -> NtSet.Equal nu nu'
+       \/ NtSet.cardinal nu < NtSet.cardinal nu'.
+Proof.
+  induction ps as [| p ps]; intros nu nu' Heq; simpl in *; subst.
+  - left.
+    apply NtSetEqProps.MP.equal_refl.
+  - destruct (IHps nu (nullablePass ps nu)); auto.
+    + (* nu wasn't changed by any of the latter productions *)
+      pose proof updateNu_le as Hun.
+      destruct (Hun p (nullablePass ps nu) (updateNu p (nullablePass ps nu))); auto.
+      * left.
+        apply NtSetEqProps.MP.equal_trans with
+            (s2 := nullablePass ps nu); auto.
+      * right.
+        apply NtSetEqProps.MP.Equal_cardinal in H.
+        omega.
+    + pose proof updateNu_le as Hun.
+      destruct (Hun p (nullablePass ps nu) (updateNu p (nullablePass ps nu))); auto.
+      * apply NtSetEqProps.MP.Equal_cardinal in H0.
+        right.
+        omega.
+      * right; omega.
+Qed.      
+*)
+
+(* New thing : the intersection part *)
+Definition nullableMeasure (ps : list production) (nu : NtSet.t) :=
+  let candidates := lhSet ps in
+  NtSet.cardinal (NtSet.diff candidates (NtSet.inter candidates nu)).
+
+Lemma cardinal_diff :
+  forall (s1 s2 s3 : NtSet.t),
+    NtSet.cardinal s2 < NtSet.cardinal s3
+    -> NtSet.cardinal (NtSet.diff s1 s2) < NtSet.cardinal (NtSet.diff s1 s3).
+Proof.
+  intros s1 s2 s3 Hlt.
+  rewrite <- NtSetEqProps.MP.diff_inter_cardinal
+    with (s' := s1)
+         (s := s2) in Hlt.
+  rewrite <- NtSetEqProps.MP.diff_inter_cardinal
+    with (s' := s1)
+         (s := s3) in Hlt.
+Abort.
+
+Import MSetDecide.
+Module Import NSD := WDecideOn NT_as_DT NtSet.
+
+Lemma cardinal_gt_iff_lt :
+  forall s1 s2,
+    NtSet.cardinal s1 < NtSet.cardinal s2
+    <-> NtSet.cardinal s2 > NtSet.cardinal s1.
+Proof.
+  split; intros; omega.
+Qed.
+
+Module MP := MSetProperties.Properties NtSet.
+
+Lemma subset_subset_diffs :
+  forall a b c : NtSet.t,
+    NtSet.Subset a b
+    -> NtSet.Subset (NtSet.diff c b) (NtSet.diff c a).
+Proof.
+  intros a b c Hsub; fsetdec.
+Qed.
+
+Lemma subset_subset_inters :
+  forall a b c : NtSet.t,
+    NtSet.Subset a b
+    -> NtSet.Subset (NtSet.inter c a) (NtSet.inter c b).
+Proof.
+  fsetdec.
+Qed.
+
+Lemma in_nin_diff :
+  forall x s1 s2,
+    NtSet.In x s2
+    -> ~ NtSet.In x s1
+    -> NtSet.In x (NtSet.diff s2 s1).
+Proof.
+  fsetdec.
+Qed.
+
+Lemma nin_nin_inter :
+  forall x a b,
+    ~ NtSet.In x b
+    -> ~ NtSet.In x (NtSet.inter a b).
+Proof.
+  fsetdec.
+Qed.
+
+Lemma nullablePass_subset :
+  forall ps nu,
+    NtSet.Subset nu (nullablePass ps nu).
+Proof.
+  induction ps as [| p ps]; intros nu; simpl in *.
+  - apply NtSetEqProps.MP.subset_refl.
+  - unfold updateNu.
+    destruct p as (x, gamma).
+    destruct (nullableGamma gamma (nullablePass ps nu)); auto.
+    apply MP.subset_add_2; auto.
+Qed.
+
+Lemma In_lhSet_cons :
+  forall x' ps x gamma,
+    NtSet.In x' (lhSet ps)
+    -> NtSet.In x' (lhSet ((x, gamma) :: ps)).
+Proof.
+  intros.
+  unfold lhSet in *; simpl in *.
+  apply F.add_2; auto.
+Qed.
+
+Lemma nullablePass_eq_or_exists :
+  forall ps nu,
+    NtSet.Equal nu (nullablePass ps nu)
+    \/ exists x,
+      NtSet.In x (lhSet ps)
+      /\ ~NtSet.In x nu
+      /\ NtSet.In x (nullablePass ps nu).
+Proof.
+  induction ps as [| p ps]; intros nu; simpl in *.
+  - left.
+    apply MP.equal_refl.
+  - unfold updateNu.
+    destruct p as (x, gamma).
+    destruct (nullableGamma gamma (nullablePass ps nu)).
+    + (* gamma is nullable -- add x *)
+      destruct (NtSetEqProps.MP.In_dec x nu).
+      * destruct (IHps nu).
+        -- left; fsetdec.
+        -- right.
+           destruct H as [x' [Hin [Hnin Hin']]].
+           exists x'; repeat split; auto.
+           ++ apply In_lhSet_cons; auto.
+           ++ apply F.add_2; auto.
+      * right.
+        exists x; repeat split; auto.
+        -- unfold lhSet; simpl.
+           apply F.add_1; auto.
+        -- apply F.add_1; auto.
+    + destruct (IHps nu); auto.
+      destruct H as [x' [Hin [Hnin Hin']]].
+      right.
+      exists x'; split; auto.
+      apply In_lhSet_cons; auto.
+Qed.
+      
+(* NtSetEqProps.MP.diff_inter_cardinal *)
+Program Fixpoint mkNullableSet' (ps : list production) 
+        (nu : NtSet.t)
+        { measure (nullableMeasure ps nu) }:=
+  let nu' := nullablePass ps nu in
+  if NtSet.eq_dec nu nu' then
+    Some nu
+  else
+    mkNullableSet' ps nu'.
+Next Obligation.
+  unfold nullableMeasure.
+  pose proof (nullablePass_eq_or_exists ps nu) as Hnp.
+  destruct Hnp as [Heq | Hex].
+  - unfold NtSet.eq in H; congruence.
+  - destruct Hex as [x [Hin [Hnin Hin']]].
+    apply NtSetEqProps.MP.subset_cardinal_lt with (x := x); try fsetdec.
+    apply subset_subset_diffs.
+    apply subset_subset_inters.
+    apply nullablePass_subset.
+Defined.
+
+(* Give up and define mkNullableSet with a fuel argument *)
+Fixpoint mkNullableSet'' (ps : list production) (nu : NtSet.t) (fuel : nat) : option NtSet.t :=
   match fuel with
-  | O => None 
-  | S n => 
-    let (candidates', nu') := nullablePass ps (candidates, nu) in
-    if NtSet.eq_dec candidates candidates' then
+  | O => None
+  | S n' =>
+    let nu' := nullablePass ps nu in
+    if NtSet.eq_dec nu nu' then
       Some nu'
-    else
-      mkNullableSet' ps candidates' nu' n
+    else 
+      mkNullableSet'' ps nu' n'
   end.
 
-Definition mkNullableSet (g : grammar) (fuel : nat) :=
-  mkNullableSet' (productions g) (lhSet g) NtSet.empty fuel.
-
-Lemma mkNullableSet_sound :
-  forall g fuel nu,
-    mkNullableSet g fuel = Some nu
-    -> nullable_set_for nu g.
-Proof.
-  intros g fuel nu Hmk.
-  unfold mkNullableSet in Hmk.
-Abort.
+Definition mkNullableSet_with_fuel (g : grammar) :=
+  mkNullableSet'' (productions g)
+                  NtSet.empty
+                  (NtSet.cardinal (lhSet (productions g))).
 
 (* Build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
@@ -125,13 +334,6 @@ Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
 
 Definition firstEntries x gamma nu fi :=
   fromLookaheadList x gamma (firstGamma gamma nu fi).
-
-Fixpoint nullableGamma (gamma : list symbol) (nu : NtSet.t) : bool :=
-  match gamma with 
-  | [] => true
-  | T _ :: _ => false
-  | NT x :: gamma' => if NtSet.mem x nu then nullableGamma gamma' nu else false
-  end.
 
 Definition followLookahead x gamma nu fo :=
   if nullableGamma gamma nu then
