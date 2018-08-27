@@ -146,21 +146,7 @@ Qed.
 (* New thing : the intersection part *)
 Definition nullableMeasure (ps : list production) (nu : NtSet.t) :=
   let candidates := lhSet ps in
-  NtSet.cardinal (NtSet.diff candidates (NtSet.inter candidates nu)).
-
-Lemma cardinal_diff :
-  forall (s1 s2 s3 : NtSet.t),
-    NtSet.cardinal s2 < NtSet.cardinal s3
-    -> NtSet.cardinal (NtSet.diff s1 s2) < NtSet.cardinal (NtSet.diff s1 s3).
-Proof.
-  intros s1 s2 s3 Hlt.
-  rewrite <- NtSetEqProps.MP.diff_inter_cardinal
-    with (s' := s1)
-         (s := s2) in Hlt.
-  rewrite <- NtSetEqProps.MP.diff_inter_cardinal
-    with (s' := s1)
-         (s := s3) in Hlt.
-Abort.
+  NtSet.cardinal (NtSet.diff candidates nu).
 
 Import MSetDecide.
 Module Import NSD := WDecideOn NT_as_DT NtSet.
@@ -282,7 +268,6 @@ Next Obligation.
   - destruct Hex as [x [Hin [Hnin Hin']]].
     apply NtSetEqProps.MP.subset_cardinal_lt with (x := x); try fsetdec.
     apply subset_subset_diffs.
-    apply subset_subset_inters.
     apply nullablePass_subset.
 Defined.
 
