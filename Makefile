@@ -121,8 +121,8 @@ VFILES:=Lib/Derivation.v\
   LL1/Proofs/Parser/Completeness.v\
   LL1/Proofs/Parser/Monotonicity.v\
   LL1/Proofs/Parser/Soundness.v\
-  LL1/Proofs/ParseTableGen/tableEntries_Correctness.v\
-  LL1/Proofs/ParseTableGen/tableFromEntries_Correctness.v\
+  LL1/Proofs/ParseTableGen/mkEntries_Correctness.v\
+  LL1/Proofs/ParseTableGen/mkParseTable_Correctness.v\
   LL1/Proofs/ParseTableGen/EndToEnd.v\
   AllStar/Parser.v\
   AllStar/ParserTests.v\

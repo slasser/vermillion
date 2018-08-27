@@ -1,8 +1,8 @@
 Require Import LL1.ParseTableGen.
 Require Import LL1.ParseTable.
 
-Require Import LL1.Proofs.ParseTableGen.tableFromEntries_Correctness.
-Require Import LL1.Proofs.ParseTableGen.tableEntries_Correctness.
+Require Import LL1.Proofs.ParseTableGen.mkEntries_Correctness.
+Require Import LL1.Proofs.ParseTableGen.mkParseTable_Correctness.
 
 Theorem genTableForGrammar_sound : 
   forall g nu fi fo tbl,
