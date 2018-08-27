@@ -9,7 +9,7 @@ Require Import LL1.ParseTableGen.
 
 Require Import LL1.Proofs.Lemmas.
 
-Require Import LL1.Proofs.ParseTableGen.tableEntries_Correctness.
+Require Import LL1.Proofs.ParseTableGen.mkEntries_Correctness.
 
 Import ListNotations.
 
