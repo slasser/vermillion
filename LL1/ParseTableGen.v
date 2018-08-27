@@ -165,11 +165,11 @@ Definition entriesForProd nu fi fo (prod : production) : list table_entry :=
   let (x, gamma) := prod in
   firstEntries x gamma nu fi ++ followEntries x gamma nu fo.
 
-Definition tableEntries' nu fi fo ps :=
+Definition mkEntries' nu fi fo ps :=
   flat_map (entriesForProd nu fi fo) ps.
 
-Definition tableEntries nu fi fo g :=
-  tableEntries' nu fi fo g.(productions).
+Definition mkEntries nu fi fo g :=
+  mkEntries' nu fi fo g.(productions).
 
 (* Step 5 : build a parse table from a (correct) list of parse table entries *)
 
@@ -189,13 +189,13 @@ Definition addEntry (p : table_entry) (o : option parse_table) :=
     end
   end.
 
-Definition tableFromEntries (ps : list table_entry) : option parse_table :=
+Definition mkParseTable (ps : list table_entry) : option parse_table :=
   fold_right addEntry (Some empty_table) ps.
 
 (* Combining all of the steps into a single function *)
 (* The type of this function will change as I add code for computing NULLABLE, etc. *)
 
-Definition mkParseTable g nu fi fo :=
-  let es := tableEntries nu fi fo g in
-  tableFromEntries es.
+Definition genTableForGrammar g nu fi fo :=
+  let es := mkEntries nu fi fo g in
+  mkParseTable es.
 

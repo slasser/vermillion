@@ -164,10 +164,10 @@ Proof.
   - intros Hin; inv Hin.
 Qed.
 
-Lemma tableFromEntries_sound_wrt_invariant :
+Lemma mkParseTable_sound_wrt_invariant :
   forall (es  : list table_entry)
          (tbl : parse_table),
-    tableFromEntries es = Some tbl
+    mkParseTable es = Some tbl
     -> table_correct_wrt_entries tbl es.
 Proof.
   intros es.
@@ -181,17 +181,17 @@ Proof.
     eapply addEntry_preserves_invariant; eauto.
 Qed.
 
-Lemma tableFromEntries_sound :
+Lemma mkParseTable_sound :
   forall (es  : list table_entry)
          (g   : grammar)
          (tbl : parse_table),
     entries_correct es g
-    -> tableFromEntries es = Some tbl
+    -> mkParseTable es = Some tbl
     -> parse_table_for tbl g.
 Proof.
   intros es g tbl Hwf Hmk.
   eapply invariant_iff_parse_table_for; eauto.
-  apply tableFromEntries_sound_wrt_invariant; auto.
+  apply mkParseTable_sound_wrt_invariant; auto.
 Qed.
 
 (* tableFromEntries completeness *)
@@ -438,12 +438,12 @@ Proof.
   - auto.
 Qed.
 
-Lemma tableFromEntries_complete_wrt_invariant :
+Lemma mkParseTable_complete_wrt_invariant :
   forall es tbl,
     table_correct_wrt_entries tbl es
     -> exists tbl',
       ParseTable.Equal tbl tbl'
-      /\ tableFromEntries es = Some tbl'.
+      /\ mkParseTable es = Some tbl'.
 Proof.
   intros es.
   induction es as [| ((x, la), gamma) es]; intros post_tbl Htc.
@@ -478,7 +478,7 @@ Proof.
         eapply equal_preserves_invariant; eauto.
 Qed.
 
-Lemma tableFromEntries_complete :
+Lemma mkParseTable_complete :
   forall (es  : list table_entry)
          (g   : grammar)
          (tbl : parse_table),
@@ -486,10 +486,10 @@ Lemma tableFromEntries_complete :
     -> parse_table_for tbl g
     -> exists tbl',
         ParseTable.Equal tbl tbl'
-        /\ tableFromEntries es = Some tbl'.
+        /\ mkParseTable es = Some tbl'.
 Proof.
   intros es g tbl Hwf Hpt.
-  eapply tableFromEntries_complete_wrt_invariant.
+  eapply mkParseTable_complete_wrt_invariant.
   eapply invariant_iff_parse_table_for; eauto.
 Qed.
   

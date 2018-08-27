@@ -427,13 +427,13 @@ Proof.
     right; eapply followEntries_complete; eauto.
 Qed.
 
-Lemma tableEntries'_correct :
+Lemma mkEntries'_correct :
   forall g nu fi fo,
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
     -> forall ps es,
-        tableEntries' nu fi fo ps = es
+        mkEntries' nu fi fo ps = es
         -> entries_correct_wrt_productions es ps g.
 Proof.
   intros g nu fi fo Hnu Hfi Hfo ps.
@@ -450,7 +450,7 @@ Proof.
            apply entriesForProd_preserves_prod in H; auto.
         -- eapply entriesForProd_sound; eauto.
       * specialize IHps with
-          (es := tableEntries' nu fi fo ps).
+          (es := mkEntries' nu fi fo ps).
         unfold entries_correct_wrt_productions in IHps.
         apply IHps in H; auto.
         destruct H as [Hin Hlf].
@@ -462,13 +462,13 @@ Proof.
       * left.
         eapply entriesForProd_complete; eauto.
       * right.
-        specialize (IHps (tableEntries' nu fi fo ps)).
+        specialize (IHps (mkEntries' nu fi fo ps)).
         unfold entries_correct_wrt_productions in IHps.
         apply IHps; auto.
 Qed.
   
-Lemma tableEntries_correct :
-  forall (g : grammar)
+Theorem mkEntries_correct :
+  forall (g  : grammar)
          (nu : nullable_set)
          (fi : first_map)
          (fo : follow_map) 
@@ -476,12 +476,12 @@ Lemma tableEntries_correct :
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
-    -> tableEntries nu fi fo g = es
+    -> mkEntries nu fi fo g = es
     -> entries_correct es g.
 Proof.
   intros g nu fi fo es Hnu Hfi Hfo Hmk.
   apply invariant_iff_entries_correct.
-  unfold tableEntries in Hmk.
-  eapply tableEntries'_correct; eauto.
+  unfold mkEntries in Hmk.
+  eapply mkEntries'_correct; eauto.
 Qed.
   
