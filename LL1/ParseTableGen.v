@@ -95,7 +95,20 @@ Qed.
 Definition numRemainingCandidates (ps : list production) (nu : NtSet.t) : nat :=
   let candidates := lhSet ps in
   NtSet.cardinal (NtSet.diff candidates nu).
-      
+
+Lemma nullablePass_eq_or_candidates_lt :
+  forall ps nu,
+    NtSet.Equal nu (nullablePass ps nu)
+    \/ numRemainingCandidates ps (nullablePass ps nu) < numRemainingCandidates ps nu.
+Proof.
+  intros ps nu.
+  destruct (nullablePass_eq_or_exists ps nu); auto.
+  right; firstorder.
+  apply NtSetEqProps.MP.subset_cardinal_lt with (x := x); try fsetdec.
+  apply subset_subset_diffs.
+  apply nullablePass_subset.
+Qed.
+  
 Program Fixpoint mkNullableSet' 
         (ps : list production) 
         (nu : NtSet.t)
@@ -107,13 +120,9 @@ Program Fixpoint mkNullableSet'
     mkNullableSet' ps nu'.
 Next Obligation.
   unfold numRemainingCandidates.
-  pose proof (nullablePass_eq_or_exists ps nu) as Hnp.
-  destruct Hnp as [Heq | Hex].
-  - unfold NtSet.eq in H; congruence.
-  - destruct Hex as [x [Hin [Hnin Hin']]].
-    apply NtSetEqProps.MP.subset_cardinal_lt with (x := x); try fsetdec.
-    apply subset_subset_diffs.
-    apply nullablePass_subset.
+  pose proof (nullablePass_eq_or_candidates_lt ps nu) as Hnp.
+  destruct Hnp as [Heq | Hex]; auto.
+  unfold NtSet.eq in H; congruence.
 Defined.
 
 Definition mkNullableSet (g : grammar) : NtSet.t :=
