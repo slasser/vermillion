@@ -180,13 +180,250 @@ Proof.
 Qed.
 
 (* Completeness *)
-  
-Lemma foo :
-  forall g nu,
-    nullable_set_for nu g
-    \/ exists x,
-      NtSet.In x (lhSet g.(productions))
-      /\ ~NtSet.In x nu
-      /\ NtSet.In x (nullablePass g.(productions) nu).
+
+(* NtSet.eq nu (nullablePass (productions g) nu) *)
+
+Definition nullable_set_complete' nu g :=
+  forall (sym : symbol)
+         (x : nonterminal), 
+    nullable_sym g sym
+    -> sym = NT x
+    -> NtSet.In x nu.
+
+Import MSetDecide.
+
+Module Import NtSetDecide := WDecideOn NT_as_DT NtSet.
+
+Lemma np_ng_in :
+  forall nu pre x ys suf,
+    NtSet.Equal nu (nullablePass (pre ++ (x, ys) :: suf) nu)
+    -> nullableGamma ys (nullablePass (pre ++ (x, ys) :: suf) nu)  = true
+    -> NtSet.In x nu.
+Proof.
+  intros nu pre.
+  induction pre as [| (x', ys') pre]; intros x ys suf Heq Hng.
+  - simpl in *.
+    destruct (nullableGamma ys (nullablePass suf nu)) eqn:Hng'.
+    + fsetdec.
+    + congruence.
+  - simpl in *.
+    destruct (nullableGamma ys' (nullablePass (pre ++ (x, ys) :: suf) nu)) eqn:Hng'.
+    + destruct (NtSetFacts.eq_dec x x').
+      * subst; fsetdec.
+Admitted.
+
+Lemma nullablePass_equal_tl :
+  forall ps nu,
+    NtSet.Equal nu (nullablePass ps nu)
+    -> forall suf pre,
+      pre ++ suf = ps
+      -> NtSet.Equal nu (nullablePass suf nu).
+Proof.
+  intros ps nu Heq suf.
+  induction suf as [| (x, gamma) suf]; intros pre Happ.
+  - simpl in *.
+    apply MP.equal_refl.
+  - simpl in *.
+    destruct (nullableGamma gamma (nullablePass suf nu)) eqn:Hng.
+    + subst.
+      apply np_ng_in in Heq; auto.
 Abort.
 
+Lemma nullablePass_add_in :
+  forall ps x nu,
+    NtSet.In x nu
+    -> NtSet.Equal (nullablePass ps nu) (NtSet.add x (nullablePass ps nu)).
+Proof.
+  intros ps.
+  induction ps as [| (x', ys) ps]; intros x nu Hin; simpl in *.
+  - fsetdec.
+  - destruct (nullableGamma ys (nullablePass ps nu)); auto.
+    apply IHps in Hin; fsetdec.
+Qed.
+
+Lemma nullableGamma_ret_true :
+  forall g ys nu,
+    nullable_gamma g ys
+    -> (forall x, In (NT x) ys -> NtSet.In x nu)
+    -> nullableGamma ys nu = true.
+Proof.
+  intros g.
+  induction ys as [| sym syms]; intros nu Hng Hall; auto.
+  destruct sym as [y | x].
+  - inv Hng.
+    inv H1. (* LEMMA *)
+  - simpl. 
+    assert (In (NT x) (NT x :: syms)) by (left; auto).
+    apply Hall in H.
+    rewrite <- NtSet.mem_spec in H.
+    rewrite H.
+    apply IHsyms.
+    + inv Hng; auto.
+    + firstorder.
+Qed.
+
+Lemma nullableGamma_ret_eq :
+  forall s1 s2 gamma,
+    NtSet.Equal s1 s2
+    -> nullableGamma gamma s1 = nullableGamma gamma s2.
+Proof.
+  intros s1 s2 gamma.
+  induction gamma as [| sym syms]; intros Heq; simpl in *; auto.
+  destruct sym as [y | x]; auto.
+  destruct (NtSet.mem x s1) eqn:Hmem; destruct (NtSet.mem x s2) eqn:Hmem'; auto.
+  - rewrite NtSet.mem_spec in Hmem.
+    apply Heq in Hmem.
+    rewrite <- NtSet.mem_spec in Hmem; congruence.
+  - rewrite NtSet.mem_spec in Hmem'.
+    apply Heq in Hmem'.
+    rewrite <- NtSet.mem_spec in Hmem'; congruence.
+Qed.
+
+Lemma nullablePass_right_in_left_in :
+  forall g x ys suf pre,
+    pre ++ suf = g.(productions)
+    -> In (x, ys) suf
+    -> nullable_gamma g ys
+    -> forall nu,
+        NtSet.Equal nu (nullablePass suf nu)
+        -> (forall x, In (NT x) ys -> NtSet.In x nu)
+        -> NtSet.In x nu.
+Proof.
+  intros g x ys suf.
+  induction suf as [| (x', ys') suf]; intros pre Happ Hin Hng nu Heq Hall.
+  - inv Hin.
+  - destruct Hin.
+    + inv H; simpl in *.
+      destruct (nullableGamma ys (nullablePass suf nu)) eqn:Hf.
+      * fsetdec.
+      * exfalso.
+        eapply nullableGamma_ret_true in Hng; eauto.
+        erewrite nullableGamma_ret_eq in Hng; eauto.
+        congruence.
+    + apply IHsuf with (pre := pre ++ [(x', ys')]); auto.
+      * rewrite <- app_assoc; auto. 
+      * simpl in *. 
+        destruct (nullableGamma ys' (nullablePass suf nu)).
+        -- assert (NtSet.In x' nu) by fsetdec. 
+           apply nullablePass_add_in with (ps := suf) in H0.
+           fsetdec.
+        -- auto.
+Qed.           
+
+(*
+Lemma nullablePass_right_in_left_in :
+  forall g x ys,
+    In (x, ys) (productions g)
+    -> nullable_gamma g ys
+    -> forall nu,
+        NtSet.Subset(nullablePass (productions g) nu) nu
+        -> (forall x, In (NT x) ys -> NtSet.In x nu)
+        -> NtSet.In x nu.
+Proof.
+  intros g x ys Hin Hng.
+  induction (productions g) as [| (x', ys') ps]; intros nu Hsub Hall.
+  - inv Hin.
+  - destruct Hin.
+    + inv H; simpl in *.
+      destruct (nullableGamma ys (nullablePass ps nu)) eqn:Hf.
+      * fsetdec.
+      * apply IHps; auto.
+    + simpl in *. 
+      destruct (nullableGamma ys' (nullablePass ps nu)) eqn:Hf.
+      * destruct (NtSetFacts.eq_dec x x').
+        -- subst; fsetdec.
+        -- apply IHps; auto.
+           fsetdec.
+Abort.
+*)
+
+Lemma eq_complete :
+  forall g nu,
+    NtSet.Equal nu (nullablePass (productions g) nu)
+    -> nullable_set_complete' nu g.
+Proof.
+  intros g nu Heq.
+  unfold nullable_set_complete'.
+  intros sym x Hns.
+  revert x.
+  induction Hns using nullable_sym_mutual_ind with
+      (P := fun sym (pf : nullable_sym g sym) =>
+              forall x, sym = NT x -> NtSet.In x nu)
+      (P0 := fun gamma (pf : nullable_gamma g gamma) =>
+               forall x, In (NT x) gamma -> NtSet.In x nu).
+  - intros x' Heq'.
+    inv Heq'.
+    eapply nullablePass_right_in_left_in with 
+    (pre := nil); simpl; eauto.
+  - intros x Hin.
+    inv Hin.
+  - intros x Hin.
+    destruct Hin.
+    + subst.
+      apply IHHns; auto.
+    + auto.
+Qed.
+
+Lemma foo : 
+  forall g nu,
+    nullable_set_complete (mkNullableSet' (productions g) nu) g
+    \/ exists x,
+      NtSet.In x (lhSet (productions g))
+      /\ ~ NtSet.In x nu
+      /\ NtSet.In x (mkNullableSet' (productions g) nu).
+Proof.
+  intros g nu.
+  remember (numRemainingCandidates (productions g) nu) as card.
+  generalize dependent nu.
+  induction card using lt_wf_ind.
+  intros nu Hcard; subst.
+  rewrite mkNullableSet'_eq_body; simpl.
+  destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)) as [Heq | Hneq].
+  - unfold NtSet.eq in Heq. 
+    apply eq_complete in Heq.
+    left.
+    unfold nullable_set_complete.
+    unfold nullable_set_complete' in Heq.
+    intros x Hns.
+    eapply Heq; eauto.
+  - destruct (nullablePass_eq_or_candidates_lt (productions g) nu); auto.
+    + unfold NtSet.eq in Hneq; congruence.
+    + apply H with (nu := nullablePass (productions g) nu) in H0; auto.
+      destruct H0.
+      * left; auto.
+      * right.
+        destruct H0 as [x [Hin [Hnin Hin']]].
+        exists x.
+        split.
+        -- auto.
+        -- split.
+           ++ admit.
+           ++ auto.
+Admitted.
+
+Lemma mkNullableSet'_complete :
+  forall g nu,
+    nullable_set_complete (mkNullableSet' (productions g) nu) g.
+Proof.
+  intros g nu.
+Admitted.
+
+
+Theorem mkNullableSet_complete :
+  forall g nu,
+    mkNullableSet g = nu
+    -> nullable_set_complete nu g.
+Proof.
+  intros g nu Hmk.
+  unfold mkNullableSet in Hmk.
+  assert (mkNullableSet' (productions g) nu = nu) by admit.
+  pose proof foo.
+  destruct (foo g nu).
+  - auto.
+  - destruct H1 as [x [Hin [Hnin Hin']]].
+    rewrite mkNullableSet'_eq_body in H.
+    simpl in H.
+    destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)).
+    + admit.
+    + admit.
+Qed.
