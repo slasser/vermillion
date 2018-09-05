@@ -8,7 +8,10 @@ Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
 
 Import ListNotations.
+Import MSetDecide.
 
+(* Any difference between these? *)
+Module Import NtSetDecide := WDecideOn NT_as_DT NtSet.
 Module MP := MSetProperties.Properties NtSet.
 
 Lemma mkNullableSet'_eq_body :
@@ -30,7 +33,7 @@ Proof.
   end; auto.
 Qed.
 
-Lemma nullableGamma_sound_nu :
+Lemma nu_sound_nullableGamma_sound :
   forall g nu gamma,
     nullable_set_sound nu g
     -> nullableGamma gamma nu = true
@@ -63,7 +66,7 @@ Proof.
   destruct (NtSetFacts.eq_dec x x'); subst.
   - econstructor.
     + admit. (* I've lost the fact that (x', gamma) is a production in g *)
-    + eapply nullableGamma_sound_nu; eauto.
+    + eapply nu_sound_nullableGamma_sound; eauto.
   - apply NtSetFacts.add_3 in Hin; auto.
 Abort.
 
@@ -103,7 +106,7 @@ Proof.
   - econstructor.
     + rewrite <- Happ'.
       apply in_app_cons.
-    + eapply nullableGamma_sound_nu; eauto.
+    + eapply nu_sound_nullableGamma_sound; eauto.
   - apply NtSetFacts.add_3 in Hin; auto.
 Qed.
 
@@ -139,13 +142,13 @@ Qed.
 *)
 
 Lemma nullablePass_preserves_soundness :
-  forall g nu,
+  forall (g : grammar)
+         (nu : NtSet.t),
     nullable_set_sound nu g
     -> nullable_set_sound (nullablePass (productions g) nu) g.
 Proof.
   intros g nu Hsou.
-  apply nullablePass_preserves_soundness' with
-      (pre := []); auto.
+  apply nullablePass_preserves_soundness' with (pre := []); auto.
 Qed.
 
 Lemma mkNullableSet'_preserves_soundness :
@@ -181,55 +184,7 @@ Qed.
 
 (* Completeness *)
 
-(* NtSet.eq nu (nullablePass (productions g) nu) *)
-
-Definition nullable_set_complete' nu g :=
-  forall (sym : symbol)
-         (x : nonterminal), 
-    nullable_sym g sym
-    -> sym = NT x
-    -> NtSet.In x nu.
-
-Import MSetDecide.
-
-Module Import NtSetDecide := WDecideOn NT_as_DT NtSet.
-
-Lemma np_ng_in :
-  forall nu pre x ys suf,
-    NtSet.Equal nu (nullablePass (pre ++ (x, ys) :: suf) nu)
-    -> nullableGamma ys (nullablePass (pre ++ (x, ys) :: suf) nu)  = true
-    -> NtSet.In x nu.
-Proof.
-  intros nu pre.
-  induction pre as [| (x', ys') pre]; intros x ys suf Heq Hng.
-  - simpl in *.
-    destruct (nullableGamma ys (nullablePass suf nu)) eqn:Hng'.
-    + fsetdec.
-    + congruence.
-  - simpl in *.
-    destruct (nullableGamma ys' (nullablePass (pre ++ (x, ys) :: suf) nu)) eqn:Hng'.
-    + destruct (NtSetFacts.eq_dec x x').
-      * subst; fsetdec.
-Admitted.
-
-Lemma nullablePass_equal_tl :
-  forall ps nu,
-    NtSet.Equal nu (nullablePass ps nu)
-    -> forall suf pre,
-      pre ++ suf = ps
-      -> NtSet.Equal nu (nullablePass suf nu).
-Proof.
-  intros ps nu Heq suf.
-  induction suf as [| (x, gamma) suf]; intros pre Happ.
-  - simpl in *.
-    apply MP.equal_refl.
-  - simpl in *.
-    destruct (nullableGamma gamma (nullablePass suf nu)) eqn:Hng.
-    + subst.
-      apply np_ng_in in Heq; auto.
-Abort.
-
-Lemma nullablePass_add_in :
+Lemma nullablePass_add_equal :
   forall ps x nu,
     NtSet.In x nu
     -> NtSet.Equal (nullablePass ps nu) (NtSet.add x (nullablePass ps nu)).
@@ -241,7 +196,7 @@ Proof.
     apply IHps in Hin; fsetdec.
 Qed.
 
-Lemma nullableGamma_ret_true :
+Lemma nullable_gamma_nullableGamma_true :
   forall g ys nu,
     nullable_gamma g ys
     -> (forall x, In (NT x) ys -> NtSet.In x nu)
@@ -262,15 +217,15 @@ Proof.
     + firstorder.
 Qed.
 
-Lemma nullableGamma_ret_eq :
-  forall s1 s2 gamma,
-    NtSet.Equal s1 s2
-    -> nullableGamma gamma s1 = nullableGamma gamma s2.
+Lemma nu_equal_nullableGamma_eq :
+  forall nu nu' gamma,
+    NtSet.Equal nu nu'
+    -> nullableGamma gamma nu = nullableGamma gamma nu'.
 Proof.
-  intros s1 s2 gamma.
+  intros nu nu' gamma.
   induction gamma as [| sym syms]; intros Heq; simpl in *; auto.
   destruct sym as [y | x]; auto.
-  destruct (NtSet.mem x s1) eqn:Hmem; destruct (NtSet.mem x s2) eqn:Hmem'; auto.
+  destruct (NtSet.mem x nu) eqn:Hmem; destruct (NtSet.mem x nu') eqn:Hmem'; auto.
   - rewrite NtSet.mem_spec in Hmem.
     apply Heq in Hmem.
     rewrite <- NtSet.mem_spec in Hmem; congruence.
@@ -297,18 +252,18 @@ Proof.
       destruct (nullableGamma ys (nullablePass suf nu)) eqn:Hf.
       * fsetdec.
       * exfalso.
-        eapply nullableGamma_ret_true in Hng; eauto.
-        erewrite nullableGamma_ret_eq in Hng; eauto.
+        eapply nullable_gamma_nullableGamma_true in Hng; eauto.
+        erewrite nu_equal_nullableGamma_eq in Hng; eauto.
         congruence.
     + apply IHsuf with (pre := pre ++ [(x', ys')]); auto.
       * rewrite <- app_assoc; auto. 
       * simpl in *. 
         destruct (nullableGamma ys' (nullablePass suf nu)).
         -- assert (NtSet.In x' nu) by fsetdec. 
-           apply nullablePass_add_in with (ps := suf) in H0.
+           apply nullablePass_add_equal with (ps := suf) in H0.
            fsetdec.
         -- auto.
-Qed.           
+Qed.
 
 (*
 Lemma nullablePass_right_in_left_in :
@@ -337,7 +292,24 @@ Proof.
 Abort.
 *)
 
-Lemma eq_complete :
+(* Slight rephrasing of nullable_set_complete so that it's 
+   compatible with induction on a nullable_sym judgment *)
+Definition nullable_set_complete' nu g :=
+  forall (sym : symbol)
+         (x : nonterminal), 
+    nullable_sym g sym
+    -> sym = NT x
+    -> NtSet.In x nu.
+
+Lemma ns_complete'_complete :
+  forall g nu,
+    nullable_set_complete' nu g
+    -> nullable_set_complete nu g.
+Proof.
+  unfold nullable_set_complete; eauto.
+Qed.  
+
+Lemma nullablePass_equal_complete' :
   forall g nu,
     NtSet.Equal nu (nullablePass (productions g) nu)
     -> nullable_set_complete' nu g.
@@ -364,6 +336,46 @@ Proof.
     + auto.
 Qed.
 
+Lemma nullablePass_equal_complete :
+  forall g nu,
+    NtSet.Equal nu (nullablePass (productions g) nu)
+    -> nullable_set_complete nu g.
+Proof.
+  intros.
+  apply ns_complete'_complete.
+  apply nullablePass_equal_complete'; auto.
+Qed.
+
+Lemma mkNullableSet'_complete :
+  forall g nu,
+    nullable_set_complete (mkNullableSet' (productions g) nu) g.
+Proof.
+  intros g nu.
+  remember (numRemainingCandidates (productions g) nu) as card.
+  generalize dependent nu.
+  induction card using lt_wf_ind.
+  intros nu Hcard; subst.
+  rewrite mkNullableSet'_eq_body; simpl.
+  destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)) as [Heq | Hneq].
+  - unfold NtSet.eq in Heq.
+    apply nullablePass_equal_complete; auto.
+  - eapply H; clear H; eauto.
+    destruct (nullablePass_eq_or_candidates_lt (productions g) nu); auto.
+    unfold NtSet.eq in Hneq; congruence.
+Qed.
+    
+Theorem mkNullableSet_complete :
+  forall g,
+    nullable_set_complete (mkNullableSet g) g.
+Proof.
+  intros g.
+  unfold mkNullableSet.
+  apply mkNullableSet'_complete.
+Qed.
+
+
+(* Not needed, as it turns out! *)
+(*
 Lemma foo : 
   forall g nu,
     nullable_set_complete (mkNullableSet' (productions g) nu) g
@@ -399,31 +411,6 @@ Proof.
         -- split.
            ++ admit.
            ++ auto.
-Admitted.
+Abort.
+ *)
 
-Lemma mkNullableSet'_complete :
-  forall g nu,
-    nullable_set_complete (mkNullableSet' (productions g) nu) g.
-Proof.
-  intros g nu.
-Admitted.
-
-
-Theorem mkNullableSet_complete :
-  forall g nu,
-    mkNullableSet g = nu
-    -> nullable_set_complete nu g.
-Proof.
-  intros g nu Hmk.
-  unfold mkNullableSet in Hmk.
-  assert (mkNullableSet' (productions g) nu = nu) by admit.
-  pose proof foo.
-  destruct (foo g nu).
-  - auto.
-  - destruct H1 as [x [Hin [Hnin Hin']]].
-    rewrite mkNullableSet'_eq_body in H.
-    simpl in H.
-    destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)).
-    + admit.
-    + admit.
-Qed.
