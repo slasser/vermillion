@@ -137,6 +137,45 @@ Defined.
 Definition mkNullableSet (g : grammar) : NtSet.t :=
   mkNullableSet' g.(productions) NtSet.empty.
 
+(* Step 2 : compute the FIRST map for the grammar using the (correct) NULLABLE set. *)
+
+Definition nullableSym (sym : symbol) (nu : NtSet.t) := 
+  match sym with
+  | T _  => false
+  | NT x => NtSet.mem x nu
+  end.
+
+Definition findOrEmpty (x : nonterminal) (fi : first_map) : LaSet.t :=
+  match NtMap.find x fi with
+  | Some s => s
+  | None => LaSet.empty
+  end.
+
+(* Compute the set of lookahead tokens for gamma using correct NULLABLE set nu
+   and possibly incomplete FIRST map fi *)
+Fixpoint firstGamma (gamma : list symbol) (nu : nullable_set) (fi : first_map) :=
+  match gamma with
+  | [] => LaSet.empty
+  | T y :: _ => LaSet.singleton (LA y)
+  | NT x :: gamma' => 
+    if NtSet.mem x nu then
+      LaSet.union (findOrEmpty x fi) (firstGamma gamma' nu fi)
+    else
+      findOrEmpty x fi
+  end.
+
+Definition updateFi (nu : nullable_set) (p : production) (fi : first_map) : first_map :=
+  let (x, gamma) := p in
+  let fg := firstGamma gamma nu fi in
+  let xFirst' := LaSet.union (findOrEmpty x fi) fg in
+  NtMap.add x xFirst' fi.
+
+
+Definition firstPass (nu : nullable_set) (fi : first_map) (ps : list production) : first_map :=
+  fold_right (updateFi nu) fi ps.
+
+(* To do : I think I'll need to prove that equality of FIRST maps is decidable *)
+
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
 Definition table_entry := (nonterminal * lookahead * list symbol)%type.
