@@ -121,6 +121,7 @@ VFILES:=Lib/Derivation.v\
   LL1/Proofs/Parser/Completeness.v\
   LL1/Proofs/Parser/Monotonicity.v\
   LL1/Proofs/Parser/Soundness.v\
+  LL1/Proofs/ParseTableGen/mkNullableSet_Correctness.v\
   LL1/Proofs/ParseTableGen/mkEntries_Correctness.v\
   LL1/Proofs/ParseTableGen/mkParseTable_Correctness.v\
   LL1/Proofs/ParseTableGen/EndToEnd.v\

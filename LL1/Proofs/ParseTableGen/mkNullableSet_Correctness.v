@@ -118,9 +118,15 @@ Proof.
   rewrite mkNullableSet'_eq_body; simpl.
   destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)) as [Heq | Hneq]; auto.
   eapply H; clear H; eauto.
-  - destruct (nullablePass_eq_or_candidates_lt (productions g) nu); auto.
-    unfold NtSet.eq in Hneq; congruence.
+  - apply nullablePass_neq_candidates_lt; auto. 
   - apply nullablePass_preserves_soundness; auto.
+Qed.
+
+Lemma empty_nu_sound :
+  forall (g : grammar),
+    nullable_set_sound NtSet.empty g.
+Proof.
+  unfold nullable_set_sound; fsetdec.
 Qed.
 
 Theorem mkNullableSet_sound :
@@ -130,9 +136,7 @@ Proof.
   intros g.
   unfold mkNullableSet.
   apply mkNullableSet'_preserves_soundness.
-  unfold nullable_set_sound; intros. (* LEMMA *)
-  exfalso.
-  rewrite <- NtSetFacts.empty_iff; eauto.
+  apply empty_nu_sound.
 Qed.
 
 (* Completeness *)
@@ -225,7 +229,7 @@ Qed.
    compatible with induction on a nullable_sym judgment *)
 Definition nullable_set_complete' nu g :=
   forall (sym : symbol)
-         (x : nonterminal), 
+         (x   : nonterminal), 
     nullable_sym g sym
     -> sym = NT x
     -> NtSet.In x nu.
@@ -291,11 +295,9 @@ Proof.
   intros nu Hcard; subst.
   rewrite mkNullableSet'_eq_body; simpl.
   destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)) as [Heq | Hneq].
-  - unfold NtSet.eq in Heq.
-    apply nullablePass_equal_complete; auto.
+  - apply nullablePass_equal_complete; auto.
   - eapply H; clear H; eauto.
-    destruct (nullablePass_eq_or_candidates_lt (productions g) nu); auto.
-    unfold NtSet.eq in Hneq; congruence.
+    apply nullablePass_neq_candidates_lt; auto.
 Qed.
     
 Theorem mkNullableSet_complete :
