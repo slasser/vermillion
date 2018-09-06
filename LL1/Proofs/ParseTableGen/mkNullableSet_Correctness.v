@@ -15,7 +15,8 @@ Module Import NtSetDecide := WDecideOn NT_as_DT NtSet.
 Module MP := MSetProperties.Properties NtSet.
 
 Lemma mkNullableSet'_eq_body :
-  forall ps nu,
+  forall (ps : list production)
+         (nu : NtSet.t),
     mkNullableSet' ps nu =
     let nu' := nullablePass ps nu in
     if NtSet.eq_dec nu nu' then
@@ -34,7 +35,9 @@ Proof.
 Qed.
 
 Lemma nu_sound_nullableGamma_sound :
-  forall g nu gamma,
+  forall (g     : grammar)
+         (nu    : NtSet.t)
+         (gamma : list symbol),
     nullable_set_sound nu g
     -> nullableGamma gamma nu = true
     -> nullable_gamma g gamma.
@@ -50,25 +53,6 @@ Proof.
       econstructor; eauto.
     + inv Hng.
 Qed.
-
-(* Here's how I originally tried to write this lemma
-   and ran into difficulty *)
-Lemma nullablePass_preserves_soundness :
-  forall g nu,
-    nullable_set_sound nu g
-    -> nullable_set_sound (nullablePass (productions g) nu) g.
-Proof.
-  intros g nu Hsou.
-  induction (productions g) as [| (x, gamma) ps]; simpl; auto.
-  destruct (nullableGamma gamma (nullablePass ps nu)) eqn:Hng; auto.
-  unfold nullable_set_sound.
-  intros x' Hin.
-  destruct (NtSetFacts.eq_dec x x'); subst.
-  - econstructor.
-    + admit. (* I've lost the fact that (x', gamma) is a production in g *)
-    + eapply nu_sound_nullableGamma_sound; eauto.
-  - apply NtSetFacts.add_3 in Hin; auto.
-Abort.
 
 Lemma cons_app_singleton :
   forall A (x : A) (ys : list A),
@@ -110,39 +94,8 @@ Proof.
   - apply NtSetFacts.add_3 in Hin; auto.
 Qed.
 
-(* Another way to prove that nullablePass preserves soundness
-   that I think is slightly less elegant *)
-(*
-Lemma nullablePass_preserves_soundness' :
-  forall (g  : grammar)
-         (nu : NtSet.t)
-         (ps : list production),
-    (forall x gamma,
-        In (x, gamma) ps
-        -> In (x, gamma) (productions g))
-    -> nullable_set_sound nu g
-    -> nullable_set_sound (nullablePass ps nu) g.
-Proof. 
-  intros g nu ps.
-  induction ps as [| (x', gamma') ps]; intros Hsub Hsou; simpl; auto.
-  assert (Hsub' : forall x gamma,
-             In (x, gamma) ps -> In (x, gamma) (productions g)).
-  { intros x gamma Hin.
-    apply Hsub; right; auto. }
-  apply IHps in Hsub'; auto.
-  destruct (nullableGamma gamma' (nullablePass ps nu)) eqn:Hng; auto.
-  unfold nullable_set_sound.
-  intros x Hin.
-  destruct (NtSetFacts.eq_dec x x'); subst.
-  - econstructor.
-    + apply Hsub; left; auto.
-    + eapply nullableGamma_sound_nu; eauto.
-  - apply NtSetFacts.add_3 in Hin; auto.
-Qed.
-*)
-
 Lemma nullablePass_preserves_soundness :
-  forall (g : grammar)
+  forall (g  : grammar)
          (nu : NtSet.t),
     nullable_set_sound nu g
     -> nullable_set_sound (nullablePass (productions g) nu) g.
@@ -152,7 +105,7 @@ Proof.
 Qed.
 
 Lemma mkNullableSet'_preserves_soundness :
-  forall (g : grammar)
+  forall (g  : grammar)
          (nu : NtSet.t),
     nullable_set_sound nu g
     -> nullable_set_sound (mkNullableSet' (productions g) nu) g.
@@ -235,7 +188,10 @@ Proof.
 Qed.
 
 Lemma nullablePass_right_in_left_in :
-  forall g x ys suf pre,
+  forall (g  : grammar)
+         (x  : nonterminal)
+         (ys : list symbol)
+         (suf pre : list production),
     pre ++ suf = g.(productions)
     -> In (x, ys) suf
     -> nullable_gamma g ys
@@ -265,33 +221,6 @@ Proof.
         -- auto.
 Qed.
 
-(*
-Lemma nullablePass_right_in_left_in :
-  forall g x ys,
-    In (x, ys) (productions g)
-    -> nullable_gamma g ys
-    -> forall nu,
-        NtSet.Subset(nullablePass (productions g) nu) nu
-        -> (forall x, In (NT x) ys -> NtSet.In x nu)
-        -> NtSet.In x nu.
-Proof.
-  intros g x ys Hin Hng.
-  induction (productions g) as [| (x', ys') ps]; intros nu Hsub Hall.
-  - inv Hin.
-  - destruct Hin.
-    + inv H; simpl in *.
-      destruct (nullableGamma ys (nullablePass ps nu)) eqn:Hf.
-      * fsetdec.
-      * apply IHps; auto.
-    + simpl in *. 
-      destruct (nullableGamma ys' (nullablePass ps nu)) eqn:Hf.
-      * destruct (NtSetFacts.eq_dec x x').
-        -- subst; fsetdec.
-        -- apply IHps; auto.
-           fsetdec.
-Abort.
-*)
-
 (* Slight rephrasing of nullable_set_complete so that it's 
    compatible with induction on a nullable_sym judgment *)
 Definition nullable_set_complete' nu g :=
@@ -301,14 +230,19 @@ Definition nullable_set_complete' nu g :=
     -> sym = NT x
     -> NtSet.In x nu.
 
+(* Proof that it's equivalent *)
 Lemma ns_complete'_complete :
   forall g nu,
     nullable_set_complete' nu g
-    -> nullable_set_complete nu g.
+    <-> nullable_set_complete nu g.
 Proof.
-  unfold nullable_set_complete; eauto.
-Qed.  
+  split; intros.
+  - unfold nullable_set_complete; eauto.
+  - unfold nullable_set_complete'; intros; subst; auto.
+Qed.
 
+(* Proof that when the iteration in mkNullableSet' converges, 
+   the resulting  NULLABLE set is complete *)
 Lemma nullablePass_equal_complete' :
   forall g nu,
     NtSet.Equal nu (nullablePass (productions g) nu)
@@ -319,8 +253,8 @@ Proof.
   intros sym x Hns.
   revert x.
   induction Hns using nullable_sym_mutual_ind with
-      (P := fun sym (pf : nullable_sym g sym) =>
-              forall x, sym = NT x -> NtSet.In x nu)
+      (P  := fun sym (pf : nullable_sym g sym) =>
+               forall x, sym = NT x -> NtSet.In x nu)
       (P0 := fun gamma (pf : nullable_gamma g gamma) =>
                forall x, In (NT x) gamma -> NtSet.In x nu).
   - intros x' Heq'.
@@ -373,44 +307,15 @@ Proof.
   apply mkNullableSet'_complete.
 Qed.
 
+(* Putting both mkNullableSet correctness properties into a single theorem *)
 
-(* Not needed, as it turns out! *)
-(*
-Lemma foo : 
-  forall g nu,
-    nullable_set_complete (mkNullableSet' (productions g) nu) g
-    \/ exists x,
-      NtSet.In x (lhSet (productions g))
-      /\ ~ NtSet.In x nu
-      /\ NtSet.In x (mkNullableSet' (productions g) nu).
+Theorem mkNullableSet_correct :
+  forall (g : grammar),
+    nullable_set_for (mkNullableSet g) g.
 Proof.
-  intros g nu.
-  remember (numRemainingCandidates (productions g) nu) as card.
-  generalize dependent nu.
-  induction card using lt_wf_ind.
-  intros nu Hcard; subst.
-  rewrite mkNullableSet'_eq_body; simpl.
-  destruct (NtSet.eq_dec nu (nullablePass (productions g) nu)) as [Heq | Hneq].
-  - unfold NtSet.eq in Heq. 
-    apply eq_complete in Heq.
-    left.
-    unfold nullable_set_complete.
-    unfold nullable_set_complete' in Heq.
-    intros x Hns.
-    eapply Heq; eauto.
-  - destruct (nullablePass_eq_or_candidates_lt (productions g) nu); auto.
-    + unfold NtSet.eq in Hneq; congruence.
-    + apply H with (nu := nullablePass (productions g) nu) in H0; auto.
-      destruct H0.
-      * left; auto.
-      * right.
-        destruct H0 as [x [Hin [Hnin Hin']]].
-        exists x.
-        split.
-        -- auto.
-        -- split.
-           ++ admit.
-           ++ auto.
-Abort.
- *)
+  intros g.
+  unfold nullable_set_for; split.
+  - apply mkNullableSet_sound.
+  - apply mkNullableSet_complete.
+Qed.
 
