@@ -151,30 +151,61 @@ Definition findOrEmpty (x : nonterminal) (fi : first_map) : LaSet.t :=
   | None => LaSet.empty
   end.
 
+Definition firstSym (sym : symbol) (fi : first_map) : LaSet.t :=
+  match sym with
+  | T y => LaSet.singleton (LA y)
+  | NT x => findOrEmpty x fi
+  end.
+
 (* Compute the set of lookahead tokens for gamma using correct NULLABLE set nu
    and possibly incomplete FIRST map fi *)
 Fixpoint firstGamma (gamma : list symbol) (nu : nullable_set) (fi : first_map) :=
   match gamma with
   | [] => LaSet.empty
-  | T y :: _ => LaSet.singleton (LA y)
-  | NT x :: gamma' => 
-    if NtSet.mem x nu then
-      LaSet.union (findOrEmpty x fi) (firstGamma gamma' nu fi)
-    else
-      findOrEmpty x fi
-  end.
+  | sym :: gamma' =>
+    if nullableSym sym nu then
+      LaSet.union (firstSym sym fi) (firstGamma gamma' nu fi)
+    else firstSym sym fi
+    end.
 
 Definition updateFi (nu : nullable_set) (p : production) (fi : first_map) : first_map :=
   let (x, gamma) := p in
   let fg := firstGamma gamma nu fi in
-  let xFirst' := LaSet.union (findOrEmpty x fi) fg in
+  let xFirst' := LaSet.union fg (firstSym (NT x) fi) in
   NtMap.add x xFirst' fi.
-
 
 Definition firstPass (nu : nullable_set) (fi : first_map) (ps : list production) : first_map :=
   fold_right (updateFi nu) fi ps.
 
-(* To do : I think I'll need to prove that equality of FIRST maps is decidable *)
+Definition first_map_equiv_dec :
+  forall m m' : first_map,
+    {NtMap.Equiv LaSet.Equal m m'} + {~ NtMap.Equiv (LaSet.Equal) m m'}.
+Proof.
+  intros m m'.
+  destruct (NtMap.equal (LaSet.equal) m m') eqn:Heq.
+  - left.
+    apply NtMapFacts.equal_iff in Heq.
+    rewrite <- NtMapFacts.Equiv_Equivb with
+        (eq_elt := LaSet.Equal) in Heq; auto.
+    unfold NtMapFacts.compat_cmp.
+    intros s s'.
+    rewrite LaSet.equal_spec; split; auto.
+  - right.
+    unfold not; intros.
+    rewrite NtMapFacts.Equiv_Equivb in H.
+    + pose proof (NtMapFacts.equal_iff m m' LaSet.equal).
+      apply H0 in H.
+      congruence.
+    + unfold NtMapFacts.compat_cmp.
+      intros s s'.
+      rewrite LaSet.equal_spec; split; auto.
+Qed.
+
+  
+(* To do : I think I'll need to prove that equality of FIRST maps is decidable -- actually, it's not, but EQUIVALENCE is *)
+
+
+
 
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
