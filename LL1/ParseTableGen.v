@@ -1,5 +1,5 @@
 Require Import List.
-
+Require Import MSets.
 Require Import Program.Wf.
 
 Require Import Lib.Grammar.
@@ -104,14 +104,14 @@ Proof.
   destruct (nullablePass_eq_or_exists ps nu); congruence.
 Qed.
 
-Definition numRemainingCandidates (ps : list production) (nu : NtSet.t) : nat :=
+Definition countNullableCandidates (ps : list production) (nu : NtSet.t) : nat :=
   let candidates := lhSet ps in
   NtSet.cardinal (NtSet.diff candidates nu).
 
 Lemma nullablePass_neq_candidates_lt :
   forall ps nu,
     ~ NtSet.Equal nu (nullablePass ps nu)
-    -> numRemainingCandidates ps (nullablePass ps nu) < numRemainingCandidates ps nu.
+    -> countNullableCandidates ps (nullablePass ps nu) < countNullableCandidates ps nu.
 Proof.
   intros ps nu Hneq.
   apply nullablePass_neq_exists in Hneq.
@@ -124,7 +124,7 @@ Qed.
 Program Fixpoint mkNullableSet' 
         (ps : list production) 
         (nu : NtSet.t)
-        { measure (numRemainingCandidates ps nu) }:=
+        { measure (countNullableCandidates ps nu) }:=
   let nu' := nullablePass ps nu in
   if NtSet.eq_dec nu nu' then
     nu
@@ -171,10 +171,11 @@ Fixpoint firstGamma (gamma : list symbol) (nu : nullable_set) (fi : first_map) :
 Definition updateFi (nu : nullable_set) (p : production) (fi : first_map) : first_map :=
   let (x, gamma) := p in
   let fg := firstGamma gamma nu fi in
-  let xFirst' := LaSet.union fg (firstSym (NT x) fi) in
+  let xFirst := findOrEmpty x fi in
+  let xFirst' := LaSet.union fg xFirst in
   NtMap.add x xFirst' fi.
 
-Definition firstPass (nu : nullable_set) (fi : first_map) (ps : list production) : first_map :=
+Definition firstPass (ps : list production) (nu : nullable_set) (fi : first_map) : first_map :=
   fold_right (updateFi nu) fi ps.
 
 Definition first_map_equiv_dec :
@@ -200,12 +201,72 @@ Proof.
       intros s s'.
       rewrite LaSet.equal_spec; split; auto.
 Qed.
-
   
-(* To do : I think I'll need to prove that equality of FIRST maps is decidable -- actually, it's not, but EQUIVALENCE is *)
+Definition nt_la_pair := (nonterminal * lookahead)%type.
 
+Definition pair_eq_dec :
+  forall (p p' : nt_la_pair),
+    {p = p'} + {~ p = p'}.
+Proof. repeat decide equality. Defined.
+  
+Module MDT_Pair.
+  Definition t := nt_la_pair.
+  Definition eq_dec := pair_eq_dec.
+End MDT_Pair.
 
+Module Pair_as_DT := Make_UDT(MDT_Pair).
+Module PairSet := MSetWeakList.Make Pair_as_DT.
+Module PairSetFacts := WFactsOn Pair_as_DT PairSet.
+Module PairSetEqProps := EqProperties PairSet.
 
+Definition mkPairs (x : nonterminal) (laSet : LaSet.t) :=
+  LaSet.fold (fun la acc => PairSet.add (x, la) acc) laSet PairSet.empty.
+
+Definition pairsOf (fi : first_map) : PairSet.t :=
+  NtMap.fold (fun x laSet acc => PairSet.union (mkPairs x laSet) acc) fi PairSet.empty. 
+
+Fixpoint leftmostLookahead (gamma : list symbol) :=
+  match gamma with 
+  | [] => None
+  | T y :: _ => Some (LA y)
+  | NT _ :: gamma' => leftmostLookahead gamma'
+  end.
+
+Definition leftmostLookaheads' (gammas : list (list symbol)) : LaSet.t :=
+  fold_right (fun gamma acc => 
+                match leftmostLookahead gamma with
+                | Some la => LaSet.add la acc
+                | None => acc
+                end) LaSet.empty gammas.
+
+Definition leftmostLookaheads (ps : list production) :=
+  leftmostLookaheads' (map snd ps).
+
+Definition product (n : NtSet.t) (l : LaSet.t) : PairSet.t :=
+  NtSet.fold (fun x acc => PairSet.union (mkPairs x l) acc) n PairSet.empty.
+
+Definition numFirstCandidates (ps : list production) (fi : first_map) :=
+  let allCandidates := product (lhSet ps) (leftmostLookaheads ps) in
+  PairSet.cardinal (PairSet.diff allCandidates (pairsOf fi)).
+
+(*
+~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
+  ============================
+  numFirstCandidates ps (firstPass ps nu fi) < numFirstCandidates ps fi
+*)
+
+Program Fixpoint mkFirstSet'
+        (ps : list production)
+        (nu : nullable_set) 
+        (fi : first_map)
+        {measure (numFirstCandidates ps fi) } :=
+  let fi' := firstPass ps nu fi in
+  if first_map_equiv_dec fi fi' then
+    fi
+  else
+    mkFirstSet' ps nu fi'.
+Next Obligation.
+Abort.
 
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
