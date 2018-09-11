@@ -218,6 +218,7 @@ Module Pair_as_DT := Make_UDT(MDT_Pair).
 Module PairSet := MSetWeakList.Make Pair_as_DT.
 Module PairSetFacts := WFactsOn Pair_as_DT PairSet.
 Module PairSetEqProps := EqProperties PairSet.
+Module Import PairSetDecide := WDecideOn Pair_as_DT PairSet.
 
 Definition mkPairs (x : nonterminal) (laSet : LaSet.t) :=
   LaSet.fold (fun la acc => PairSet.add (x, la) acc) laSet PairSet.empty.
@@ -249,11 +250,65 @@ Definition numFirstCandidates (ps : list production) (fi : first_map) :=
   let allCandidates := product (lhSet ps) (leftmostLookaheads ps) in
   PairSet.cardinal (PairSet.diff allCandidates (pairsOf fi)).
 
-(*
-~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
-  ============================
-  numFirstCandidates ps (firstPass ps nu fi) < numFirstCandidates ps fi
-*)
+Lemma firstPass_not_equiv_exists :
+  forall nu ps fi,
+    ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
+    -> exists x la,
+      NtSet.In x (lhSet ps)
+      /\ LaSet.In la (leftmostLookaheads ps)
+      /\ ~ PairSet.In (x, la) (pairsOf fi)
+      /\ PairSet.In (x, la) (pairsOf (firstPass ps nu fi)).
+Proof.
+Admitted.
+
+(* To do : there must be a way to avoid duplicating this *)
+Lemma pairset_subset_subset_diffs :
+  forall a b c : PairSet.t,
+    PairSet.Subset a b 
+    -> PairSet.Subset (PairSet.diff c b) (PairSet.diff c a).
+Proof.
+  fsetdec.
+Qed.
+
+Lemma firstPass_subset : 
+  forall nu ps fi,
+    PairSet.Subset (pairsOf fi) (pairsOf (firstPass ps nu fi)).
+Proof.
+Admitted.
+
+Lemma in_A_not_in_B_in_diff :
+  forall elt a b,
+    PairSet.In elt a
+    -> ~ PairSet.In elt b
+    -> PairSet.In elt (PairSet.diff a b).
+Proof.
+  fsetdec.
+Qed.
+
+Module MP := MSetProperties.Properties NtSet.
+
+Lemma in_A_in_B_in_product :
+  forall x la ntSet laSet,
+    NtSet.In x ntSet
+    -> LaSet.In la laSet
+    -> PairSet.In (x, la) (product ntSet laSet).
+Proof.
+Admitted.
+
+Lemma firstPass_not_equiv_candidates_lt :
+  forall nu ps fi,
+    ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
+    -> numFirstCandidates ps (firstPass ps nu fi) < numFirstCandidates ps fi.
+Proof.
+  intros nu ps fi Hneq.
+  apply firstPass_not_equiv_exists in Hneq.
+  destruct Hneq as [x [la [Hin [Ht [Hnin Hin']]]]].
+  apply PairSetEqProps.MP.subset_cardinal_lt with (x := (x, la)); try fsetdec.
+  - apply pairset_subset_subset_diffs.
+    apply firstPass_subset.
+  - apply in_A_not_in_B_in_diff; auto.
+    apply in_A_in_B_in_product; auto.
+Qed.
 
 Program Fixpoint mkFirstSet'
         (ps : list production)
@@ -266,7 +321,8 @@ Program Fixpoint mkFirstSet'
   else
     mkFirstSet' ps nu fi'.
 Next Obligation.
-Abort.
+  apply firstPass_not_equiv_candidates_lt; auto.
+Defined.
 
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
