@@ -244,7 +244,8 @@ Definition leftmostLookaheads (ps : list production) :=
   leftmostLookaheads' (map snd ps).
 
 Definition product (n : NtSet.t) (l : LaSet.t) : PairSet.t :=
-  NtSet.fold (fun x acc => PairSet.union (mkPairs x l) acc) n PairSet.empty.
+  let f := (fun x acc => PairSet.union (mkPairs x l) acc) in
+  NtSet.fold f n PairSet.empty.
 
 Definition numFirstCandidates (ps : list production) (fi : first_map) :=
   let allCandidates := product (lhSet ps) (leftmostLookaheads ps) in
@@ -286,14 +287,106 @@ Proof.
 Qed.
 
 Module MP := MSetProperties.Properties NtSet.
+ 
+Module LSP := MSetProperties.Properties LaSet.
+Module LSD := WDecideOn Lookahead_as_DT LaSet.
 
+Lemma in_elements_iff_in_laSet :
+  forall la s,
+    In la (LaSet.elements s) <-> LaSet.In la s.
+Proof.
+  intros la s.
+  split; intros Hin.
+  - apply LaSetFacts.elements_iff.
+    apply SetoidList.In_InA; auto.
+  - rewrite LaSetFacts.elements_iff in Hin.
+    apply SetoidList.InA_alt in Hin.
+    destruct Hin as [la' [Heq Hin]].
+    subst; auto.
+Qed.
+
+Lemma in_elements_iff_in_ntSet :
+  forall x s,
+    In x (NtSet.elements s) <-> NtSet.In x s.
+Proof.
+  intros x s.
+  split; intros Hin.
+  - apply NtSetFacts.elements_iff.
+    apply SetoidList.In_InA; auto.
+  - rewrite NtSetFacts.elements_iff in Hin.
+    apply SetoidList.InA_alt in Hin.
+    destruct Hin as [x' [Heq Hin]].
+    subst; auto.
+Qed.
+
+Lemma in_set_in_mkPairs' :
+  forall (x   : nonterminal)
+         (la  : lookahead)
+         (las : list lookahead),
+    In la las
+    -> PairSet.In (x, la)
+                  (fold_right (fun la acc => PairSet.add (x, la) acc) 
+                              PairSet.empty 
+                              las).
+Proof.
+  intros x la las Hin.
+  induction las as [| la' las]; simpl in *.
+  - inv Hin.
+  - destruct Hin; subst; try fsetdec.
+    apply IHlas in H; fsetdec.
+Qed.
+
+Lemma in_set_in_mkPairs :
+  forall (x  : nonterminal)
+         (la : lookahead)
+         (s  : LaSet.t),
+    LaSet.In la s
+    -> PairSet.In (x, la) (mkPairs x s).
+Proof.
+  intros x la s Hin.
+  unfold mkPairs.
+  rewrite LSP.fold_spec_right.
+  apply in_set_in_mkPairs'. 
+  rewrite <- in_rev.
+  apply in_elements_iff_in_laSet; auto.
+Qed.
+
+Lemma in_A_in_B_in_product' :
+  forall (x : nonterminal)
+         (xs : list nonterminal)
+         (la : lookahead)
+         (s  : LaSet.t),
+    In x xs
+    -> LaSet.In la s
+    -> PairSet.In (x, la)
+                  (fold_right (fun x acc => PairSet.union (mkPairs x s) acc) 
+                              PairSet.empty 
+                              xs).
+Proof.
+  intros x xs.
+  induction xs as [| x' xs]; intros la s Hin Hin'; simpl in *.
+  - inv Hin.
+  - destruct Hin; subst.
+    + apply in_set_in_mkPairs with (x := x) in Hin'. 
+      fsetdec.
+    + eapply IHxs in H; eauto.
+      fsetdec.
+Qed.
+
+(* To do : add module name before all fsetdec uses *)
 Lemma in_A_in_B_in_product :
   forall x la ntSet laSet,
     NtSet.In x ntSet
     -> LaSet.In la laSet
     -> PairSet.In (x, la) (product ntSet laSet).
 Proof.
-Admitted.
+  intros x la ntSet laSet Hin Hin'.
+  unfold product.
+  rewrite MP.fold_spec_right.
+  apply in_A_in_B_in_product'; auto.
+  rewrite <- in_rev.
+  apply in_elements_iff_in_ntSet; auto.
+Qed.
 
 Lemma firstPass_not_equiv_candidates_lt :
   forall nu ps fi,
