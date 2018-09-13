@@ -73,20 +73,6 @@ Proof.
   apply FirstGamma with (gpre := NT x :: gpre); auto.
 Qed.
 
-Lemma in_elements_iff_in_set :
-  forall la s,
-    In la (LaSet.elements s) <-> LaSet.In la s.
-Proof.
-  intros la s.
-  split; intros Hin.
-  - apply LaSetFacts.elements_iff.
-    apply SetoidList.In_InA; auto.
-  - rewrite LaSetFacts.elements_iff in Hin.
-    apply SetoidList.InA_alt in Hin.
-    destruct Hin as [la' [Heq Hin]].
-    subst; auto.
-Qed.
-
 Lemma first_gamma_terminal_head :
   forall g la y syms,
     first_gamma g la (T y :: syms)
