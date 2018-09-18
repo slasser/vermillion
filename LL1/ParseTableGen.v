@@ -220,11 +220,13 @@ Module Pair_as_DT := Make_UDT(MDT_Pair).
 Module PairSet := MSetWeakList.Make Pair_as_DT.
 Module PairSetFacts := WFactsOn Pair_as_DT PairSet.
 Module PairSetEqProps := EqProperties PairSet.
-Module Import PairSetDecide := WDecideOn Pair_as_DT PairSet.
+Module Import PSD := WDecideOn Pair_as_DT PairSet.
 
 Definition mkPairs (x : nonterminal) (laSet : LaSet.t) :=
+  fold_right (fun la acc => PairSet.add (x, la) acc) PairSet.empty (LaSet.elements laSet).
+(*
   LaSet.fold (fun la acc => PairSet.add (x, la) acc) laSet PairSet.empty.
-
+*)
 (*
 Definition pairsOf (fi : first_map) : PairSet.t :=
   NtMap.fold (fun x laSet acc => PairSet.union (mkPairs x laSet) acc) fi PairSet.empty. 
@@ -344,9 +346,7 @@ Lemma in_set_in_mkPairs :
 Proof.
   intros x la s Hin.
   unfold mkPairs.
-  rewrite LSP.fold_spec_right.
-  apply in_set_in_mkPairs'. 
-  rewrite <- in_rev.
+  apply in_set_in_mkPairs'.
   apply in_elements_iff_in_laSet; auto.
 Qed.
 
@@ -660,7 +660,396 @@ Proof.
   eapply in_firstGamma_in_leftmost_lks' with (gpre := []); simpl; eauto.
   constructor.
 Qed.
+
+Definition list_subset A (xs xs' : list A) :=
+  forall x, In x xs -> In x xs'.
+
+Definition list_equal A (xs xs' : list A) :=
+  forall x, In x xs <-> In x xs'.
+
+Lemma list_subset_neq_exists_elt :
+  forall A xs xs'
+         (eq_dec : forall x x' : A, {x = x'} + {x <> x'}),
+    list_subset A xs xs'
+    -> ~ list_equal A xs xs'
+    -> exists x',
+        In x' xs'
+        /\ ~ In x' xs.
+Proof.
+  intros A xs xs' Heq Hsub Hneq.
+  assert (~ ((list_subset A xs xs') /\ (list_subset A xs' xs))) by firstorder.
+  assert (~ (list_subset A xs' xs)) by firstorder.
+  assert (~ Forall (fun x => In x xs) xs'). (* LEMMA *)
+  { unfold not; intros.
+    apply H0.
+    unfold list_subset.
+    apply Forall_forall; auto. }
+  apply Exists_Forall_neg in H1.
+  - apply Exists_exists; auto.
+  - intros x.
+    destruct (in_dec Heq x xs); auto.
+Qed.
+
+Lemma subset_list_subset :
+  forall s s',
+    LaSet.Subset s s'
+    -> list_subset LaSet.elt (LaSet.elements s) (LaSet.elements s').
+Proof.
+  intros s s' Hsub.
+  unfold LaSet.Subset in *.
+  unfold list_subset.
+  intros x Hin.
+  apply in_elements_iff_in_laSet.
+  apply Hsub.
+  apply in_elements_iff_in_laSet.
+  auto.
+Qed.
+
+Lemma not_equal_not_list_equal :
+  forall s s',
+    ~ LaSet.Equal s s'
+    -> ~ list_equal LaSet.elt (LaSet.elements s) (LaSet.elements s').
+Proof.
+  intros s s' Hneq.
+  unfold not; intros.
+  apply Hneq.
+  unfold LaSet.Equal, list_equal in *.
+  intros x; split; intros Hin.
+  - apply in_elements_iff_in_laSet.
+    apply H.
+    apply in_elements_iff_in_laSet.
+    auto.
+  - apply in_elements_iff_in_laSet.
+    apply H.
+    apply in_elements_iff_in_laSet.
+    auto.
+Qed.
+
+Lemma exists_list_elt_exists_set_elt :
+  forall s s',
+    (exists la, In la (LaSet.elements s')
+                /\ ~ In la (LaSet.elements s))
+    -> exists la, LaSet.In la s'
+                  /\ ~ LaSet.In la s.
+Proof.
+  intros s s' Hex.
+  destruct Hex as [la [Hin Hnin]].
+  exists la; split.
+  - apply in_elements_iff_in_laSet; auto.
+  - unfold not; intros.
+    apply Hnin.
+    apply in_elements_iff_in_laSet; auto.
+Qed.
+
+Lemma subset_neq_exists_elt :
+  forall s s',
+    LaSet.Subset s s'
+    -> ~ LaSet.Equal s s'
+    -> exists la,
+        LaSet.In la s'
+      /\ ~ LaSet.In la s.
+Proof.
+  intros s s' Hsub Hneq.
+  apply subset_list_subset in Hsub.
+  apply not_equal_not_list_equal in Hneq.
+  apply exists_list_elt_exists_set_elt.
+  apply list_subset_neq_exists_elt; auto.
+  apply lookahead_eq_dec.
+Qed.    
       
+Lemma union_neq_exists_elt :
+  forall s s',
+    ~ LaSet.Equal s (LaSet.union s' s)
+    -> exists la,
+      LaSet.In la s'
+      /\ ~ LaSet.In la s.
+Proof.
+  intros.
+  apply subset_neq_exists_elt in H; auto; try LSD.fsetdec.
+  destruct H as [la [Hin Hnin]].
+  assert (LaSet.In la s') by LSD.fsetdec.
+  exists la; split; auto.
+Qed.
+
+Lemma in_lhSet_app :
+  forall x gamma pre suf,
+    NtSet.In x (lhSet (pre ++ (x, gamma) :: suf)).
+Proof.
+  intros.
+  induction pre as [| (x', gamma')]; unfold lhSet; simpl in *.
+  - NSD.fsetdec.
+  - apply NtSetFacts.add_2.
+    auto.
+Qed.
+
+Lemma in_app_cons :
+  forall A (x : A) (pre suf : list A),
+    In x (pre ++ x :: suf).
+Proof.
+  intros A x pre suf.
+  induction pre; simpl; auto.
+Qed.
+
+Lemma ntmap_find_in : forall k vT (v : vT) m,
+    NtMap.find k m = Some v ->
+    NtMap.In k m.
+Proof.
+  intros. rewrite NtMapFacts.in_find_iff. rewrite H.
+  unfold not. intro Hcontra. inv Hcontra.
+Qed.
+
+Lemma maps_equiv_in_findOrEmpty :
+  forall fi fi' x la,
+    NtMap.Equiv LaSet.Equal fi fi'
+    -> LaSet.In la (findOrEmpty x fi')
+    -> LaSet.In la (findOrEmpty x fi).
+Proof.
+  intros fi fi' x la Heq Hin.
+  destruct Heq as [Hin' Hmt].
+  unfold findOrEmpty in *.
+  destruct (NtMap.find x fi) as [s |] eqn:Hf;
+    destruct (NtMap.find x fi') as [s' |] eqn:Hf'.
+  - apply NtMapFacts.find_mapsto_iff in Hf.
+    apply NtMapFacts.find_mapsto_iff in Hf'.
+    eapply Hmt in Hf; eauto.
+    LSD.fsetdec.
+  - apply ntmap_find_in in Hf.
+    apply Hin' in Hf.
+    apply NtMapFacts.in_find_iff in Hf.
+    congruence.
+  - apply ntmap_find_in in Hf'.
+    apply Hin' in Hf'.
+    apply NtMapFacts.in_find_iff in Hf'.
+    congruence.
+  - inv Hin.
+Qed.
+
+Lemma maps_equiv_not_in_findOrEmpty :
+  forall fi fi' x la,
+    NtMap.Equiv LaSet.Equal fi fi'
+    -> ~ LaSet.In la (findOrEmpty x fi)
+    -> ~ LaSet.In la (findOrEmpty x fi').
+Proof.
+  intros fi fi' x la Heq Hnin.
+  unfold not; intros Hin.
+  apply Hnin.
+  eapply maps_equiv_in_findOrEmpty; eauto.
+Qed.
+
+Lemma maps_equiv_in_firstSym_iff :
+  forall fi fi' la sym,
+    NtMap.Equiv LaSet.Equal fi fi'
+    -> LaSet.In la (firstSym sym fi')
+    -> LaSet.In la (firstSym sym fi).
+Proof.
+  intros fi fi' la sym Heq Hin.
+  destruct sym as [y | x]; simpl in *; auto.
+  eapply maps_equiv_in_findOrEmpty; eauto.
+Qed.
+
+Lemma maps_equiv_in_firstGamma_iff :
+  forall nu fi fi' la gamma,
+    NtMap.Equiv LaSet.Equal fi fi'
+    -> LaSet.In la (firstGamma gamma nu fi')
+    -> LaSet.In la (firstGamma gamma nu fi).
+Proof.
+  intros nu fi fi' la gamma Heq Hin.
+  induction gamma as [| sym gamma]; simpl in *.
+  - inv Hin.
+  - destruct (nullableSym sym nu).
+    + eapply LaSetFacts.union_1 in Hin.
+      destruct Hin as [Hfs | Hfg].
+      * apply LaSetFacts.union_2.
+        eapply maps_equiv_in_firstSym_iff; eauto.
+      * apply LaSetFacts.union_3.
+        apply IHgamma; auto.
+    + eapply maps_equiv_in_firstSym_iff; eauto.
+Qed.
+
+Lemma in_mkPairs_in_set' :
+  forall x la las,
+    PairSet.In (x, la)
+               (fold_right (fun la acc => PairSet.add (x, la) acc)
+                           PairSet.empty
+                           las)
+    -> In la las.
+Proof.
+  intros x la las Hin.
+  induction las as [| la' las]; simpl in *.
+  - inv Hin.
+  - destruct (lookahead_eq_dec la' la); subst; auto.
+    right.
+    apply IHlas.
+    eapply PairSetFacts.add_3; eauto.
+    congruence.
+Qed.
+
+Lemma mkPairs_keys_eq :
+  forall x x' la s,
+    PairSet.In (x, la) (mkPairs x' s)
+    -> x = x'.
+Proof.
+  intros x x' la s Hin.
+  unfold mkPairs in *.
+  induction (LaSet.elements s) as [| la' elts]; simpl in *.
+  - inv Hin.
+  - destruct (NtSetFacts.eq_dec x' x); subst; auto.
+    apply IHelts.
+    eapply PairSetFacts.add_3; eauto.
+    congruence.
+Qed.
+  
+Lemma in_mkPairs_in_set :
+  forall x x' la s,
+    PairSet.In (x, la) (mkPairs x' s)
+    -> LaSet.In la s.
+Proof.
+  intros x x' la s Hin.
+  pose proof Hin as Hin'.
+  apply mkPairs_keys_eq in Hin'; subst.
+  apply in_elements_iff_in_laSet.
+  unfold mkPairs in *.
+  eapply in_mkPairs_in_set'; eauto.
+Qed.
+
+Lemma nt_in_pairs_in_elements :
+  forall x la s ps,
+    PairSet.In (x, la)
+               (fold_right
+                  (fun (p : nonterminal * LaSet.t)
+                       (acc : PairSet.t) =>
+                     let (x, s) := p in
+                     PairSet.union (mkPairs x s) acc) PairSet.empty
+                  ps)
+    -> InA (NtMap.eq_key (elt:=LaSet.t)) (x, s) ps.
+Proof.
+  intros x la s ps Hin.
+  induction ps as [| (x', s') ps]; simpl in *.
+  - inv Hin.
+  - apply PairSetFacts.union_1 in Hin.
+    destruct Hin as [Hmk | Hfr].
+    + apply InA_cons_hd.
+      apply mkPairs_keys_eq in Hmk; subst. (* LTAC *)
+      constructor.
+    + apply InA_cons_tl; auto.
+Qed.
+
+Lemma In_InA_eq_key :
+  forall x s s' ps,
+    In (x, s) ps
+    -> InA (NtMap.eq_key (elt := LaSet.t)) (x, s') ps.
+Proof.
+  intros x s s' ps Hin.
+  induction ps as [| (x', s'') ps]; simpl in *.
+  - inv Hin.
+  - destruct Hin as [Heq | Hin].
+    + inv Heq.
+      apply InA_cons_hd.
+      constructor.
+    + apply InA_cons_tl; auto.
+Qed.
+
+(* To do : give the f argument to fold_right a name *)
+Lemma in_pairsOf_in_set' :
+  forall x la s ps,
+    PairSet.In (x, la)
+               (fold_right
+                  (fun (p : nonterminal * LaSet.t) acc =>
+                     let (x, s) := p in
+                     PairSet.union (mkPairs x s) acc)
+                  PairSet.empty
+                  ps)
+    -> In (x, s) ps
+    -> NoDupA (NtMap.eq_key (elt := LaSet.t)) ps
+    -> LaSet.In la s.
+Proof.
+  intros x la s ps Hin Hin' Hnd.
+  induction ps as [| (x', s') ps]; simpl in *.
+  - inv Hin'.
+  - destruct Hin' as [Heq | Hin'].
+    + inv Heq.
+      apply PairSetFacts.union_1 in Hin.
+      destruct Hin as [Hmk | Hfr].
+      * inv Hnd.
+        eapply in_mkPairs_in_set; eauto.
+      * exfalso.
+        inv Hnd.
+        eapply nt_in_pairs_in_elements in Hfr; eauto.
+    + apply PairSetFacts.union_1 in Hin.
+      destruct Hin as [Hmk | Hfr].
+      * exfalso.
+        inv Hnd.
+        apply mkPairs_keys_eq in Hmk; subst.
+        eapply In_InA_eq_key in Hin'; eauto.
+      * inv Hnd.
+        apply IHps; auto.
+Qed.        
+
+Lemma in_pairsOf_in_set :
+  forall x la fi s,
+  PairSet.In (x, la) (pairsOf fi)
+  -> NtMap.find (elt:=LaSet.t) x fi = Some s
+  -> LaSet.In la s.
+Proof.
+  intros x la fi s Hin Hf.
+  eapply in_pairsOf_in_set'; eauto.
+  - apply find_in; auto.
+  - apply NtMap.elements_3w.
+Qed.
+
+Lemma in_pairsOf_in_map_keys :
+  forall x la fi,
+    PairSet.In (x, la) (pairsOf fi)
+    -> NtMap.In (elt:=LaSet.t) x fi.
+Proof.
+  intros x la fi Hin.
+  unfold pairsOf in *.
+  apply NtMapFacts.elements_in_iff.
+  induction (NtMap.elements fi) as [| (x', s) elts]; simpl in *.
+  - inv Hin.
+  - apply PairSetFacts.union_1 in Hin.
+    destruct Hin as [Heq | Hin]; auto.
+    + exists s.
+      apply InA_cons_hd.
+      apply mkPairs_keys_eq in Heq; subst.
+      constructor; auto.
+    + apply IHelts in Hin.
+      destruct Hin as [s' Hin].
+      exists s'.
+      apply InA_cons_tl; auto.
+Qed.
+                                           
+Lemma not_in_findOrEmpty_not_in_pairsOf :
+  forall x la fi,
+    ~ LaSet.In la (findOrEmpty x fi)
+    -> ~ PairSet.In (x, la) (pairsOf fi).
+Proof.
+  intros x la fi Hnin.
+  unfold not; intros Hin.
+  apply Hnin; clear Hnin.
+  unfold findOrEmpty in *.
+  destruct (NtMap.find x fi) as [s |] eqn:Hf.
+  - eapply in_pairsOf_in_set; eauto.
+  - exfalso.
+    apply NtMapFacts.not_find_in_iff in Hf.
+    apply Hf; clear Hf.
+    eapply in_pairsOf_in_map_keys; eauto.
+Qed.
+
+Lemma maps_equiv_sym :
+  forall fi fi',
+    NtMap.Equiv LaSet.Equal fi fi'
+    -> NtMap.Equiv LaSet.Equal fi' fi.
+Proof.
+  intros fi fi' Heq.
+  unfold NtMap.Equiv in *.
+  destruct Heq as [Hin Hmt].
+  split.
+  - intros x; split; intros Hin'; apply Hin; auto.
+  - intros x s s' Hmt' Hmt''.
+    apply Hmt with (e := s') in Hmt'; auto.
+    LSD.fsetdec.
+Qed.
 
 Lemma firstPass_equiv_or_exists' :
   forall nu ps suf pre fi,
@@ -686,21 +1075,48 @@ Proof.
       assert (s = s') by congruence; subst.
       apply LSP.equal_refl.
   - simpl in *.
-    rewrite cons_app_singleton in Happ.
-    rewrite app_assoc in Happ.
-    destruct (IHsuf (pre ++ [(x,gamma)]) fi Happ Hap) as [Heq | Hex].
+    destruct (IHsuf (pre ++ [(x, gamma)]) fi) as [Heq | Hex]; auto.
+    + rewrite <- app_assoc.
+      rewrite <- cons_app_singleton; auto.
+    + match goal with 
+      | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Hleq | Hnleq]
+      end; auto.
+      apply union_neq_exists_elt in Hnleq.
+      destruct Hnleq as [la [Hnin Hin]].
+      right.
+      exists x; exists la.
+      repeat split; auto.
+      * rewrite Happ.
+        apply in_lhSet_app.
+      * eapply in_firstGamma_in_leftmost_lks with 
+            (x := x)
+            (nu := nu)
+            (gamma := gamma); eauto.
+        -- rewrite Happ.
+           apply in_app_cons.
+        -- eapply maps_equiv_in_firstGamma_iff; eauto.
+      * apply not_in_findOrEmpty_not_in_pairsOf; auto.
+        eapply maps_equiv_not_in_findOrEmpty; eauto.
+        apply maps_equiv_sym; auto.
+      * admit.
+    + match goal with 
+      | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Hleq | Hnleq]
+      end; auto. destruct right.
+    pose proof Happ as Happ'.
+    destruct (IHsuf (pre ++ [(x,gamma)]) fi) as [Heq | Hex]; auto.
+    + rewrite <- app_assoc.
+      rewrite <- cons_app_singleton; auto.
     + (* folding over ps hasn't changed fi *) 
       match goal with 
       | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Hleq | Hnleq]
       end; auto.
-      assert (exists la, 
-                 ~ LaSet.In la (findOrEmpty x (firstPass suf nu fi))
-                 /\ LaSet.In la (firstGamma gamma nu (firstPass suf nu fi))) by admit.
-      destruct H as [la [Hnin Hin]].
+      apply union_neq_exists_elt in Hnleq.
+      destruct Hnleq as [la [Hnin Hin]].
       right.
       exists x; exists la.
       repeat split; auto.
-      * admit.
+      * rewrite rewrite Happ
+        apply in_lhSet_app.
       * eapply in_firstGamma_in_leftmost_lks with 
             (x := x)
             (nu := nu)
@@ -744,13 +1160,6 @@ Happ : first_map_wf (firstPass suf nu fi) ps
   LaSet.In la (leftmostLookaheads ps)
 *)
 
-Lemma in_app_cons :
-  forall A (x : A) (pre suf : list A),
-    In x (pre ++ x :: suf).
-Proof.
-  intros A x pre suf.
-  induction pre; simpl; auto.
-Qed.
 
 (*
 Lemma foo :
