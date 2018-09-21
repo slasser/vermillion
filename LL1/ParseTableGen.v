@@ -400,102 +400,6 @@ Proof.
     destruct (leftmostLookahead gamma') as [la'' |]; auto; LSD.fsetdec.
 Qed.
 
-Lemma firstPass_equiv_or_exists :
-  forall nu ps fi,
-    NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
-    \/ exists x la,
-      NtSet.In x (lhSet ps)
-      /\ LaSet.In la (leftmostLookaheads ps)
-      /\ ~ PairSet.In (x, la) (pairsOf fi)
-      /\ PairSet.In (x, la) (pairsOf (firstPass ps nu fi)).
-Proof.
-Admitted.
-(*
-  intros nu ps.
-  induction ps as [| (x, gamma) ps]; intros fi.
-  - simpl in *. 
-    left. (* LEMMA *)
-    unfold NtMap.Equiv.
-    split.
-    + split; intros; auto.
-    + intros k s s' Hmt Hmt'.
-      apply NtMapFacts.find_mapsto_iff in Hmt.
-      apply NtMapFacts.find_mapsto_iff in Hmt'.
-      assert (s = s') by congruence; subst.
-      apply LSP.equal_refl.
-  - simpl in *.
-    match goal with 
-    | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Heq | Hneq]
-    end.
-    + destruct (IHps fi); auto.
-      destruct H as [x' [la [Hin [Hin' [Hnin Hin'']]]]].
-      right.
-      exists x'; exists la.
-      repeat split; auto.
-      * apply In_lhSet_cons; auto.
-      * apply in_leftmostLookaheads_cons; auto.
-    + assert (exists la, 
-                 ~ LaSet.In la (findOrEmpty x (firstPass ps nu fi))
-                 /\ LaSet.In la (firstGamma gamma nu (firstPass ps nu fi))) by admit.
-      destruct H as [la [Hnin Hin]].
-      destruct (IHps fi).
-      * right.
-        exists x; exists la.
-        repeat split; auto.
-        -- unfold lhSet; simpl. 
-           NSD.fsetdec.
-        -- unfold leftmostLookaheads; simpl.
-           destruct (leftmostLookahead gamma) as [la' |].
-           ++ destruct (lookahead_eq_dec la' la); subst.
-              ** LSD.fsetdec.
-              ** apply LaSetFacts.add_neq_iff; auto.
-                 
-
-      * destruct H as [x' [la' [Hin' [Hin'' [Hnin' Hin''']]]]].
-        right.
-        exists x'; exists la'.
-        repeat split; auto.
-        -- apply In_lhSet_cons; auto.
-        -- apply in_leftmostLookaheads_cons; auto.
-        -- admit.
-      right.
-      exists x; exists la.
-      repeat split; auto.
-      * unfold lhSet; simpl. 
-        NSD.fsetdec.
-      * unfold leftmostLookaheads; simpl.
-        destruct (leftmostLookahead gamma).
-        -- LSD.fsetdec.
-*)
-
-Lemma firstPass_not_equiv_exists :
-  forall nu ps fi,
-    ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
-    -> exists x la,
-      NtSet.In x (lhSet ps)
-      /\ LaSet.In la (leftmostLookaheads ps)
-      /\ ~ PairSet.In (x, la) (pairsOf fi)
-      /\ PairSet.In (x, la) (pairsOf (firstPass ps nu fi)).
-Proof.
-  intros nu ps fi Hneq.
-  destruct (firstPass_equiv_or_exists nu ps fi); try congruence.
-Qed.
-  
-Lemma firstPass_not_equiv_candidates_lt :
-  forall nu ps fi,
-    ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
-    -> numFirstCandidates ps (firstPass ps nu fi) < numFirstCandidates ps fi.
-Proof.
-  intros nu ps fi Hneq.
-  apply firstPass_not_equiv_exists in Hneq.
-  destruct Hneq as [x [la [Hin [Ht [Hnin Hin']]]]].
-  apply PairSetEqProps.MP.subset_cardinal_lt with (x := (x, la)); try fsetdec.
-  - apply pairset_subset_subset_diffs.
-    apply firstPass_subset.
-  - apply in_A_not_in_B_in_diff; auto.
-    apply in_A_in_B_in_product; auto.
-Qed.
-
 Definition all_pairs_are_candidates (fi : first_map) (ps : list production) :=
   forall x la,
     PairSet.In (x, la) (pairsOf fi)
@@ -1218,6 +1122,51 @@ Proof.
               apply NtMapFacts.in_find_iff in Hin'''.
               congruence.
       * apply in_add_keys_neq; auto.
+Qed.
+
+Lemma firstPass_equiv_or_exists :
+  forall nu ps fi,
+    all_pairs_are_candidates fi ps
+    -> NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
+       \/ exists x la,
+        NtSet.In x (lhSet ps)
+        /\ LaSet.In la (leftmostLookaheads ps)
+        /\ ~ PairSet.In (x, la) (pairsOf fi)
+        /\ PairSet.In (x, la) (pairsOf (firstPass ps nu fi)).
+Proof.
+  intros nu ps fi Hap.
+  eapply firstPass_equiv_or_exists'; auto.
+  rewrite app_nil_l; auto.
+Qed.
+
+Lemma firstPass_not_equiv_exists :
+  forall nu ps fi,
+    all_pairs_are_candidates fi ps
+    -> ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
+    -> exists x la,
+      NtSet.In x (lhSet ps)
+      /\ LaSet.In la (leftmostLookaheads ps)
+      /\ ~ PairSet.In (x, la) (pairsOf fi)
+      /\ PairSet.In (x, la) (pairsOf (firstPass ps nu fi)).
+Proof.
+  intros nu ps fi Hneq.
+  destruct (firstPass_equiv_or_exists nu ps fi); auto; try congruence.
+Qed.
+  
+Lemma firstPass_not_equiv_candidates_lt :
+  forall nu ps fi,
+    all_pairs_are_candidates fi ps
+    -> ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
+    -> numFirstCandidates ps (firstPass ps nu fi) < numFirstCandidates ps fi.
+Proof.
+  intros nu ps fi Hap Hneq.
+  apply firstPass_not_equiv_exists in Hneq; auto.
+  destruct Hneq as [x [la [Hin [Ht [Hnin Hin']]]]].
+  apply PairSetEqProps.MP.subset_cardinal_lt with (x := (x, la)); try fsetdec.
+  - apply pairset_subset_subset_diffs.
+    apply firstPass_subset.
+  - apply in_A_not_in_B_in_diff; auto.
+    apply in_A_in_B_in_product; auto.
 Qed.
 
 Program Fixpoint mkFirstSet'
