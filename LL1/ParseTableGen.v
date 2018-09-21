@@ -537,7 +537,7 @@ Hin : In (x, gpre ++ T y :: gsuf) ps
   LaSet.In (LA y) (leftmostLookaheads ps)
 *)
 
-Definition all_nt(gamma : list symbol) :=
+Definition all_nt (gamma : list symbol) :=
   Forall (fun sym => isNT sym = true) gamma.
 
 Lemma gpre_nullable_leftmost_lk_some :
@@ -1051,6 +1051,103 @@ Proof.
     LSD.fsetdec.
 Qed.
 
+Lemma map_elements_InA_iff_In :
+  forall x s fi,
+    InA (NtMap.eq_key_elt (elt:=LaSet.t)) (x, s)
+        (NtMap.elements (elt:=LaSet.t) fi)
+    <-> In (x, s) (NtMap.elements (elt:=LaSet.t) fi).
+Proof.
+  intros x s fi; split; intros Hin.
+  - induction (NtMap.elements fi) as [| (x', s') elts]; simpl in *.
+    + inv Hin.
+    + apply InA_cons in Hin.
+      destruct Hin as [Heq | Htl]; auto.
+      inv Heq; simpl in *; subst; auto.
+  - induction (NtMap.elements fi) as [| (x', s') elts]; simpl in *.
+    + inv Hin.
+    + destruct Hin as [Heq | Hin]; auto.
+      inv Heq.
+      apply InA_cons_hd.
+      unfold NtMap.eq_key_elt; auto.
+Qed.
+
+Lemma kv_in_map_iff_in_elements :
+    forall (x  : nonterminal)
+           (s  : LaSet.t)
+           (fi : first_map),
+      NtMap.MapsTo x s fi
+      <-> In (x, s) (NtMap.elements fi).
+Proof.
+  intros x s fi; split; [intros Hmt | intros Hin].
+  - apply map_elements_InA_iff_In. 
+    rewrite <- NtMapFacts.elements_mapsto_iff; auto.
+  - rewrite NtMapFacts.elements_mapsto_iff.
+    apply map_elements_InA_iff_In; auto.
+Qed.
+
+Lemma in_elements_add :
+  forall (x  : nonterminal)
+         (s  : LaSet.t)
+         (fi : first_map),
+    In (x, s) (NtMap.elements (NtMap.add x s fi)).
+Proof.
+  intros x s fi.
+  apply kv_in_map_iff_in_elements.
+  apply NtMap.add_1; auto.
+Qed.
+
+Lemma in_pairsOf_exists' :
+  forall x la elts,
+  PairSet.In (x, la)
+          (fold_right
+             (fun (p : nonterminal * LaSet.t) (acc : PairSet.t) =>
+              let (x, s) := p in PairSet.union (mkPairs x s) acc) PairSet.empty elts)
+  -> exists s : LaSet.t, In (x,s) elts /\ LaSet.In la s.
+Proof.
+  intros x la elts Hin.
+  induction elts as [| (x', s) elts]; simpl in *.
+  - inv Hin.
+  - apply PairSetFacts.union_1 in Hin.
+    destruct Hin as [Heq | Hin]; auto.
+    + pose proof Heq as Heq'. 
+      apply mkPairs_keys_eq in Heq'; subst.
+      apply in_mkPairs_in_set in Heq.
+      exists s; split; auto.
+    + apply IHelts in Hin.
+      destruct Hin as [s' [Hin Hin']].
+      exists s'; split; auto.
+Qed.
+
+Lemma in_pairsOf_exists :
+  forall x la fi,
+    PairSet.In (x, la) (pairsOf fi)
+    -> exists s,
+      NtMap.MapsTo x s fi
+      /\ LaSet.In la s.
+Proof.
+  intros x la fi Hin.
+  apply in_pairsOf_exists' in Hin.
+  destruct Hin as [s [Hin Hin']].
+  exists s; split; auto.
+  apply NtMapFacts.elements_mapsto_iff.
+  apply map_elements_InA_iff_In; auto.
+Qed.
+
+Lemma in_add_keys_neq :
+  forall x y s la fi,
+    x <> y
+    -> PairSet.In (y, la) (pairsOf fi)
+    -> PairSet.In (y, la) (pairsOf (NtMap.add x s fi)).
+Proof.
+  intros x y s la fi Hneq Hin.
+  apply in_pairsOf_exists in Hin.
+  destruct Hin as [s' [Hmt Hin]].
+  eapply in_A_in_B_in_pairsOf; eauto.
+  apply map_elements_InA_iff_In.
+  rewrite <- NtMapFacts.elements_mapsto_iff.
+  apply NtMap.add_2; auto.
+Qed.
+  
 Lemma firstPass_equiv_or_exists' :
   forall nu ps suf pre fi,
     ps = pre ++ suf
@@ -1098,133 +1195,30 @@ Proof.
       * apply not_in_findOrEmpty_not_in_pairsOf; auto.
         eapply maps_equiv_not_in_findOrEmpty; eauto.
         apply maps_equiv_sym; auto.
-      * admit.
+      * eapply in_A_in_B_in_pairsOf. (* need a better name for this lemma *)
+        -- apply in_elements_add.
+        -- LSD.fsetdec.
     + match goal with 
       | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Hleq | Hnleq]
-      end; auto. destruct right.
-    pose proof Happ as Happ'.
-    destruct (IHsuf (pre ++ [(x,gamma)]) fi) as [Heq | Hex]; auto.
-    + rewrite <- app_assoc.
-      rewrite <- cons_app_singleton; auto.
-    + (* folding over ps hasn't changed fi *) 
-      match goal with 
-      | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Hleq | Hnleq]
       end; auto.
+      right.
       apply union_neq_exists_elt in Hnleq.
       destruct Hnleq as [la [Hnin Hin]].
-      right.
-      exists x; exists la.
-      repeat split; auto.
-      * rewrite rewrite Happ
-        apply in_lhSet_app.
-      * eapply in_firstGamma_in_leftmost_lks with 
-            (x := x)
-            (nu := nu)
-            (gamma := gamma); eauto.
-        -- admit.
-        -- admit.
-      * admit.
-      * admit.
-    + match goal with 
-      | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Hleq | Hnleq]
-      end; auto.
-      destruct Hex as [x' [la [Hin [Hin' [Hnin Hin'']]]]].
-      right.
-      exists x'; exists la.
-      repeat split; auto.
-      admit.
-  
-Admitted.
-
-(*
-Lemma foo' :
-  forall fi ps,
-    first_map_wf fi ps
-    -> LaSet.In la (firstGamma gamma nu fi)
-    -> LaSet.In la (leftmostLookaheads ps)
-Happ : first_map_wf (firstPass suf nu fi) ps
-  Hfm : first_map_wf fi ps
-  n : ~
-      LaSet.eq (findOrEmpty x (firstPass suf nu fi))
-        (LaSet.union (firstGamma gamma nu (firstPass suf nu fi))
-           (findOrEmpty x (firstPass suf nu fi)))
-  la : lookahead
-  Hin : PairSet.In (x, la)
-          (pairsOf
-             (NtMap.add x
-                (LaSet.union (firstGamma gamma nu (firstPass suf nu fi))
-                   (findOrEmpty x (firstPass suf nu fi))) 
-                (firstPass suf nu fi)))
-  H : LaSet.In la (firstGamma gamma nu (firstPass suf nu fi))
-  ============================
-  LaSet.In la (leftmostLookaheads ps)
-*)
-
-
-(*
-Lemma foo :
-  forall nu ps suf pre fi,
-    ps = pre ++ suf
-    -> first_map_wf fi ps
-    -> first_map_wf (firstPass suf nu fi) ps.
-Proof.
-  intros nu ps suf.
-  induction suf as [| (x, gamma) suf]; intros pre fi Happ Hfm.
-  - auto.
-  - assert (Hin : In (x, gamma) ps) by (rewrite Happ; apply in_app_cons).
-    rewrite cons_app_singleton in Happ.
-    rewrite app_assoc in Happ.
-    apply IHsuf with (fi := fi) in Happ; clear IHsuf; auto.
-    simpl.
-    match goal with
-    | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s')
-    end; auto.
-    unfold first_map_wf.
-    intros x' la Hin'.
-    destruct (NtSetFacts.eq_dec x' x) as [Heq | Hneq]; subst.
-    + assert (LaSet.In la (LaSet.union (firstGamma gamma nu (firstPass suf nu fi))
-                                       (findOrEmpty x (firstPass suf nu fi)))) by admit.
-      apply LaSetFacts.union_1 in H.
-      destruct H.
-      * admit.
-      * unfold findOrEmpty in H.
-        destruct (NtMap.find x (firstPass suf nu fi)) eqn:Hf.
-        -- apply Happ with (x := x). 
-           admit.
-        -- inv H.
-    + assert (PairSet.In (x', la) (pairsOf (firstPass suf nu fi))) by admit.
-      eapply Happ; eauto.
-    
-
-re
-  - auto.
-  - simpl in *.
-    match goal with
-    | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s')
-    end.
-    + unfold first_map_wf.
-      intros x' la Hin.
-      unfold leftmostLookaheads; simpl.
-      destruct (leftmostLookahead gamma) as [la' |].
-      * destruct (lookahead_eq_dec la' la); subst; try LSD.fsetdec.
-        apply LaSetFacts.add_neq_iff; auto.
-        assert (first_map_wf fi ps) by admit.
-        apply IHps in H.
-        unfold first_map_wf in H.
-        eapply H; eauto.
-      * assert (first_map_wf fi ps) by admit.
-        apply IHps in H.
-        eapply H; eauto.
-    + unfold first_map_wf.
-      intros x' la Hin.
+      destruct Hex as [x' [la' [Hin' [Hin'' [Hnin' Hin''']]]]].
+      repeat eexists; repeat split; eauto.
       destruct (NtSetFacts.eq_dec x' x); subst.
-      * assert (LaSet.In la (LaSet.union (firstGamma gamma nu (firstPass ps nu fi)) (findOrEmpty x (firstPass ps nu fi)))) by admit.
-        apply LaSetFacts.union_1 in H.
-        destruct H.
-        -- 
-  
-Admitted.
-*)
+      * eapply in_A_in_B_in_pairsOf.
+        -- apply in_elements_add.
+        -- apply LaSetFacts.union_3.
+           eapply in_pairsOf_in_set; eauto.
+           unfold findOrEmpty.
+           destruct (NtMap.find x (firstPass suf nu fi)) eqn:Hf; auto.
+           ++ exfalso.
+              apply in_pairsOf_in_map_keys in Hin'''.
+              apply NtMapFacts.in_find_iff in Hin'''.
+              congruence.
+      * apply in_add_keys_neq; auto.
+Qed.
 
 Program Fixpoint mkFirstSet'
         (ps : list production)
