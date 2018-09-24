@@ -1,7 +1,6 @@
 Require Import Bool FunctionalExtensionality List Omega String.
 Require Import Grammar Lib.Lemmas Lib.Tactics Lib.Utils.
 Import ListNotations.
-Open Scope string_scope.
 
 Record subparser :=
   mkSp { stack: list symbol ;
@@ -253,7 +252,7 @@ Definition move (token : string) (sps : list subparser) :
         else 
           nil
       end 
-  in  concat (map moveSp sps).
+  in  List.concat (map moveSp sps).
 
 Definition closure (g : grammar) (freeSyms : SymbolSet.t)
            (sps : list subparser) : list subparser :=
