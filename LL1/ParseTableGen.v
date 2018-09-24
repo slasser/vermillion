@@ -1198,7 +1198,8 @@ Defined.
 Definition fromLookaheadList x gamma las : list table_entry :=
   map (fun la => (x, la, gamma)) las.
 
-Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
+(* To do: rename this function, or create a single version *)
+Fixpoint firstGamma' (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
   list lookahead :=
   match gamma with 
   | [] => []
@@ -1208,11 +1209,11 @@ Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
                   | Some s => LaSet.elements s
                   | None => []
                   end
-    in  if NtSet.mem x nu then xFirst ++ firstGamma gamma' nu fi else xFirst
+    in  if NtSet.mem x nu then xFirst ++ firstGamma' gamma' nu fi else xFirst
   end.
 
 Definition firstEntries x gamma nu fi :=
-  fromLookaheadList x gamma (firstGamma gamma nu fi).
+  fromLookaheadList x gamma (firstGamma' gamma nu fi).
 
 Definition followLookahead x gamma nu fo :=
   if nullableGamma gamma nu then

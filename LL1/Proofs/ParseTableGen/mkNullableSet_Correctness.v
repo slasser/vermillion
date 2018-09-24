@@ -111,7 +111,7 @@ Lemma mkNullableSet'_preserves_soundness :
     -> nullable_set_sound (mkNullableSet' (productions g) nu) g.
 Proof.
   intros g nu.
-  remember (numRemainingCandidates (productions g) nu) as card.
+  remember (countNullableCandidates(productions g) nu) as card.
   generalize dependent nu.
   induction card using lt_wf_ind.
   intros nu Hcard Hsou; subst.
@@ -289,7 +289,7 @@ Lemma mkNullableSet'_complete :
     nullable_set_complete (mkNullableSet' (productions g) nu) g.
 Proof.
   intros g nu.
-  remember (numRemainingCandidates (productions g) nu) as card.
+  remember (countNullableCandidates (productions g) nu) as card.
   generalize dependent nu.
   induction card using lt_wf_ind.
   intros nu Hcard; subst.

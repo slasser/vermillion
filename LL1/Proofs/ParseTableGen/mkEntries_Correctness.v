@@ -116,7 +116,7 @@ Lemma firstGamma_sound :
   forall g la nu fi gamma,
     nullable_set_for nu g
     -> first_map_for fi g
-    -> In la (firstGamma gamma nu fi)
+    -> In la (firstGamma' gamma nu fi)
     -> first_gamma g la gamma.
 Proof.
   intros g la nu fi gamma Hns Hfm Hin.
@@ -134,7 +134,7 @@ Proof.
               unfold first_map_sound in Hsou.
               apply Hsou with (la := la) in Hfind.
               ** apply FirstGamma with (gpre := nil); auto.
-              ** apply in_elements_iff_in_set; auto.
+              ** apply in_elements_iff_in_laSet; auto.
            ++ apply first_gamma_tail_first_gamma_cons; auto.
               destruct Hns as [Hsou Hcom].
               apply Hsou.
@@ -149,7 +149,7 @@ Proof.
            eapply Hsou in Hfind.
            apply FirstGamma with (gpre := nil); auto.
            apply Hfind.
-           apply in_elements_iff_in_set; auto.
+           apply in_elements_iff_in_laSet; auto.
         -- inv Hin.
 Qed.
 
@@ -159,7 +159,7 @@ Lemma firstGamma_complete :
     nullable_set_for nu g
     -> first_map_for fi g
     -> first_gamma g la gamma
-    -> In la (firstGamma gamma nu fi).
+    -> In la (firstGamma' gamma nu fi).
 Proof.
   intros g la nu fi gamma Hnu Hfm Hfg.
   induction gamma as [| sym syms].
@@ -180,7 +180,7 @@ Proof.
               destruct H as [fiSet' [Hnf Hlin]]; auto.
               left.
               assert (fiSet = fiSet') by congruence; subst.
-             apply in_elements_iff_in_set; auto.
+             apply in_elements_iff_in_laSet; auto.
            ++ destruct H.
               right; auto.
         -- simpl.
@@ -199,7 +199,7 @@ Proof.
               eapply Hcom in H.
               destruct H as [fiSet' [Hnf Hli]]; auto.
               assert (fiSet = fiSet') by congruence; subst.
-              apply in_elements_iff_in_set; auto.
+              apply in_elements_iff_in_laSet; auto.
            ++ destruct H.
               destruct Hnu as [Hsou Hcom].
               apply Hcom in H.
@@ -261,7 +261,7 @@ Proof.
     + destruct (NtMap.find x fo) as [foSet |] eqn:Hfind.
       * destruct Hfm as [Hsou Hcom].
         eapply Hsou; eauto.
-        apply in_elements_iff_in_set; auto.
+        apply in_elements_iff_in_laSet; auto.
       * inv Hin.
   - inv Hin.
 Qed.
@@ -377,7 +377,7 @@ Proof.
   eapply Hcom in Hfs.
   destruct Hfs as [xFollow [Hnf Hli]]; auto.
   rewrite Hnf.
-  apply in_elements_iff_in_set; auto.
+  apply in_elements_iff_in_laSet; auto.
 Qed.
 
 Lemma followEntries_complete :
