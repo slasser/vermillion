@@ -413,34 +413,6 @@ Proof.
   auto.
 Qed.
 
-Lemma firstPass_preserves_apac' :
-  forall nu ps suf pre fi,
-    ps = pre ++ suf
-    -> all_pairs_are_candidates fi ps
-    -> all_pairs_are_candidates (firstPass suf nu fi) ps.
-Proof.
-Admitted.
-
-Lemma firstPass_preserves_apac :
-  forall nu ps fi,
-    all_pairs_are_candidates fi ps
-    -> all_pairs_are_candidates (firstPass ps nu fi) ps.
-Proof.
-  intros.
-  apply firstPass_preserves_apac' with (pre := []); auto.
-Qed.
-
-(*
-Lemma in_leftmostLookaheads_exists :
-  forall la ps,
-    exists x gpre y
-Hin : In (x, gpre ++ T y :: gsuf) ps
-  Hapac : all_pairs_are_candidates fi ps
-  Hfa : Forall (fun sym : symbol => isNT sym = true) gpre
-  ============================
-  LaSet.In (LA y) (leftmostLookaheads ps)
-*)
-
 Definition all_nt (gamma : list symbol) :=
   Forall (fun sym => isNT sym = true) gamma.
 
@@ -922,7 +894,20 @@ Proof.
       exists s'.
       apply InA_cons_tl; auto.
 Qed.
-                                           
+
+Lemma in_findOrEmpty_in_pairsOf :
+  forall x la fi,
+    LaSet.In la (findOrEmpty x fi)
+    -> PairSet.In (x, la) (pairsOf fi).
+Proof.
+  intros x la fi Hin.
+  unfold findOrEmpty in *.
+  destruct (NtMap.find x fi) as [s |] eqn:Hf.
+  - eapply in_A_in_B_in_pairsOf; eauto.
+    apply find_in; auto.
+  - inv Hin.
+Qed.
+
 Lemma not_in_findOrEmpty_not_in_pairsOf :
   forall x la fi,
     ~ LaSet.In la (findOrEmpty x fi)
@@ -1041,15 +1026,22 @@ Lemma in_add_keys_neq :
   forall x y s la fi,
     x <> y
     -> PairSet.In (y, la) (pairsOf fi)
-    -> PairSet.In (y, la) (pairsOf (NtMap.add x s fi)).
+       <-> PairSet.In (y, la) (pairsOf (NtMap.add x s fi)).
 Proof.
-  intros x y s la fi Hneq Hin.
-  apply in_pairsOf_exists in Hin.
-  destruct Hin as [s' [Hmt Hin]].
-  eapply in_A_in_B_in_pairsOf; eauto.
-  apply map_elements_InA_iff_In.
-  rewrite <- NtMapFacts.elements_mapsto_iff.
-  apply NtMap.add_2; auto.
+  intros x y s la fi Hneq.
+  split; intros Hin.
+  - apply in_pairsOf_exists in Hin.
+    destruct Hin as [s' [Hmt Hin]].
+    eapply in_A_in_B_in_pairsOf; eauto.
+    apply map_elements_InA_iff_In.
+    rewrite <- NtMapFacts.elements_mapsto_iff.
+    apply NtMap.add_2; auto.
+  - apply in_pairsOf_exists in Hin.
+    destruct Hin as [s' [Hmt Hin]].
+    eapply NtMap.add_3 in Hmt; eauto.
+    eapply in_A_in_B_in_pairsOf; eauto.
+    apply map_elements_InA_iff_In.
+    rewrite <- NtMapFacts.elements_mapsto_iff; auto.
 Qed.
   
 Lemma firstPass_equiv_or_exists' :
@@ -1122,6 +1114,66 @@ Proof.
               apply NtMapFacts.in_find_iff in Hin'''.
               congruence.
       * apply in_add_keys_neq; auto.
+Qed.
+
+Lemma in_pairsOf_in_value :
+  forall x la s fi,
+    PairSet.In (x, la) (pairsOf (NtMap.add x s fi))
+    -> LaSet.In la s.
+Proof.
+  intros x la s fi Hin.
+  apply in_pairsOf_exists in Hin.
+  destruct Hin as [s' [Hmt Hin]].
+  apply NtMapFacts.add_mapsto_iff in Hmt. (* LEMMA, maybe *)
+  destruct Hmt as [Heq | Hneq].
+  - destruct Heq; subst; auto.
+  - exfalso.
+    destruct Hneq.
+    congruence.
+Qed.
+
+Lemma firstPass_preserves_apac' :
+  forall nu ps suf pre fi,
+    ps = pre ++ suf
+    -> all_pairs_are_candidates fi ps
+    -> all_pairs_are_candidates (firstPass suf nu fi) ps.
+Proof.
+  intros nu ps suf.
+  induction suf as [| (x, gamma) suf]; intros pre fi Heq Hap.
+  - simpl in *.
+    auto.
+  - simpl in *.
+    match goal with
+    | |- context[LaSet.eq_dec ?s1 ?s2] => destruct (LaSet.eq_dec s1 s2) as [Heq' | Hneq]
+    end.
+    + apply IHsuf with (pre := pre ++ [(x, gamma)]); auto.
+      subst.
+      rewrite <- app_assoc.
+      auto.
+    + apply IHsuf with (pre := pre ++ [(x, gamma)]) in Hap; clear IHsuf.
+      * unfold all_pairs_are_candidates.
+      intros x' la Hin.
+      assert (Hinps : In (x, gamma) ps) by (subst; apply in_app_cons).
+      destruct (NtSetFacts.eq_dec x' x); subst.
+        -- split.
+           ++ apply in_lhSet_app.
+           ++ apply in_pairsOf_in_value in Hin.
+              apply LaSetFacts.union_1 in Hin.
+              destruct Hin as [Hfg | Hfe].
+              ** eapply in_firstGamma_in_leftmost_lks; eauto.
+              ** eapply Hap.
+                 apply in_findOrEmpty_in_pairsOf; eauto.
+        -- apply in_add_keys_neq in Hin; auto.
+      * subst; rewrite <- app_assoc; auto.
+Qed.                 
+
+Lemma firstPass_preserves_apac :
+  forall nu ps fi,
+    all_pairs_are_candidates fi ps
+    -> all_pairs_are_candidates (firstPass ps nu fi) ps.
+Proof.
+  intros.
+  apply firstPass_preserves_apac' with (pre := []); auto.
 Qed.
 
 Lemma firstPass_equiv_or_exists :
