@@ -1311,7 +1311,8 @@ Proof.
   inv Hin.
 Qed.
 
-Definition mkFirstMap (ps : list production) (nu : nullable_set) :=
+Definition mkFirstMap (g : grammar) (nu : nullable_set) :=
+  let ps := g.(productions) in
   mkFirstMap' ps nu empty_fi (empty_fi_apac ps).
 
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
