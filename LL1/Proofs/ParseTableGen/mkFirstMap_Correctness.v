@@ -1,9 +1,13 @@
+Require Import List.
 Require Import Wf_nat.
 
 Require Import Lib.Grammar.
+Require Import Lib.Tactics.
 
 Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
+
+Import ListNotations.
 
 Lemma mkFirstMap'_eq_body :
   forall ps nu fi pf,
@@ -25,6 +29,135 @@ Proof.
   end; auto.
 Qed.
 
+Lemma in_findOrEmpty_find_in :
+  forall x la fi,
+    LaSet.In la (findOrEmpty x fi)
+    -> exists s,
+      NtMap.find x fi = Some s
+      /\ LaSet.In la s.
+Proof.
+  intros x la fi Hin.
+  unfold findOrEmpty in *.
+  destruct (NtMap.find x fi) as [s |].
+  - eauto.
+  - inv Hin.
+Qed.
+
+Lemma firstSym_first_sym :
+  forall g la sym fi,
+    first_map_sound fi g
+    -> LaSet.In la (firstSym sym fi)
+    -> first_sym g la sym.
+Proof.
+  intros g la sym fi Hsou Hin.
+  destruct sym as [y | x]; simpl in *.
+  - apply LaSetFacts.singleton_iff in Hin; subst.
+    constructor.
+  - apply in_findOrEmpty_find_in in Hin. 
+    destruct Hin as [s [Hf Hin]]. 
+    eapply Hsou; eauto.
+Qed.
+
+Lemma nullable_app :
+  forall g xs ys,
+    nullable_gamma g xs
+    -> nullable_gamma g ys
+    -> nullable_gamma g (xs ++ ys).
+Proof.
+  intros g xs ys Hng Hng'.
+  induction xs as [| x xs]; simpl in *; auto.
+  inv Hng.
+  constructor; auto.
+Qed.
+
+Lemma nullableSym_nullable_sym :
+  forall g nu sym,
+    nullable_set_for nu g
+    -> nullableSym sym nu = true
+    -> nullable_sym g sym.
+Proof.
+  intros g nu sym Hns Htr.
+  unfold nullableSym in Htr.
+  destruct sym as [y | x].
+  - inv Htr.
+  - apply Hns.
+    rewrite <- NtSet.mem_spec; auto.
+Qed.
+
+Lemma firstGamma_first_sym' :
+  forall g nu fi la x,
+    nullable_set_for nu g
+    -> first_map_sound fi g
+    -> forall gsuf gpre,
+        In (x, gpre ++ gsuf) (productions g)
+        -> nullable_gamma g gpre
+        -> LaSet.In la (firstGamma gsuf nu fi)
+        -> first_sym g la (NT x).
+Proof.
+  intros g nu fi la x Hns Hfm gsuf.
+  induction gsuf as [| sym syms]; intros gpre Hin Hng Hin'; simpl in *.
+  - inv Hin'.
+  - destruct (nullableSym sym nu) eqn:Hsym.
+    + destruct (LaSetFacts.union_1 Hin') as [Hfs | Hfg].
+      * econstructor; eauto.
+        eapply firstSym_first_sym; eauto.
+      * eapply IHsyms with (gpre := gpre ++ [sym]); auto.
+        -- rewrite <- app_assoc; auto.
+        -- apply nullable_app; auto.
+           constructor; auto.
+           eapply nullableSym_nullable_sym; eauto.
+    + econstructor; eauto.
+      eapply firstSym_first_sym; eauto.
+Qed.
+
+Lemma firstGamma_first_sym :
+  forall g nu fi la x gamma,
+    nullable_set_for nu g
+    -> first_map_sound fi g
+    -> In (x, gamma) (productions g)
+    -> LaSet.In la (firstGamma gamma nu fi)
+    -> first_sym g la (NT x).
+Proof.
+  intros.
+  eapply firstGamma_first_sym'; eauto.
+  simpl; auto.
+Qed.
+
+Lemma firstPass_preserves_soundness' :
+  forall (g  : grammar)
+         (nu : nullable_set)
+         (fi : first_map),
+    nullable_set_for nu g
+    -> first_map_sound fi g
+    -> forall suf pre : list production,
+      pre ++ suf = (productions g)
+      -> first_map_sound (firstPass suf nu fi) g.
+Proof. 
+  intros g nu fi Hnf Hfm.
+  induction suf as [| (x, gamma) suf]; intros pre Happ; simpl; auto.
+  (* todo: write a tactic for this *)
+  pose proof Happ as Happ'.
+  rewrite cons_app_singleton in Happ.
+  rewrite app_assoc in Happ.
+  apply IHsuf in Happ; clear IHsuf.
+  match goal with 
+  | |- context[LaSet.eq_dec ?s ?s'] => 
+    destruct (LaSet.eq_dec s s') as [Heq | Hneq]
+  end; auto.
+  unfold first_map_sound.
+  intros x' xFirst la Hf Hin.
+  destruct (NtSetFacts.eq_dec x' x); subst.
+  - clear Hneq.
+    apply find_values_eq in Hf; subst.
+    destruct (LaSetFacts.union_1 Hin) as [Hfg | Hfe]; auto.
+    + eapply firstGamma_first_sym; eauto.
+      rewrite <- Happ'.
+      apply in_app_cons.
+    + apply in_findOrEmpty_find_in in Hfe. 
+      destruct Hfe as [s [Hf Hin']]; eauto.
+  - rewrite NtMapFacts.add_neq_o in Hf; eauto.
+Qed.
+    
 Lemma firstPass_preserves_soundness :
   forall (g : grammar)
          (nu : nullable_set)
@@ -32,7 +165,10 @@ Lemma firstPass_preserves_soundness :
     nullable_set_for nu g
     -> first_map_sound fi g
     -> first_map_sound (firstPass (productions g) nu fi) g.
-Admitted.
+Proof.
+  intros g nu fi Hns Hfm.
+  apply firstPass_preserves_soundness' with (pre := []); eauto.
+Qed.
 
 Lemma mkFirstMap'_preserves_soundness :
   forall (g  : grammar)
@@ -82,3 +218,4 @@ Proof.
   apply mkFirstMap'_preserves_soundness; auto.
   apply empty_fi_sound.
 Qed.
+
