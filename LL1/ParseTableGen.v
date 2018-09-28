@@ -1016,6 +1016,43 @@ Proof.
   apply map_elements_InA_iff_In; auto.
 Qed.
 
+Lemma find_values_eq :
+  forall x (s s' : LaSet.t) fi,
+    NtMap.find x (NtMap.add x s fi) = Some s'
+    -> s = s'.
+Proof.
+  intros x s s' fi Hf.
+  pose proof NtMapFacts.add_eq_o as H.
+  specialize (H LaSet.t fi x x s).
+  assert (H' : x = x) by auto.
+  apply H in H'.
+  congruence.
+Qed.
+
+Lemma map_key_in_add :
+  forall x s fi,
+    NtMap.In (elt:=LaSet.t) x (NtMap.add x s fi).
+Proof.
+  intros x s fi.
+  apply NtMapFacts.add_in_iff.
+  left; auto.
+Qed.
+
+Lemma in_add_keys_eq :
+  forall x s la fi,
+    LaSet.In la s
+    -> PairSet.In (x, la) (pairsOf (NtMap.add x s fi)).
+Proof.
+  intros x s la fi Hin.
+  apply in_findOrEmpty_iff_in_pairsOf.
+  unfold findOrEmpty.
+  destruct (NtMap.find x (NtMap.add x s fi)) as [s' |] eqn:Hf.
+  - apply find_values_eq in Hf; subst; auto.
+  - exfalso.
+    eapply NtMapFacts.in_find_iff; eauto.
+    apply map_key_in_add.
+Qed.
+
 Lemma in_add_keys_neq :
   forall x y s la fi,
     x <> y
@@ -1183,71 +1220,6 @@ Proof.
     + eapply in_mkPairs_in_set; eauto.
 Qed.
 
-Lemma pairsOf_add_equal_pairsOf_union :
-  forall x s fi,
-  PairSet.Equal (pairsOf (NtMap.add x (LaSet.union s (findOrEmpty x fi)) fi))
-                (PairSet.union (mkPairs x (LaSet.union s (findOrEmpty x fi)))
-                               (pairsOf fi)).
-Proof.
-  intros x s fi.
-  unfold PairSet.Equal.
-  intros (x', la); split; intros Hin.
-  - destruct (NtSetFacts.eq_dec x' x); subst.
-    + apply in_pairsOf_in_mkPairs in Hin.
-      PD.fsetdec.
-    + apply in_add_keys_neq in Hin; auto.
-      PD.fsetdec.
-  - apply PairSetFacts.union_1 in Hin.
-    destruct Hin as [Hmk | Hpo].
-    + destruct (NtSetFacts.eq_dec x' x); subst.
-      * apply in_pairsOf_in_mkPairs; auto.
-      * apply in_add_keys_neq; auto.
-        exfalso.
-        apply n.
-        eapply mkPairs_keys_eq; eauto.
-    + destruct (NtSetFacts.eq_dec x' x); subst.
-      * apply in_pairsOf_in_mkPairs.
-        apply in_set_in_mkPairs.
-        apply LaSetFacts.union_3.
-        apply in_findOrEmpty_iff_in_pairsOf; auto.
-      * apply in_add_keys_neq; auto.
-Qed.
-    
-Lemma pairset_equal_subsets :
-  forall a b c,
-  PairSet.Equal b c
-  -> PairSet.Subset a b
-  -> PairSet.Subset a c. 
-Proof.
-  PD.fsetdec.
-Qed.
-    
-Lemma pairset_subset_update :
-  forall x s fi,
-  PairSet.Subset (pairsOf fi)
-                 (pairsOf (NtMap.add x (LaSet.union s (findOrEmpty x fi)) fi)).
-Proof.
-  intros x s fi.
-  pose proof (pairsOf_add_equal_pairsOf_union x s fi).
-  apply PP.equal_sym in H.
-  eapply pairset_equal_subsets; eauto.
-  apply PP.union_subset_2.
-Qed.
-
-Lemma pairset_subset_add :
-  forall x s fi fi',
-  PairSet.Subset (pairsOf fi) (pairsOf fi')
-  -> PairSet.Subset (pairsOf fi) 
-                    (pairsOf (NtMap.add x 
-                                        (LaSet.union s (findOrEmpty x fi'))
-                                        fi')).
-Proof.
-  intros x s fi fi' Hsub.
-  eapply PairSetFacts.Subset_trans; eauto.
-  apply pairset_subset_update.
-Qed.
-
-(* to do : clean up the proofs of the lemmas that this one relies on *)
 Lemma firstPass_subset : 
   forall nu ps fi,
     PairSet.Subset (pairsOf fi) (pairsOf (firstPass ps nu fi)).
@@ -1258,7 +1230,13 @@ Proof.
   - match goal with
     | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Heq | Hneq]
     end; auto.
-    apply pairset_subset_add; auto.
+    eapply PairSetFacts.Subset_trans; eauto.
+    intros (x', la) Hin.
+    destruct (NtSetFacts.eq_dec x' x); subst.
+    + apply in_add_keys_eq.
+      apply LaSetFacts.union_3.
+      apply in_findOrEmpty_iff_in_pairsOf; auto.
+    + apply in_add_keys_neq; auto.
 Qed.
 
 Lemma firstPass_equiv_or_exists :
