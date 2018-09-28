@@ -1284,7 +1284,7 @@ Proof.
     apply in_A_in_B_in_product; auto.
 Qed.
 
-Program Fixpoint mkFirstSet'
+Program Fixpoint mkFirstMap'
         (ps : list production)
         (nu : nullable_set) 
         (fi : first_map)
@@ -1294,10 +1294,25 @@ Program Fixpoint mkFirstSet'
   if first_map_equiv_dec fi fi' then
     fi
   else
-    mkFirstSet' ps nu fi' (firstPass_preserves_apac nu ps fi pf).
+    mkFirstMap' ps nu fi' (firstPass_preserves_apac nu ps fi pf).
 Next Obligation.
   apply firstPass_not_equiv_candidates_lt; auto.
 Defined.
+
+Definition empty_fi := NtMap.empty LaSet.t.
+
+Lemma empty_fi_apac :
+  forall ps,
+  all_pairs_are_candidates empty_fi ps.
+Proof.
+  intros ps.
+  unfold all_pairs_are_candidates; intros x la Hin.
+  unfold pairsOf in *; simpl in *.
+  inv Hin.
+Qed.
+
+Definition mkFirstMap (ps : list production) (nu : nullable_set) :=
+  mkFirstMap' ps nu empty_fi (empty_fi_apac ps).
 
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
