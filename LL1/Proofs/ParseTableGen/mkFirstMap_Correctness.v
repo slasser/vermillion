@@ -219,3 +219,57 @@ Proof.
   apply empty_fi_sound.
 Qed.
 
+(* Completeness *)
+
+Lemma firstPass_equiv_complete :
+  forall g nu fi,
+    NtMap.Equiv LaSet.Equal fi (firstPass (productions g) nu fi)
+    -> first_map_complete fi g.
+Proof.
+  intros g nu fi Hequiv.
+  unfold first_map_complete.
+  intros la sym x Hfs.
+  revert x.
+  induction Hfs; intros lx Heq; inv Heq.
+  destruct s as [y | rx].
+  + inv Hfs.
+    clear IHHfs.
+    admit.
+  + specialize (IHHfs rx).
+    destruct IHHfs as [rxFirst [Hf Hin]]; auto.
+Admitted.
+
+Lemma mkFirstMap'_complete :
+  forall (g  : grammar)
+         (nu : nullable_set)
+         (fi : first_map)
+         (pf : all_pairs_are_candidates fi (productions g)),
+    nullable_set_for nu g
+    -> first_map_complete (mkFirstMap' (productions g) nu fi pf) g.
+Proof.
+  intros g nu fi pf Hns.
+  remember (numFirstCandidates (productions g) fi) as card.
+  generalize dependent fi.
+  induction card using lt_wf_ind.
+  intros fi pf Hc; subst.
+  rewrite mkFirstMap'_eq_body; simpl.
+  match goal with 
+  | |- context[first_map_equiv_dec ?fi ?fi'] => 
+    destruct (first_map_equiv_dec fi fi') as [Heq | Hneq]
+  end.
+  - eapply firstPass_equiv_complete; eauto.
+  - eapply H; clear H; eauto.
+    apply firstPass_not_equiv_candidates_lt; auto.
+Qed.
+
+Theorem mkFirstMap_complete :
+  forall (g : grammar)
+         (nu : nullable_set),
+    nullable_set_for nu g
+    -> first_map_complete (mkFirstMap g nu) g.
+Proof.
+  intros g nu Hns.
+  unfold mkFirstMap.
+  apply mkFirstMap'_complete; auto.
+Qed.
+
