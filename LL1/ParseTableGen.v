@@ -1392,8 +1392,9 @@ Definition mkParseTable (ps : list table_entry) : option parse_table :=
 (* Combining all of the steps into a single function *)
 (* The type of this function will change as I add code for computing NULLABLE, etc. *)
 
-Definition genTableForGrammar g fi fo :=
+Definition genTableForGrammar g fo :=
   let nu := mkNullableSet g in
+  let fi := mkFirstMap g nu in
   let es := mkEntries nu fi fo g in
   mkParseTable es.
 
