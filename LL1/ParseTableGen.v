@@ -1315,6 +1315,145 @@ Definition mkFirstMap (g : grammar) (nu : nullable_set) :=
   let ps := g.(productions) in
   mkFirstMap' ps nu empty_fi (empty_fi_apac ps).
 
+(* Step 3 : compute the FOLLOW map for the grammar using the (correct) NULLABLE set and FIRST map. *)
+
+(* to do *)
+Definition updateFo (nu : nullable_set)
+                    (fi : first_map)
+                    (p  : production)
+                    (fo : follow_map) : follow_map :=
+
+  fo.
+
+Definition followPass (ps : list production)
+                      (nu : nullable_set)
+                      (fi : first_map)
+                      (fo : follow_map) : follow_map :=
+  fold_right (updateFo nu fi) fo ps.
+
+Definition follow_map_equiv_dec :
+  forall m m' : first_map,
+    {NtMap.Equiv LaSet.Equal m m'} + {~ NtMap.Equiv (LaSet.Equal) m m'}.
+Proof.
+  apply first_map_equiv_dec.
+Defined.
+
+Fixpoint ntsOfGamma (gamma : list symbol) :=
+  match gamma with
+  | [] => NtSet.empty
+  | T _ :: gamma' => ntsOfGamma gamma'
+  | NT x :: gamma' => NtSet.add x (ntsOfGamma gamma')
+  end.
+
+Definition ntsOfProd (p : production) : NtSet.t :=
+  let (x, gamma) := p in
+  NtSet.add x (ntsOfGamma gamma).
+
+Definition ntsOf (g : grammar) : NtSet.t :=
+  fold_right (fun p acc => NtSet.union (ntsOfProd p) acc)
+             (NtSet.singleton (start g))
+             (productions g).
+
+Fixpoint lookaheadsOfGamma (gamma : list symbol) : LaSet.t :=
+  match gamma with
+  | [] => LaSet.empty
+  | T y :: gamma' => LaSet.add (LA y) (lookaheadsOfGamma gamma')
+  | NT _ :: gamma' => lookaheadsOfGamma gamma'
+  end.
+
+Definition lookaheadsOf (g : grammar) : LaSet.t :=
+  fold_right (fun p acc =>
+                match p with
+                | (_, gamma) => LaSet.union (lookaheadsOfGamma gamma) acc
+                end)
+             (LaSet.singleton EOF)
+             (productions g).
+
+Definition all_pairs_are_follow_candidates (fo : follow_map)
+                                           (g  : grammar) : Prop :=
+  forall x la,
+    PairSet.In (x, la) (pairsOf fo)
+    -> NtSet.In x (ntsOf g)
+       /\ LaSet.In la (lookaheadsOf g).
+
+Definition numFollowCandidates (g : grammar)
+           (fo : follow_map) : nat :=
+  let allCandidates := product (ntsOf g) (lookaheadsOf g) in
+  PairSet.cardinal (PairSet.diff allCandidates (pairsOf fo)).
+
+Lemma followPass_preserves_apac :
+  forall g nu fi fo,
+    all_pairs_are_follow_candidates fo g
+    -> all_pairs_are_follow_candidates (followPass (productions g) nu fi fo) g.
+Proof.
+Admitted.
+
+Lemma followPass_equiv_or_exists :
+  forall g nu fi fo,
+    all_pairs_are_follow_candidates fo g
+    -> NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+       \/ exists x la,
+        NtSet.In x (ntsOf g)
+        /\ LaSet.In la (lookaheadsOf g)
+        /\ ~ PairSet.In (x, la) (pairsOf fo)
+        /\ PairSet.In (x, la) (pairsOf (followPass (productions g) nu fi fo)).
+Proof.
+Admitted.
+
+Lemma followPass_not_equiv_exists :
+  forall g nu fi fo,
+    all_pairs_are_follow_candidates fo g
+    -> ~ NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+    -> exists x la,
+      NtSet.In x (ntsOf g)
+      /\ LaSet.In la (lookaheadsOf g)
+      /\ ~ PairSet.In (x, la) (pairsOf fo)
+      /\ PairSet.In (x, la) (pairsOf (followPass (productions g) nu fi fo)).
+Proof.
+  intros g nu fi fo Hap Hneq.
+  destruct (followPass_equiv_or_exists g nu fi fo); auto; try congruence.
+Qed.
+
+Lemma followPass_subset :
+  forall ps nu fi fo,
+ PairSet.Subset (pairsOf fo)
+                (pairsOf (followPass ps nu fi fo)).
+Proof.
+Admitted.
+  
+Lemma followPass_not_equiv_candidates_lt :
+  forall g nu fi fo,
+    all_pairs_are_follow_candidates fo g
+    -> ~ NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+    -> numFollowCandidates g (followPass (productions g) nu fi fo) < numFollowCandidates g fo.
+Proof.
+  intros g nu fi fo Hap Hneq.
+  apply followPass_not_equiv_exists in Hneq; auto.
+  destruct Hneq as [x [la [Hx [Hla [Hps Hps']]]]].
+  apply PP.subset_cardinal_lt with (x := (x, la)).
+  - apply pairset_subset_subset_diffs.
+    apply followPass_subset.
+  - apply in_A_not_in_B_in_diff; auto.
+    apply in_A_in_B_in_product; auto.
+  - PD.fsetdec.
+Qed.
+
+Program Fixpoint mkFollowMap'
+        (g  : grammar)
+        (nu : nullable_set) 
+        (fi : first_map)
+        (fo : follow_map)
+        (pf : all_pairs_are_follow_candidates fo g)
+        {measure (numFollowCandidates g fo) } :=
+  let fo' := followPass (productions g) nu fi fo in
+  if follow_map_equiv_dec fo fo' then
+    fo
+  else
+    mkFollowMap' g nu fi fo' (followPass_preserves_apac g nu fi fo pf).
+Next Obligation.
+  apply followPass_not_equiv_candidates_lt; auto.
+Defined.
+
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
 Definition table_entry := (nonterminal * lookahead * list symbol)%type.
