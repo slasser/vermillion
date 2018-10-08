@@ -630,3 +630,17 @@ Proof.
   apply mkFirstMap'_complete; auto.
 Qed.
 
+(* Putting both mkFirstMap correctness properties into a single theorem *)
+
+Theorem mkFirstMap_correct :
+  forall (g  : grammar)
+         (nu : nullable_set),
+    nullable_set_for nu g
+    -> first_map_for (mkFirstMap g nu) g.
+Proof.
+  intros g nu Hns.
+  split.
+  - apply mkFirstMap_sound; auto.
+  - apply mkFirstMap_complete; auto.
+Qed.
+
