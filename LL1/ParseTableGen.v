@@ -1318,12 +1318,42 @@ Definition mkFirstMap (g : grammar) (nu : nullable_set) :=
 (* Step 3 : compute the FOLLOW map for the grammar using the (correct) NULLABLE set and FIRST map. *)
 
 (* to do *)
+Fixpoint updateFo' (nu : nullable_set)
+                   (fi : first_map)
+                   (lx  : nonterminal)
+                   (gamma : list symbol)
+                   (fo : follow_map) : follow_map :=
+  match gamma with
+  | [] => fo
+  | T _ :: gamma' => updateFo' nu fi lx gamma' fo
+  | NT rx :: gamma' =>
+    let fo'   := updateFo' nu fi lx gamma' fo in
+    let lSet  := findOrEmpty lx fo' in
+    let rSet  := firstGamma gamma' nu fi in
+    let lrSet := LaSet.union lSet rSet in
+    match NtMap.find rx fo' with
+    | Some rxFollow =>
+      (* Only update FOLLOW(rx) if there's a new element to add *)
+      if LaSet.subset lrSet rxFollow then
+        fo'
+      else
+        let rxFollow' := LaSet.union rxFollow lrSet in
+        NtMap.add rx rxFollow' fo'
+    | None =>
+      (* Only create a new FOLLOW(rx) if it contains at least one element *)
+      if LaSet.is_empty lrSet then
+        fo'
+      else
+        NtMap.add rx lrSet fo'
+    end
+  end.
+
 Definition updateFo (nu : nullable_set)
                     (fi : first_map)
                     (p  : production)
                     (fo : follow_map) : follow_map :=
-
-  fo.
+  let (x, gamma) := p in
+  updateFo' nu fi x gamma fo.
 
 Definition followPass (ps : list production)
                       (nu : nullable_set)
@@ -1381,12 +1411,248 @@ Definition numFollowCandidates (g : grammar)
   let allCandidates := product (ntsOf g) (lookaheadsOf g) in
   PairSet.cardinal (PairSet.diff allCandidates (pairsOf fo)).
 
+Lemma app_cons_apps :
+  forall g x gpre sym gsuf,
+    In (x, gpre ++ sym :: gsuf) (productions g)
+    -> In (x, (gpre ++ [sym]) ++ gsuf) (productions g).
+Proof.
+  intros.
+  rewrite <- app_assoc; auto.
+Qed.
+
+Lemma find_in_pairsOf :
+  forall x la s fo,
+    NtMap.find x fo = Some s
+    -> LaSet.In la s
+    -> PairSet.In (x, la) (pairsOf fo).
+Proof.
+  intros x la s fo Hf Hin.
+  apply in_findOrEmpty_iff_in_pairsOf.
+  unfold findOrEmpty.
+  rewrite Hf; auto.
+Qed.
+
+Lemma medial_nt_in_ntsOfGamma :
+  forall x gpre gsuf,
+    NtSet.In x (ntsOfGamma (gpre ++ NT x :: gsuf)).
+Proof.
+  intros x gpre gsuf.
+  induction gpre as [| sym gpre]; simpl in *; auto.
+  - ND.fsetdec.
+  - destruct sym as [y | x']; auto.
+    ND.fsetdec.
+Qed.
+
+Lemma medial_nt_in_ntsOf :
+  forall g lx rx gpre gsuf,
+    In (lx, gpre ++ NT rx :: gsuf) (productions g)
+    -> NtSet.In rx (ntsOf g).
+Proof.
+  intros g lx rx gpre gsuf Hin.
+  unfold ntsOf.
+  induction (productions g) as [| (lx', gamma) ps]; simpl in *.
+  - inv Hin.
+  - destruct Hin as [Heq | Hin].
+    + inv Heq.
+      apply NtSetFacts.union_2.
+      apply NtSetFacts.add_2.
+      apply medial_nt_in_ntsOfGamma.
+    + apply NtSetFacts.union_3; auto.
+Qed.
+
+Lemma in_findOrEmpty_exists_set :
+  forall x la m,
+    LaSet.In la (findOrEmpty x m)
+    -> exists s,
+      NtMap.find x m = Some s
+      /\ LaSet.In la s.
+Proof.
+  intros x la m Hin.
+  unfold findOrEmpty in *.
+  destruct (NtMap.find x m) as [s |]; eauto.
+  inv Hin.
+Qed.
+
+Lemma medial_t_in_lookaheadsOfGamma :
+  forall y gpre gsuf,
+    LaSet.In (LA y) (lookaheadsOfGamma (gpre ++ T y :: gsuf)).
+Proof.
+  intros y gpre gsuf.
+  induction gpre as [| sym gpre]; simpl in *.
+  - LD.fsetdec.
+  - destruct sym as [y' | x]; auto.
+    LD.fsetdec.
+Qed.
+
+Lemma medial_t_in_lookaheadsOf :
+  forall g x gpre gsuf y,
+    In (x, gpre ++ T y :: gsuf) (productions g)
+    -> LaSet.In (LA y) (lookaheadsOf g).
+Proof.
+  intros g x gpre gsuf y Hin.
+  unfold lookaheadsOf.
+  induction (productions g) as [| (x', gamma) ps]; simpl in *.
+  - inv Hin.
+  - destruct Hin as [Heq | Hin].
+    + inv Heq.
+      apply LaSetFacts.union_2.
+      apply medial_t_in_lookaheadsOfGamma.
+    + apply LaSetFacts.union_3; auto.
+Qed.
+
+Lemma first_sym_in_lookaheadsOf :
+  forall g la sym,
+    first_sym g la sym
+    -> forall x,
+      sym = NT x
+      -> LaSet.In la (lookaheadsOf g).
+Proof.
+  intros g la sym Hfs.
+  induction Hfs; intros x' Heq.
+  - inv Heq.
+  - inv Heq.
+    destruct s as [y | x].
+    + inv Hfs.
+      eapply medial_t_in_lookaheadsOf; eauto.
+    + eapply IHHfs; eauto.
+Qed.
+  
+
+Lemma first_map_la_in_lookaheadsOf :
+  forall g x s la fi,
+    first_map_for fi g
+    -> NtMap.find x fi = Some s
+    -> LaSet.In la s
+    -> LaSet.In la (lookaheadsOf g).
+Proof.
+  intros g x s la fi Hfm Hf Hin.
+  eapply first_sym_in_lookaheadsOf; eauto.
+  eapply Hfm; eauto.
+Qed.
+
+Lemma in_firstGamma_in_lookaheadsOf :
+  forall g nu fi x gsuf gpre la,
+    first_map_for fi g
+    -> In (x, gpre ++ gsuf) (productions g)
+    -> LaSet.In la (firstGamma gsuf nu fi)
+    -> LaSet.In la (lookaheadsOf g).
+Proof.
+  intros g nu fi x gsuf.
+  induction gsuf as [| sym gsuf]; intros gpre la Hfm Hin Hin'; simpl in *.
+  - inv Hin'.
+  - destruct nullableSym.
+    + apply LaSetFacts.union_1 in Hin'.
+      destruct Hin' as [Hfs | Hfg].
+      * destruct sym as [y | x']; simpl in *.
+        -- apply LaSetFacts.singleton_1 in Hfs; subst.
+           eapply medial_t_in_lookaheadsOf; eauto.
+        -- apply in_findOrEmpty_exists_set in Hfs.
+           destruct Hfs as [s [Hf Hin']].
+           eapply first_map_la_in_lookaheadsOf; eauto.
+      * apply IHgsuf with (gpre := gpre ++ [sym]); auto.
+        apply app_cons_apps; auto.
+    + (* lemma *)
+      destruct sym as [y | x']; simpl in *.
+      * apply LaSetFacts.singleton_1 in Hin'; subst.
+        eapply medial_t_in_lookaheadsOf; eauto.
+      * apply in_findOrEmpty_exists_set in Hin'.
+        destruct Hin' as [s [Hf Hin']].
+        eapply first_map_la_in_lookaheadsOf; eauto.
+Qed.
+
+Lemma updateFo_preserves_apac :
+  forall g nu fi lx gsuf gpre fo,
+    first_map_for fi g
+    -> In (lx, gpre ++ gsuf) (productions g)
+    -> all_pairs_are_follow_candidates fo g
+    -> all_pairs_are_follow_candidates (updateFo' nu fi lx gsuf fo) g.
+Proof.
+  intros g nu fi lx gsuf.
+  induction gsuf as [| sym gsuf]; intros gpre fo Hfm Hin Hap; simpl in *; auto.
+  pose proof Hap as Hap'.
+  apply IHgsuf with (gpre := gpre ++ [sym]) in Hap; try (apply app_cons_apps; auto); clear IHgsuf; auto.
+  destruct sym as [y | rx]; auto.
+  destruct (NtMap.find rx (updateFo' nu fi lx gsuf fo)) as [rxFollow |] eqn:Hf.
+  - match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+    end; auto.
+    unfold all_pairs_are_follow_candidates.
+    intros x la Hin'.
+    destruct (NtSetFacts.eq_dec x rx); subst.
+    + apply in_pairsOf_in_value in Hin'.
+      apply LaSetFacts.union_1 in Hin'.
+      destruct Hin' as [Hfo | Hu].
+      * split.
+        -- eapply medial_nt_in_ntsOf; eauto.
+        -- eapply find_in_pairsOf in Hf; eauto.
+           apply Hap in Hf.
+           destruct Hf; auto.
+      * apply LaSetFacts.union_1 in Hu.
+        destruct Hu as [Hfe | Hfg].
+        -- split.
+           ++ eapply medial_nt_in_ntsOf; eauto.
+           ++ apply in_findOrEmpty_iff_in_pairsOf in Hfe.
+              apply Hap in Hfe.
+              destruct Hfe; auto.
+        -- split.
+           ++ eapply medial_nt_in_ntsOf; eauto.
+           ++ eapply in_firstGamma_in_lookaheadsOf with
+                  (gpre := gpre ++ [NT rx]); eauto.
+              apply app_cons_apps; eauto.
+    + apply Hap.
+      apply in_add_keys_neq in Hin'; auto.
+  - match goal with
+    | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+    end; auto.
+    unfold all_pairs_are_follow_candidates.
+    intros x la Hin'.
+    destruct (NtSetFacts.eq_dec x rx); subst.
+    + apply in_pairsOf_in_value in Hin'.
+      apply LaSetFacts.union_1 in Hin'.
+      destruct Hin' as [Hfe | Hfg].
+      * split.
+        -- eapply medial_nt_in_ntsOf; eauto.
+        -- unfold all_pairs_are_follow_candidates in Hap.
+           apply in_findOrEmpty_iff_in_pairsOf in Hfe.
+           apply Hap in Hfe.
+           destruct Hfe; auto.
+      * split.
+        -- eapply medial_nt_in_ntsOf; eauto.
+        -- eapply in_firstGamma_in_lookaheadsOf with
+               (gpre := gpre ++ [NT rx]); eauto.
+           apply app_cons_apps; eauto.
+    + apply Hap.
+      apply in_add_keys_neq in Hin'; auto.
+Qed.
+    
+Lemma followPass_preserves_apac' :
+  forall g nu fi suf pre fo,
+    first_map_for fi g
+    -> pre ++ suf = g.(productions)
+    -> all_pairs_are_follow_candidates fo g
+    -> all_pairs_are_follow_candidates (followPass suf nu fi fo) g.
+Proof.
+  intros g nu fi suf.
+  induction suf as [| (x, gamma) suf]; intros pre fo Hfm Happ Hap; simpl in *; auto.
+  pose proof Happ as Happ'.
+  rewrite cons_app_singleton in Happ.
+  rewrite app_assoc in Happ.
+  eapply IHsuf in Hap; eauto.
+  apply updateFo_preserves_apac with (gpre := nil); simpl in *; auto.
+  rewrite <- Happ'.
+  apply in_app_cons.
+Qed.
+
 Lemma followPass_preserves_apac :
   forall g nu fi fo,
-    all_pairs_are_follow_candidates fo g
+    first_map_for fi g
+    -> all_pairs_are_follow_candidates fo g
     -> all_pairs_are_follow_candidates (followPass (productions g) nu fi fo) g.
 Proof.
-Admitted.
+  intros.
+  eapply followPass_preserves_apac'; eauto.
+  rewrite app_nil_l; auto.
+Qed.
 
 Lemma followPass_equiv_or_exists :
   forall g nu fi fo,
@@ -1442,14 +1708,15 @@ Program Fixpoint mkFollowMap'
         (g  : grammar)
         (nu : nullable_set) 
         (fi : first_map)
+        (fi_pf : first_map_for fi g)
         (fo : follow_map)
-        (pf : all_pairs_are_follow_candidates fo g)
+        (apac_pf : all_pairs_are_follow_candidates fo g)
         {measure (numFollowCandidates g fo) } :=
   let fo' := followPass (productions g) nu fi fo in
   if follow_map_equiv_dec fo fo' then
     fo
   else
-    mkFollowMap' g nu fi fo' (followPass_preserves_apac g nu fi fo pf).
+    mkFollowMap' g nu fi fi_pf fo' (followPass_preserves_apac g nu fi fo fi_pf apac_pf).
 Next Obligation.
   apply followPass_not_equiv_candidates_lt; auto.
 Defined.
