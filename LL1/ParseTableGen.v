@@ -1654,9 +1654,302 @@ Proof.
   rewrite app_nil_l; auto.
 Qed.
 
+(* to do : redefine this with PairSet.Subset *)
+Lemma updateFo_subset :
+  forall nu fi fo x x' la gamma,
+    PairSet.In (x, la) (pairsOf fo)
+    -> PairSet.In (x, la) (pairsOf (updateFo' nu fi x' gamma fo)).
+Proof.
+  intros nu fi fo x x' la gamma Hin.
+  induction gamma as [| sym gamma]; simpl in *; auto.
+  destruct sym as [y | rx]; auto.
+  destruct (NtMap.find rx (updateFo' nu fi x' gamma fo)) as [rxFollow |] eqn:Hf.
+  - match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+    end; auto.
+    destruct (NtSetFacts.eq_dec x rx); subst.
+    + apply in_add_keys_eq.
+      apply LaSetFacts.union_2.
+      (* to do : rename fi to something generic in this lemma *)
+      eapply in_pairsOf_in_set with
+          (fi := updateFo' nu fi x' gamma fo); eauto.
+    + apply in_add_keys_neq; auto.
+  - match goal with
+    | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+    end; auto.
+    destruct (NtSetFacts.eq_dec x rx); subst.
+    + exfalso.
+      apply in_pairsOf_in_map_keys in IHgamma.
+      apply NtMapFacts.in_find_iff in IHgamma.
+      congruence.
+    + apply in_add_keys_neq; auto.    
+Qed.
+
+Lemma followPass_subset :
+  forall nu fi fo ps,
+    PairSet.Subset (pairsOf fo) (pairsOf (followPass ps nu fi fo)).
+Proof.
+  intros nu fi fo ps.
+  induction ps as [| (x, gamma) ps]; simpl in *; auto.
+  - PD.fsetdec.
+  - eapply PairSetFacts.Subset_trans; eauto.
+    unfold PairSet.Subset.
+    intros (x', la) Hin.
+    eapply updateFo_subset; eauto.
+Qed.
+
+Lemma subset_false_not_Subset :
+  forall a b,
+    LaSet.subset a b = false
+    -> ~ LaSet.Subset a b.
+Proof.
+  intros a b Hs.
+  unfold not; intros HS.
+  apply LaSetFacts.subset_iff in HS; congruence.
+Qed.
+
+Lemma not_Subset_exists_elt :
+  forall a b,
+    ~ LaSet.Subset a b
+    -> exists la,
+      LaSet.In la a
+      /\ ~ LaSet.In la b.
+Proof.
+  intros a b Hns.
+  unfold LaSet.Subset in Hns.
+  apply union_neq_exists_elt.
+  unfold not; intros.
+  apply Hns.
+  intros la Hin.
+  LD.fsetdec.
+Qed.
+
+Lemma la_in_fo_in_lookaheadsOf :
+  forall g x fo xFollow la,
+    NtMap.find x fo = Some xFollow
+    -> LaSet.In la xFollow
+    -> all_pairs_are_follow_candidates fo g
+    -> LaSet.In la (lookaheadsOf g).
+Proof.
+  intros g x fo xFollow la Hf Hin Hap.
+  eapply Hap.
+  eapply find_in_pairsOf; eauto.
+Qed.
+
+Lemma not_empty_exists_elt :
+  forall s,
+    LaSet.is_empty s = false
+    -> exists la,
+      LaSet.In la s.
+Proof.
+  intros s Hie.
+  apply LaSetEqProps.choose_mem_3 in Hie.
+  destruct Hie as [la [_ Hmem]].
+  exists la.
+  rewrite <- LaSet.mem_spec; auto.
+Qed.
+
+Lemma updateFo_equiv_or_exists' :
+  forall g nu fi lx gsuf gpre fo,
+    first_map_for fi g
+    -> In (lx, gpre ++ gsuf) (productions g)
+    -> all_pairs_are_follow_candidates fo g
+    -> NtMap.Equiv LaSet.Equal fo (updateFo' nu fi lx gsuf fo)
+       \/ exists (x' : NtSet.elt) (la : LaSet.elt),
+        NtSet.In x' (ntsOf g) /\
+        LaSet.In la (lookaheadsOf g) /\
+        ~ PairSet.In (x', la) (pairsOf fo) /\
+        PairSet.In (x', la) (pairsOf (updateFo' nu fi lx gsuf fo)).
+Proof.
+  intros g nu fi lx gsuf.
+  induction gsuf as [| sym gsuf]; intros gpre fo Hfm Hin Hap; simpl in *.
+  - left.
+    (* LEMMA *)
+    unfold NtMap.Equiv.
+    split.
+    + split; intros; auto.
+    + intros k s s' Hmt Hmt'.
+      apply NtMapFacts.find_mapsto_iff in Hmt.
+      apply NtMapFacts.find_mapsto_iff in Hmt'.
+      assert (s = s') by congruence; subst.
+      apply LP.equal_refl.
+  - pose proof Hin as Hin'.
+    rewrite cons_app_singleton in Hin.
+    rewrite app_assoc in Hin.
+    pose proof Hin as Hin''.
+    eapply IHgsuf in Hin; clear IHgsuf; eauto.
+    destruct sym as [y | rx]; auto.
+    destruct (NtMap.find rx (updateFo' nu fi lx gsuf fo)) as [rxFollow |] eqn:Hf.
+    + match goal with
+      | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+      end; auto.
+      right.
+      apply subset_false_not_Subset in Hsub.
+      apply not_Subset_exists_elt in Hsub.
+      destruct Hsub as [la [H_la_in H_la_nin]].
+      exists rx; exists la; repeat split; auto.
+      * eapply medial_nt_in_ntsOf; eauto.
+      * apply LaSetFacts.union_1 in H_la_in.
+        destruct H_la_in as [Hfe | Hfg].
+        -- eapply updateFo_preserves_apac with
+               (nu := nu)
+               (gpre := gpre ++ [NT rx]) in Hap; eauto.
+           apply in_findOrEmpty_exists_set in Hfe.
+           destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
+           eapply la_in_fo_in_lookaheadsOf; eauto.
+        -- eapply in_firstGamma_in_lookaheadsOf; eauto.
+      * unfold not; intros Hp.
+        apply H_la_nin.
+        eapply updateFo_subset in Hp.
+        eapply in_pairsOf_in_set; eauto.
+      * apply in_add_keys_eq.
+        apply LaSetFacts.union_3; auto.
+    + match goal with
+      | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+      end; auto.
+      right.
+      apply not_empty_exists_elt in Hemp.
+      destruct Hemp as [la H_la_in].
+      exists rx; exists la; repeat split; auto.
+      * eapply medial_nt_in_ntsOf; eauto.
+      * apply LaSetFacts.union_1 in H_la_in.
+        destruct H_la_in as [Hfe | Hfg].
+        -- eapply updateFo_preserves_apac with
+               (nu := nu)
+               (gpre := gpre ++ [NT rx]) in Hap; eauto.
+           apply in_findOrEmpty_exists_set in Hfe.
+           destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
+           eapply la_in_fo_in_lookaheadsOf; eauto.
+        -- eapply in_firstGamma_in_lookaheadsOf; eauto.
+      * unfold not; intros Hp.
+        eapply updateFo_subset with
+            (nu := nu)
+            (fi := fi)
+            (x' := lx)
+            (gamma := gsuf) in Hp.
+        apply in_pairsOf_exists in Hp.
+        destruct Hp as [rxFollow [Hmt H_in_rxFollow]].
+        apply NtMapFacts.find_mapsto_iff in Hmt.
+        congruence.
+      * apply in_add_keys_eq; auto.
+Qed.
+
+Lemma updateFo_equiv_or_exists :
+  forall g nu fi x gamma fo,
+    first_map_for fi g
+    -> In (x, gamma) (productions g)
+    -> all_pairs_are_follow_candidates fo g
+    -> NtMap.Equiv LaSet.Equal fo (updateFo' nu fi x gamma fo)
+       \/ exists (x' : NtSet.elt) (la : LaSet.elt),
+        NtSet.In x' (ntsOf g) /\
+        LaSet.In la (lookaheadsOf g) /\
+        ~ PairSet.In (x', la) (pairsOf fo) /\
+        PairSet.In (x', la) (pairsOf (updateFo' nu fi x gamma fo)).
+Proof.
+  intros.
+  eapply updateFo_equiv_or_exists'; eauto.
+  rewrite app_nil_l; auto.
+Qed.
+
+Lemma mapsto_in :
+  forall k (v : LaSet.t) m,
+    NtMap.MapsTo k v m
+    -> NtMap.In k m.
+Proof.
+  intros.
+  rewrite NtMapFacts.find_mapsto_iff in H.
+  eapply ntmap_find_in; eauto.
+Qed.
+
+(* to do : move this to Lemmas.v or some shared location *)
+Lemma k_in_map_exists_v :
+  forall x (m : NtMap.t LaSet.t),
+    NtMap.In x m
+    -> exists s,
+      NtMap.MapsTo x s m.
+Proof.
+  intros x m Hin.
+  apply NtMapFacts.in_find_iff in Hin.
+  destruct (NtMap.find x m) as [s |] eqn:Hf.
+  - eexists.
+    apply NtMapFacts.find_mapsto_iff; eauto.
+  - congruence.
+Qed.
+
+Lemma ntmap_equiv_trans :
+  forall m1 m2 m3,
+    NtMap.Equiv LaSet.Equal m1 m2
+    -> NtMap.Equiv LaSet.Equal m2 m3
+    -> NtMap.Equiv LaSet.Equal m1 m3.
+Proof.
+  intros m1 m2 m3 H12 H23.
+  unfold NtMap.Equiv.
+  split; [intros k; split; intros Hin | intros k s1 s3 Hmt1 Hmt3].
+  - apply H23; apply H12; auto.
+  - apply H12; apply H23; auto.
+  - pose proof Hmt1 as Hmt1'.
+    apply mapsto_in in Hmt1.
+    apply H12 in Hmt1.
+    apply k_in_map_exists_v in Hmt1.
+    destruct Hmt1 as [s2 Hmt2].
+    eapply LP.equal_trans.
+    + eapply H12; eauto.
+    + eapply H23; eauto.   
+Qed.
+
+Lemma followPass_equiv_or_exists' :
+  forall g nu fi suf pre fo,
+    first_map_for fi g
+    -> all_pairs_are_follow_candidates fo g
+    -> pre ++ suf = (productions g)
+    -> NtMap.Equiv LaSet.Equal fo (followPass suf nu fi fo)
+       \/ exists x la,
+        NtSet.In x (ntsOf g)
+        /\ LaSet.In la (lookaheadsOf g)
+        /\ ~ PairSet.In (x, la) (pairsOf fo)
+        /\ PairSet.In (x, la) (pairsOf (followPass suf nu fi fo)).
+Proof.
+  intros g nu fi suf.
+  induction suf as [| (x, gamma) suf]; intros pre fo Hfm Hap Happ; simpl in *.
+  - left. (* LEMMA *)
+    unfold NtMap.Equiv.
+    split.
+    + split; intros; auto.
+    + intros k s s' Hmt Hmt'.
+      apply NtMapFacts.find_mapsto_iff in Hmt.
+      apply NtMapFacts.find_mapsto_iff in Hmt'.
+      assert (s = s') by congruence; subst.
+      apply LP.equal_refl.
+  - destruct (IHsuf (pre ++ [(x, gamma)]) fo) as [Heq | Hex]; clear IHsuf; auto.
+    + rewrite <- app_assoc; auto.
+    + pose proof updateFo_equiv_or_exists.
+      specialize (H g nu fi x gamma (followPass suf nu fi fo)).
+      eapply followPass_preserves_apac' with
+          (suf := suf) in Hap; eauto.
+      * apply H in Hap; auto.
+        destruct Hap; auto.
+        -- left.
+           eapply ntmap_equiv_trans; eauto.
+        -- destruct H0 as [x' [la [Hin [Hin' [Hnin Hin'']]]]].
+           right.
+           exists x'; exists la; repeat split; auto.
+           unfold not; intros.
+           apply Hnin.
+           apply followPass_subset; auto.
+        -- rewrite <- Happ.
+           apply in_app_cons.
+      * rewrite cons_app_singleton in Happ.
+        rewrite app_assoc in Happ; eauto.
+    + destruct Hex as [x' [la [Hin [Hin' [Hnin Hin'']]]]].
+      right.
+      exists x'; exists la; repeat split; auto.
+      apply updateFo_subset; auto.
+Qed.
+
 Lemma followPass_equiv_or_exists :
   forall g nu fi fo,
-    all_pairs_are_follow_candidates fo g
+    first_map_for fi g
+    -> all_pairs_are_follow_candidates fo g
     -> NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
        \/ exists x la,
         NtSet.In x (ntsOf g)
@@ -1664,11 +1957,15 @@ Lemma followPass_equiv_or_exists :
         /\ ~ PairSet.In (x, la) (pairsOf fo)
         /\ PairSet.In (x, la) (pairsOf (followPass (productions g) nu fi fo)).
 Proof.
-Admitted.
+  intros.
+  eapply followPass_equiv_or_exists'; eauto.
+  rewrite app_nil_l; auto.
+Qed.
 
 Lemma followPass_not_equiv_exists :
   forall g nu fi fo,
-    all_pairs_are_follow_candidates fo g
+    first_map_for fi g
+    -> all_pairs_are_follow_candidates fo g
     -> ~ NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
     -> exists x la,
       NtSet.In x (ntsOf g)
@@ -1680,20 +1977,67 @@ Proof.
   destruct (followPass_equiv_or_exists g nu fi fo); auto; try congruence.
 Qed.
 
+(*
+Lemma updateFo_subset :
+  forall nu fi lx gamma fo,
+    PairSet.Subset (pairsOf fo)
+                   (pairsOf (updateFo' nu fi lx gamma fo)).
+Proof.
+  intros nu fi lx gamma.
+  induction gamma as [| sym gamma]; intros fo; simpl in *.
+  - PD.fsetdec.
+  - destruct sym as [y | rx]; auto.
+    destruct (NtMap.find rx (updateFo' nu fi lx gamma fo)) as [rxFollow |] eqn:Hf.
+    + match goal with
+      | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+      end; auto.
+      unfold PairSet.Subset.
+      intros (rx', la) Hin.
+      destruct (NtSetFacts.eq_dec rx' rx); subst.
+      * apply IHgamma in Hin.
+        apply in_add_keys_eq.
+        apply LaSetFacts.union_2.
+        eapply in_pairsOf_in_set; eauto.
+      * apply in_add_keys_neq; auto.
+        apply IHgamma; auto.
+    + match goal with
+      | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+      end; auto.
+      unfold PairSet.Subset.
+      intros (rx', la) Hin.
+      destruct (NtSetFacts.eq_dec rx' rx); subst.
+      * exfalso.
+        apply IHgamma in Hin.
+        apply in_pairsOf_in_map_keys in Hin.
+        apply NtMapFacts.in_find_iff in Hin.
+        congruence.
+      * apply in_add_keys_neq; auto.
+        apply IHgamma; auto.
+Qed.      
+
+
 Lemma followPass_subset :
   forall ps nu fi fo,
  PairSet.Subset (pairsOf fo)
                 (pairsOf (followPass ps nu fi fo)).
 Proof.
-Admitted.
+  intros ps nu fi fo.
+  induction ps as [| (x, gamma) ps]; simpl in *.
+  - PD.fsetdec.
+  - eapply PairSetFacts.Subset_trans; eauto.
+    apply updateFo_subset.
+Qed.
+*)
+
   
 Lemma followPass_not_equiv_candidates_lt :
   forall g nu fi fo,
-    all_pairs_are_follow_candidates fo g
+    first_map_for fi g
+    -> all_pairs_are_follow_candidates fo g
     -> ~ NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
     -> numFollowCandidates g (followPass (productions g) nu fi fo) < numFollowCandidates g fo.
 Proof.
-  intros g nu fi fo Hap Hneq.
+  intros g nu fi fo Hfm Hap Hneq.
   apply followPass_not_equiv_exists in Hneq; auto.
   destruct Hneq as [x [la [Hx [Hla [Hps Hps']]]]].
   apply PP.subset_cardinal_lt with (x := (x, la)).
@@ -1721,6 +2065,51 @@ Next Obligation.
   apply followPass_not_equiv_candidates_lt; auto.
 Defined.
 
+Definition initial_fo g :=
+  NtMap.add (start g) (LaSet.singleton EOF) (NtMap.empty LaSet.t).
+
+Lemma start_in_ntsOf :
+  forall g,
+    NtSet.In (start g) (ntsOf g).
+Proof.
+  intros g.
+  unfold ntsOf.
+  induction (productions g) as [| (x, gamma) ps]; simpl in *; ND.fsetdec.
+Qed.
+
+Lemma EOF_in_lookaheadsOf :
+  forall g,
+    LaSet.In EOF (lookaheadsOf g).
+Proof.
+  intros g.
+  unfold lookaheadsOf.
+  induction (productions g) as [| (x, gamma) ps]; simpl in *; LD.fsetdec.
+Qed.
+
+Lemma initial_fo_apac :
+  forall g,
+    all_pairs_are_follow_candidates (initial_fo g) g.
+Proof.
+  intros g.
+  unfold all_pairs_are_follow_candidates.
+  intros x la Hin.
+  unfold initial_fo in *.
+  destruct (NtSetFacts.eq_dec x (start g)); subst.
+  - apply in_pairsOf_in_value in Hin.
+    apply LaSetFacts.singleton_1 in Hin; subst.
+    split.
+    + apply start_in_ntsOf. 
+    + apply EOF_in_lookaheadsOf. 
+  - apply in_add_keys_neq in Hin; auto.
+    inv Hin.
+Qed.
+
+Definition mkFollowMap (g : grammar)
+                       (nu : nullable_set)
+                       (fi : first_map)
+                       (fi_pf : first_map_for fi g) : follow_map :=
+  mkFollowMap' g nu fi fi_pf (initial_fo g) (initial_fo_apac g).
+ 
 (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
 
 Definition table_entry := (nonterminal * lookahead * list symbol)%type.
