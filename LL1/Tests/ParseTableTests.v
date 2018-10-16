@@ -301,12 +301,13 @@ Qed.
 
 (* tests of FOLLOW definitions *)
 
-Definition xFollow := LaSet.add EOF acdSet.
-Definition yFollow := LaSet.add EOF acdSet.
+Definition xFollow := acdSet.
+Definition yFollow := acdSet.
+Definition zFollow := LaSet.singleton EOF.
 
 (* Correct FOLLOW set for Grammar 3.12 *)
 Definition g312FollowMap :=
-  mkNtLaMap [(X, xFollow); (Y, yFollow)].
+  mkNtLaMap [(X, xFollow); (Y, yFollow); (Z, zFollow)].
 
 Example what's_in_xFirst :
   forall la,
@@ -435,10 +436,7 @@ Proof with crush.
     revert x.
     induction Hfo; intros.
     + inv H...
-      * exfalso. 
-        eapply Z_not_nullable; eauto. 
-      * exists yFollow...
-      * exists xFollow...
+      exists zFollow...
     + crush; try solve [crush]...
       * crush.
         -- inv H.

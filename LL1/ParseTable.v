@@ -135,9 +135,12 @@ Definition first_map_for (fi : first_map) (g : grammar) : Prop :=
   first_map_sound fi g /\ first_map_complete fi g.
 
 Inductive follow_sym (g : grammar) : lookahead -> symbol -> Prop :=
-| FollowNullable : forall sym,
+(*| FollowNullable : forall sym,
     nullable_sym g sym
-    -> follow_sym g EOF sym
+    -> follow_sym g EOF sym *)
+| FollowStart : forall x,
+    x = g.(start)
+    -> follow_sym g EOF (NT x)
 | FollowRight : forall x1 x2 la gpre gsuf,
     In (x1, gpre ++ NT x2 :: gsuf) g.(productions)
     -> first_gamma g la gsuf
