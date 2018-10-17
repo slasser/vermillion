@@ -141,8 +141,36 @@ Proof.
            eapply firstGamma_first_gamma; eauto.
     + rewrite NtMapFacts.add_neq_o in Hf'; auto.
       eapply Hin; eauto.
-  - admit.
-Admitted.
+  - match goal with
+    | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+    end; auto.
+    destruct (nullableGamma gsuf nu) eqn:Hng.
+    + unfold follow_map_sound.
+      intros x xFollow la Hf' Hin'.
+      destruct (NtSetFacts.eq_dec x rx); subst.
+      * apply find_values_eq in Hf'; subst.
+        apply LaSetFacts.union_1 in Hin'.
+        destruct Hin' as [Hfe | Hfg].
+        -- apply in_findOrEmpty_exists_set in Hfe.
+           destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
+           eapply FollowLeft; eauto.
+           eapply nullableGamma_nullable_gamma; eauto.
+           rewrite cons_app_singleton in Hprod.
+           rewrite app_assoc in Hprod.
+           eauto.
+        -- eapply FollowRight; eauto.
+           eapply firstGamma_first_gamma; eauto.
+      * rewrite NtMapFacts.add_neq_o in Hf'; auto.
+        eapply Hin; eauto.
+    + unfold follow_map_sound.
+      intros x xFollow la Hf' Hin'.
+      destruct (NtSetFacts.eq_dec x rx); subst.
+      * apply find_values_eq in Hf'; subst.
+        eapply FollowRight; eauto.
+        eapply firstGamma_first_gamma; eauto.
+      * rewrite NtMapFacts.add_neq_o in Hf'; auto.
+        eapply Hin; eauto.
+Qed.
 
 Lemma updateFo_preserves_soundness :
   forall g nu fi lx gamma fo,
