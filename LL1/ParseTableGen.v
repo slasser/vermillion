@@ -1330,22 +1330,25 @@ Fixpoint updateFo' (nu : nullable_set)
     let fo'   := updateFo' nu fi lx gamma' fo in
     let lSet  := findOrEmpty lx fo' in
     let rSet  := firstGamma gamma' nu fi in
-    let lrSet := LaSet.union lSet rSet in
-    match NtMap.find rx fo' with
-    | Some rxFollow =>
-      (* Only update FOLLOW(rx) if there's a new element to add *)
-      if LaSet.subset lrSet rxFollow then
-        fo'
-      else
-        let rxFollow' := LaSet.union rxFollow lrSet in
-        NtMap.add rx rxFollow' fo'
-    | None =>
-      (* Only create a new FOLLOW(rx) if it contains at least one element *)
-      if LaSet.is_empty lrSet then
-        fo'
-      else
-        NtMap.add rx lrSet fo'
-    end
+    let additions := if nullableGamma gamma' nu then
+                       LaSet.union lSet rSet
+                     else
+                       rSet
+    in  match NtMap.find rx fo' with
+        | Some rxFollow =>
+          (* Only update FOLLOW(rx) if there's a new element to add *)
+          if LaSet.subset additions rxFollow then
+            fo'
+          else
+            let rxFollow' := LaSet.union rxFollow additions in
+            NtMap.add rx rxFollow' fo'
+        | None =>
+          (* Only create a new FOLLOW(rx) if it contains at least one element *)
+          if LaSet.is_empty additions then
+            fo'
+          else
+            NtMap.add rx additions fo'
+        end
   end.
 
 Definition updateFo (nu : nullable_set)
@@ -1587,13 +1590,19 @@ Proof.
         -- eapply find_in_pairsOf in Hf; eauto.
            apply Hap in Hf.
            destruct Hf; auto.
-      * apply LaSetFacts.union_1 in Hu.
-        destruct Hu as [Hfe | Hfg].
-        -- split.
-           ++ eapply medial_nt_in_ntsOf; eauto.
-           ++ apply in_findOrEmpty_iff_in_pairsOf in Hfe.
-              apply Hap in Hfe.
-              destruct Hfe; auto.
+      * destruct (nullableGamma gsuf nu) eqn:Hng.
+        -- apply LaSetFacts.union_1 in Hu.
+           destruct Hu as [Hfe | Hfg].
+           ++ split.
+              ** eapply medial_nt_in_ntsOf; eauto.
+              ** apply in_findOrEmpty_iff_in_pairsOf in Hfe.
+                 apply Hap in Hfe.
+                 destruct Hfe; auto.
+           ++ split.
+              ** eapply medial_nt_in_ntsOf; eauto.
+              ** eapply in_firstGamma_in_lookaheadsOf with
+                     (gpre := gpre ++ [NT rx]); eauto.
+                 apply app_cons_apps; eauto.
         -- split.
            ++ eapply medial_nt_in_ntsOf; eauto.
            ++ eapply in_firstGamma_in_lookaheadsOf with
@@ -1608,14 +1617,20 @@ Proof.
     intros x la Hin'.
     destruct (NtSetFacts.eq_dec x rx); subst.
     + apply in_pairsOf_in_value in Hin'.
-      apply LaSetFacts.union_1 in Hin'.
-      destruct Hin' as [Hfe | Hfg].
-      * split.
-        -- eapply medial_nt_in_ntsOf; eauto.
-        -- unfold all_pairs_are_follow_candidates in Hap.
-           apply in_findOrEmpty_iff_in_pairsOf in Hfe.
-           apply Hap in Hfe.
-           destruct Hfe; auto.
+      destruct (nullableGamma gsuf nu) eqn:Hng.
+      * apply LaSetFacts.union_1 in Hin'.
+        destruct Hin' as [Hfe | Hfg].
+        -- split.
+           ++ eapply medial_nt_in_ntsOf; eauto.
+           ++ unfold all_pairs_are_follow_candidates in Hap.
+              apply in_findOrEmpty_iff_in_pairsOf in Hfe.
+              apply Hap in Hfe.
+              destruct Hfe; auto.
+        -- split.
+           ++ eapply medial_nt_in_ntsOf; eauto.
+           ++ eapply in_firstGamma_in_lookaheadsOf with
+                  (gpre := gpre ++ [NT rx]); eauto.
+              apply app_cons_apps; eauto.
       * split.
         -- eapply medial_nt_in_ntsOf; eauto.
         -- eapply in_firstGamma_in_lookaheadsOf with
@@ -1789,14 +1804,16 @@ Proof.
       destruct Hsub as [la [H_la_in H_la_nin]].
       exists rx; exists la; repeat split; auto.
       * eapply medial_nt_in_ntsOf; eauto.
-      * apply LaSetFacts.union_1 in H_la_in.
-        destruct H_la_in as [Hfe | Hfg].
-        -- eapply updateFo_preserves_apac with
-               (nu := nu)
-               (gpre := gpre ++ [NT rx]) in Hap; eauto.
-           apply in_findOrEmpty_exists_set in Hfe.
-           destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
-           eapply la_in_fo_in_lookaheadsOf; eauto.
+      * destruct (nullableGamma gsuf nu) eqn:Hng.
+        -- apply LaSetFacts.union_1 in H_la_in.
+           destruct H_la_in as [Hfe | Hfg].
+           ++ eapply updateFo_preserves_apac with
+                  (nu := nu)
+                  (gpre := gpre ++ [NT rx]) in Hap; eauto.
+              apply in_findOrEmpty_exists_set in Hfe.
+              destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
+              eapply la_in_fo_in_lookaheadsOf; eauto.
+           ++ eapply in_firstGamma_in_lookaheadsOf; eauto.
         -- eapply in_firstGamma_in_lookaheadsOf; eauto.
       * unfold not; intros Hp.
         apply H_la_nin.
@@ -1812,14 +1829,16 @@ Proof.
       destruct Hemp as [la H_la_in].
       exists rx; exists la; repeat split; auto.
       * eapply medial_nt_in_ntsOf; eauto.
-      * apply LaSetFacts.union_1 in H_la_in.
-        destruct H_la_in as [Hfe | Hfg].
-        -- eapply updateFo_preserves_apac with
-               (nu := nu)
-               (gpre := gpre ++ [NT rx]) in Hap; eauto.
-           apply in_findOrEmpty_exists_set in Hfe.
-           destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
-           eapply la_in_fo_in_lookaheadsOf; eauto.
+      * destruct (nullableGamma gsuf nu) eqn:Hng.
+        -- apply LaSetFacts.union_1 in H_la_in.
+           destruct H_la_in as [Hfe | Hfg].
+           ++ eapply updateFo_preserves_apac with
+                  (nu := nu)
+                  (gpre := gpre ++ [NT rx]) in Hap; eauto.
+              apply in_findOrEmpty_exists_set in Hfe.
+              destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
+              eapply la_in_fo_in_lookaheadsOf; eauto.
+           ++ eapply in_firstGamma_in_lookaheadsOf; eauto.
         -- eapply in_firstGamma_in_lookaheadsOf; eauto.
       * unfold not; intros Hp.
         eapply updateFo_subset with
