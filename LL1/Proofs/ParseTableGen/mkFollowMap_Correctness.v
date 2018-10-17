@@ -7,6 +7,8 @@ Require Import Lib.Tactics.
 Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
 
+Require Import LL1.Proofs.ParseTableGen.mkFirstMap_Correctness.
+
 Import ListNotations.
 
 Lemma mkFollowMap'_eq_body :
@@ -29,7 +31,73 @@ Proof.
   end; auto.
 Qed.
 
-(* found a bug--forgot to check whether gamma tail is nullable! *)
+Lemma nullableGamma_nullable_gamma :
+  forall g nu x gsuf gpre,
+    nullable_set_for nu g
+    -> In (x, gpre ++ gsuf) (productions g)
+    -> nullableGamma gsuf nu = true
+    -> nullable_gamma g gsuf.
+Proof.
+  intros g nu x gsuf.
+  induction gsuf as [| sym gsuf]; intros gpre Hnu Hin Hng; simpl in *.
+  - constructor.
+  - destruct sym as [y | rx].
+    + inv Hng.
+    + destruct (NtSet.mem rx nu) eqn:Hmem.
+      * rewrite cons_app_singleton in Hin.
+        rewrite app_assoc in Hin.
+        apply IHgsuf in Hin; clear IHgsuf; auto.
+        constructor; auto.
+        apply Hnu.
+        rewrite <- NtSet.mem_spec; auto.
+      * inv Hng.
+Qed.
+    
+Lemma first_gamma_tail_cons :
+  forall g la gsuf gpre sym,
+    nullable_sym g sym
+    -> nullable_gamma g gpre
+    -> first_gamma g la gsuf
+    -> first_gamma g la (gpre ++ sym :: gsuf).
+Proof.
+  intros g la gsuf gpre sym Hns Hng Hfg.
+  inv Hfg.
+  rewrite cons_app_singleton.
+  do 2 rewrite app_assoc.
+  constructor; auto.
+  apply nullable_app; auto.
+  apply nullable_app; auto.
+Qed.
+
+Lemma firstGamma_first_gamma :
+  forall g la nu fi gsuf,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> LaSet.In la (firstGamma gsuf nu fi)
+    -> first_gamma g la gsuf.
+Proof.
+  intros g la nu fi gsuf Hnu Hfi Hin.
+  induction gsuf as [| sym gsuf]; simpl in *.
+  - inv Hin.
+  - destruct (nullableSym sym nu) eqn:Hns.
+    + apply LaSetFacts.union_1 in Hin.
+      destruct Hin as [Hfs | Hfg].
+      * rewrite <- app_nil_l.
+        constructor.
+        -- constructor.
+        -- eapply firstSym_first_sym; eauto.
+           apply Hfi.
+      * apply IHgsuf in Hfg; clear IHgsuf.
+        rewrite <- app_nil_l.
+        apply first_gamma_tail_cons; auto.
+        eapply nullableSym_nullable_sym; eauto.
+    + rewrite <- app_nil_l. 
+      constructor.
+      * constructor.
+      * eapply firstSym_first_sym; eauto.
+        apply Hfi.
+Qed.
+        
 Lemma updateFo_preserves_soundness' :
   forall g nu fi lx fo,
     nullable_set_for nu g
@@ -57,15 +125,23 @@ Proof.
       apply LaSetFacts.union_1 in Hin'.
       destruct Hin' as [Hrxf | Hin'].
       * eapply Hin; eauto.
-      * apply LaSetFacts.union_1 in Hin'.
-        destruct Hin' as [Hfe | Hfg].
-        -- apply in_findOrEmpty_exists_set in Hfe.
-           destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
-           eapply FollowLeft.
-        
-      
-
-    
+      * destruct (nullableGamma gsuf nu) eqn:Hng.
+        -- apply LaSetFacts.union_1 in Hin'.
+           destruct Hin' as [Hfe | Hfg].
+           ++ apply in_findOrEmpty_exists_set in Hfe.
+              destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
+              eapply FollowLeft; eauto.
+              eapply nullableGamma_nullable_gamma; eauto.
+              rewrite cons_app_singleton in Hprod.
+              rewrite app_assoc in Hprod.
+              eauto.
+           ++ eapply FollowRight; eauto.
+              eapply firstGamma_first_gamma; eauto.
+        -- eapply FollowRight; eauto.
+           eapply firstGamma_first_gamma; eauto.
+    + rewrite NtMapFacts.add_neq_o in Hf'; auto.
+      eapply Hin; eauto.
+  - admit.
 Admitted.
 
 Lemma updateFo_preserves_soundness :
@@ -77,7 +153,9 @@ Lemma updateFo_preserves_soundness :
     -> follow_map_sound (updateFo' nu fi lx gamma fo) g.
 Proof.
   intros g nu fi lx gamma fo Hnu Hfi Hin Hfo.
-Admitted.
+  eapply updateFo_preserves_soundness'; eauto.
+  rewrite app_nil_l; auto.
+Qed.
 
 Lemma followPass_preserves_soundness' :
   forall (g  : grammar)
