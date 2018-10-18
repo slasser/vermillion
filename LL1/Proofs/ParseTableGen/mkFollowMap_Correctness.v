@@ -31,6 +31,8 @@ Proof.
   end; auto.
 Qed.
 
+(* Soundness *)
+
 Lemma nullableGamma_nullable_gamma :
   forall g nu x gsuf gpre,
     nullable_set_for nu g
@@ -276,6 +278,110 @@ Proof.
   apply initial_fo_sound.
 Qed.
 
+(* Completeness *)
+
+Lemma followPass_equiv_right :
+    forall (g : grammar)
+           (nu : nullable_set)
+           (Hnu : nullable_set_for nu g)
+           (fi : first_map)
+           (Hfi : first_map_for fi g)
+           (fo : follow_map)
+           (lx rx : nonterminal)
+           (gpre gsuf : list symbol)
+           (la : lookahead),
+      NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+      -> In (lx, gpre ++ NT rx :: gsuf) (productions g)
+      -> first_gamma g la gsuf
+      -> exists rxFollow : LaSet.t,
+          NtMap.find (elt:=LaSet.t) rx fo = Some rxFollow /\
+          LaSet.In la rxFollow.
+Proof.
+Admitted.
+
+Lemma followPass_equiv_left :
+      forall (g : grammar)
+             (nu : nullable_set)
+             (Hnu : nullable_set_for nu g)
+             (fi : first_map)
+             (Hfi : first_map_for fi g)
+             (fo : follow_map)
+             (lx rx : nonterminal)
+             (gpre gsuf : list symbol)
+             (la : lookahead)
+             (lxFollow : LaSet.t),
+        In (lx, gpre ++ NT rx :: gsuf) (productions g)
+        -> nullable_gamma g gsuf
+        -> NtMap.find (elt:=LaSet.t) lx fo = Some lxFollow
+        -> LaSet.In la lxFollow
+        -> exists rxFollow : LaSet.t,
+            NtMap.find (elt:=LaSet.t) rx fo = Some rxFollow
+            /\ LaSet.In la rxFollow.
+Proof.
+  intros g nu Hnu fi Hfi fo lx rx gpre gsuf la lxFollow Hin Hng Hf_l Hin_l.
+Admitted.
+
+Lemma followPass_equiv_complete :
+  forall (g : grammar)
+         (nu : nullable_set)
+         (Hnu : nullable_set_for nu g)
+         (fi : first_map)
+         (Hfi : first_map_for fi g)
+         (fo : follow_map),
+    PairSet.In (start g, EOF) (pairsOf fo)
+    -> NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+    -> follow_map_complete fo g.
+Proof.
+  intros g nu Hnu fi Hfi fo Hstart Heq.
+  unfold follow_map_complete.
+  intros s x la Hfs.
+  revert x.
+  induction Hfs; intros x' Hs; inv Hs; simpl in *; subst.
+  - apply in_pairsOf_exists in Hstart.
+    destruct Hstart as [s [Hmt Hin]].
+    rewrite NtMapFacts.find_mapsto_iff in Hmt; eauto.
+  - eapply followPass_equiv_right; eauto.
+  - destruct (IHHfs x1) as [lxFollow [Hf_lx Hin_lx]]; clear IHHfs; auto.
+    eapply followPass_equiv_left; eauto.
+Qed.
+    
+Lemma mkFollowMap'_complete :
+  forall (g  : grammar)
+         (nu : nullable_set)
+         (nu_pf : nullable_set_for nu g)
+         (fi : first_map)
+         (fi_pf : first_map_for fi g)
+         (fo : follow_map)
+         (fo_pf : all_pairs_are_follow_candidates fo g),
+    PairSet.In (start g, EOF) (pairsOf fo)
+    -> follow_map_complete (mkFollowMap' g nu fi fi_pf fo fo_pf) g.
+Proof.
+  intros g nu Hnu fi Hfi fo Hfo Hstart.
+  remember (numFollowCandidates g fo) as card.
+  generalize dependent fo.
+  induction card using lt_wf_ind.
+  intros fo Hfo Hstart Hc; subst.
+  rewrite mkFollowMap'_eq_body; simpl.
+  match goal with 
+  | |- context[follow_map_equiv_dec ?fo ?fo'] => 
+    destruct (follow_map_equiv_dec fo fo') as [Heq | Hneq]
+  end; auto.
+  - eapply followPass_equiv_complete; eauto.
+  - eapply H; clear H; auto.
+    + apply followPass_not_equiv_candidates_lt; auto.
+    + apply followPass_subset; auto.
+Qed.
+
+Lemma start_eof_in_initial_fo :
+  forall g,
+    PairSet.In (start g, EOF) (pairsOf (initial_fo g)).
+Proof.
+  intros g.
+  unfold initial_fo.
+  apply in_add_keys_eq.
+  LD.fsetdec.
+Qed.
+
 Theorem mkFollowMap_complete :
   forall (g  : grammar)
          (nu : nullable_set)
@@ -285,7 +391,10 @@ Theorem mkFollowMap_complete :
     follow_map_complete (mkFollowMap g nu fi fi_pf) g.
 Proof.
   intros g nu fi Hnu Hfi.
-Admitted.
+  unfold mkFollowMap.
+  apply mkFollowMap'_complete; auto.
+  apply start_eof_in_initial_fo.
+Qed.
 
 Theorem mkFollowMap_correct :
   forall (g  : grammar)
