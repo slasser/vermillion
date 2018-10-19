@@ -2203,12 +2203,3 @@ Definition addEntry (p : table_entry) (o : option parse_table) :=
 Definition mkParseTable (ps : list table_entry) : option parse_table :=
   fold_right addEntry (Some empty_table) ps.
 
-(* Combining all of the steps into a single function *)
-(* The type of this function will change as I add code for computing NULLABLE, etc. *)
-
-Definition genTableForGrammar g fo :=
-  let nu := mkNullableSet g in
-  let fi := mkFirstMap g nu in
-  let es := mkEntries nu fi fo g in
-  mkParseTable es.
-
