@@ -99,7 +99,54 @@ Proof.
       * eapply firstSym_first_sym; eauto.
         apply Hfi.
 Qed.
-        
+    
+Lemma first_gamma_firstGamma :
+  forall g la nu fi gamma,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> first_gamma g la gamma
+    -> LaSet.In la (firstGamma gamma nu fi).
+Proof.
+  intros g la nu fi gamma Hnu Hfi Hfg.
+  induction gamma as [| sym syms]; simpl in *.
+  - inv Hfg.
+    symmetry in H.
+    apply app_cons_not_nil in H; inv H.
+  - destruct (nullableSym sym nu) eqn:Hns.
+    + inv Hfg.
+      destruct gpre as [| sym' gpre]; simpl in *.
+      * inv H.
+        apply LaSetFacts.union_2.
+        destruct sym as [y | x]; simpl in *.
+        -- congruence.
+        -- unfold findOrEmpty.
+           destruct Hfi as [Hsou Hcom].
+           eapply Hcom in H2.
+           destruct H2 as [xFirst [Hf Hin]]; eauto.
+           rewrite Hf; auto.
+      * inv H.
+        apply LaSetFacts.union_3.
+        apply IHsyms.
+        constructor; auto.
+        inv H0; auto.
+    + inv Hfg.
+      destruct gpre as [| sym' gpre]; simpl in *.
+      * inv H.
+        destruct sym as [y | x]; simpl in *.
+        -- inv H2.
+           LD.fsetdec.
+        -- unfold findOrEmpty.
+           destruct Hfi as [Hsou Hcom].
+           eapply Hcom in H2.
+           destruct H2 as [xFirst [Hf Hin]]; eauto.
+           rewrite Hf; auto.
+      * inv H.
+        exfalso.
+        inv H0.
+        eapply nullable_sym_nullableSym in H3; eauto.
+        congruence.
+Qed.
+
 Lemma updateFo_preserves_soundness' :
   forall g nu fi lx fo,
     nullable_set_for nu g
@@ -280,6 +327,290 @@ Qed.
 
 (* Completeness *)
 
+Lemma ntmap_equiv_refl :
+  forall fo,
+    NtMap.Equiv LaSet.Equal fo fo.
+Proof.
+  intros fo.
+  unfold NtMap.Equiv.
+  split.
+  + split; intros; auto.
+  + intros k s s' Hmt Hmt'.
+    apply NtMapFacts.find_mapsto_iff in Hmt.
+    apply NtMapFacts.find_mapsto_iff in Hmt'.
+    assert (s = s') by congruence; subst.
+    apply LP.equal_refl.
+Qed.
+
+Lemma k_in_map_exists_pair :
+  forall x m,
+    NtMap.In x m
+    -> exists la,
+      PairSet.In (x, la) (pairsOf m).
+Proof.
+  intros x m Hin.
+  unfold pairsOf.
+Admitted.
+
+Lemma mapsto_in_pairsOf :
+  forall x s m la,
+ NtMap.MapsTo x s m
+ -> LaSet.In la s
+ -> PairSet.In (x, la) (pairsOf m).
+Proof.
+  intros x s m la Hmt Hin.
+  apply in_findOrEmpty_iff_in_pairsOf.
+  unfold findOrEmpty.
+  rewrite NtMapFacts.find_mapsto_iff in Hmt.
+  rewrite Hmt; auto.
+Qed.
+
+Lemma pairsOf_equal_iff_maps_equiv :
+  forall m1 m2,
+    PairSet.Equal (pairsOf m1) (pairsOf m2)
+    <-> NtMap.Equiv LaSet.Equal m1 m2.
+Proof.
+  intros m1 m2; split; intros Heq.
+  - unfold PairSet.Equal in Heq.
+    split.
+    + intros x; split; intros Hin.
+      * (* to do : the values associated with x might be empty in neither or both of the maps; it should be a contradiction if only one is empty *)
+        apply k_in_map_exists_pair in Hin.
+        destruct Hin as [la Hin].
+        apply Heq in Hin.
+        eapply in_pairsOf_in_map_keys; eauto.
+      * apply k_in_map_exists_pair in Hin.
+        destruct Hin as [la Hin].
+        apply Heq in Hin.
+        eapply in_pairsOf_in_map_keys; eauto.
+    + intros x s1 s2 Hmt1 Hmt2.
+      unfold LaSet.Equal.
+      intros la; split; intros Hin.
+      * eapply mapsto_in_pairsOf in Hmt1; eauto.
+        apply Heq in Hmt1.
+        eapply in_pairsOf_in_set; eauto.
+        rewrite <- NtMapFacts.find_mapsto_iff; auto.
+      * eapply mapsto_in_pairsOf in Hmt2; eauto.
+        apply Heq in Hmt2.
+        eapply in_pairsOf_in_set; eauto.
+        rewrite <- NtMapFacts.find_mapsto_iff; auto. 
+  - unfold PairSet.Equal.
+    unfold NtMap.Equiv in Heq.
+    destruct Heq as [Hin Hmt].
+    intros (x, la); split; intros Hin'.
+    + apply in_pairsOf_exists in Hin'.
+      destruct Hin' as [s1 [Hmt1 Hin1]].
+      pose proof Hmt1 as Hmt1'.
+      apply mapsto_in in Hmt1.
+      apply Hin in Hmt1.
+      apply k_in_map_exists_v in Hmt1.
+      destruct Hmt1 as [s2 Hmt2].
+      pose proof Hmt2 as Hmt2'.
+      eapply Hmt in Hmt2; eauto.
+      assert (LaSet.In la s2) by LD.fsetdec.
+      eapply find_in_pairsOf; eauto.
+      rewrite <- NtMapFacts.find_mapsto_iff; auto.
+    + apply in_pairsOf_exists in Hin'.
+      destruct Hin' as [s2 [Hmt2 Hin2]].
+      pose proof Hmt2 as Hmt2'.
+      apply mapsto_in in Hmt2.
+      apply Hin in Hmt2.
+      apply k_in_map_exists_v in Hmt2.
+      destruct Hmt2 as [s1 Hmt1].
+      pose proof Hmt1 as Hmt1'.
+      eapply Hmt in Hmt1; eauto.
+      assert (LaSet.In la s1) by LD.fsetdec.
+      eapply find_in_pairsOf; eauto.
+      rewrite <- NtMapFacts.find_mapsto_iff; auto.
+Qed.
+
+Lemma followPass_equiv_cons_tl :
+  forall nu fi fo x gamma ps,
+    NtMap.Equiv LaSet.Equal fo
+                (followPass ((x, gamma) :: ps) nu fi fo)
+    -> NtMap.Equiv LaSet.Equal fo
+                   (followPass ps nu fi fo).
+Proof.
+  intros.
+  simpl in *.
+  apply pairsOf_equal_iff_maps_equiv.
+  apply pairsOf_equal_iff_maps_equiv in H.
+  unfold PairSet.Equal in *.
+  intros (x', la); split; intros Hin.
+  - apply followPass_subset; auto.
+  - apply H.
+    apply updateFo_subset; auto.
+Qed.
+
+Lemma find_updateFo_cons_neq :
+  forall x x' nu fi fo lx gsuf xFollow,
+  x <> x'
+  -> NtMap.find x (updateFo' nu fi lx gsuf fo) = Some xFollow
+  -> NtMap.find x (updateFo' nu fi lx (NT x' :: gsuf) fo) = Some xFollow.
+Proof.
+  intros.
+  simpl.
+  destruct (NtMap.find (elt:=LaSet.t) x' (updateFo' nu fi lx gsuf fo)) as [x'Follow |].
+  - match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+    end; auto.
+    rewrite NtMapFacts.add_neq_o; auto.
+  - match goal with
+    | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+    end; auto.
+    rewrite NtMapFacts.add_neq_o; auto.
+Qed.
+
+Lemma in_updateFo_cons_neq :
+  forall x x' nu fi fo lx gsuf,
+  x <> x'
+  -> NtMap.In x (updateFo' nu fi lx gsuf fo)
+  -> NtMap.In x (updateFo' nu fi lx (NT x' :: gsuf) fo).
+Proof.
+  intros.
+  simpl.
+  destruct (NtMap.find (elt:=LaSet.t) x' (updateFo' nu fi lx gsuf fo)) as [x'Follow |].
+  - match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+    end; auto.
+    rewrite NtMapFacts.add_neq_in_iff; auto.
+  - match goal with
+    | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+    end; auto.
+    rewrite NtMapFacts.add_neq_in_iff; auto.
+Qed.
+
+Lemma updateFo_preserves_map_keys :
+  forall nu fi fo lx gsuf x sym,
+    NtMap.In (elt:=LaSet.t) x (updateFo' nu fi lx gsuf fo)
+    ->   NtMap.In (elt:=LaSet.t) x (updateFo' nu fi lx (sym :: gsuf) fo).
+Proof.
+  intros.
+  destruct sym as [y | x']; auto.
+  destruct (NtSetFacts.eq_dec x' x); subst.
+  - simpl in *.
+    destruct (NtMap.find x (updateFo' nu fi lx gsuf fo)) as [xFollow |] eqn:Hf.
+    + match goal with
+      | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+      end; auto.
+      apply map_key_in_add.
+    + exfalso.
+      apply k_in_map_exists_v in H.
+      destruct H as [s Hmt].
+      rewrite NtMapFacts.find_mapsto_iff in Hmt.
+      congruence.
+  - apply in_updateFo_cons_neq; auto.
+Qed.      
+
+Lemma right_nt_is_follow_map_key_first_gamma :
+  forall g nu fi fo lx rx gpre gsuf la,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> first_gamma g la gsuf
+    -> NtMap.In rx (updateFo' nu fi lx (gpre ++ NT rx :: gsuf) fo).
+Proof.
+  intros.
+  induction gpre as [| sym gpre].
+  - simpl in *.
+    destruct (NtMap.find (elt:=LaSet.t) rx (updateFo' nu fi lx gsuf fo)) as [rxFollow |] eqn:Hf.
+    + match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+      end.
+      * destruct (nullableGamma gsuf nu).
+        -- eapply ntmap_find_in; eauto.
+        -- eapply ntmap_find_in; eauto.
+      * apply map_key_in_add.
+    + match goal with
+      | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+      end.
+      * exfalso.
+        destruct (nullableGamma gsuf nu).
+        -- apply LaSet.is_empty_spec in Hemp.
+           assert (LaSet.Empty (firstGamma gsuf nu fi)) by LD.fsetdec.
+           eapply first_gamma_firstGamma in H1; eauto.
+           LD.fsetdec.
+        -- apply LaSet.is_empty_spec in Hemp.
+           eapply first_gamma_firstGamma in H1; eauto.
+           LD.fsetdec.
+      * apply map_key_in_add.
+  - apply updateFo_preserves_map_keys; auto.
+Qed.
+      
+Lemma exists_follow_set_containing_first_gamma :
+  forall g nu fi fo lx rx gpre gsuf la,
+    nullable_set_for nu g
+    -> first_map_for fi g
+    -> first_gamma g la gsuf
+    -> exists rxFollow,
+      NtMap.find rx (updateFo' nu fi lx (gpre ++ NT rx :: gsuf) fo) = Some rxFollow
+      /\ LaSet.In la rxFollow.
+Proof.
+  intros.
+  induction gpre as [| sym gpre].
+  - simpl in *.
+    destruct (NtMap.find (elt:=LaSet.t) rx (updateFo' nu fi lx gsuf fo)) as [rxFollow |] eqn:Hf.
+    + match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+      end.
+      * destruct (nullableGamma gsuf nu).
+        -- exists rxFollow; split; auto.
+           apply LaSetFacts.subset_iff in Hsub.
+           assert (LaSet.Subset (firstGamma gsuf nu fi) rxFollow) by LD.fsetdec.
+           eapply first_gamma_firstGamma in H; eauto.
+        -- exists rxFollow; split; auto.
+           apply LaSetFacts.subset_iff in Hsub.
+           apply Hsub.
+           eapply first_gamma_firstGamma; eauto.
+      * destruct (nullableGamma gsuf nu).
+        -- eexists; split.
+           ++ apply NtMapFacts.add_eq_o; auto.
+           ++ apply LaSetFacts.union_3.
+              apply LaSetFacts.union_3.
+              eapply first_gamma_firstGamma; eauto.
+        -- eexists; split.
+           ++ apply NtMapFacts.add_eq_o; auto.
+           ++ apply LaSetFacts.union_3.
+              eapply first_gamma_firstGamma; eauto.
+    + match goal with
+      | |- context[LaSet.is_empty ?s] => destruct (LaSet.is_empty s) eqn:Hemp
+      end.
+      * destruct (nullableGamma gsuf nu).
+        -- exfalso.
+           apply LaSet.is_empty_spec in Hemp.
+           assert (LaSet.Empty (firstGamma gsuf nu fi)) by LD.fsetdec.
+           eapply first_gamma_firstGamma in H1; eauto.
+           LD.fsetdec.
+        -- apply LaSet.is_empty_spec in Hemp.
+           eapply first_gamma_firstGamma in H1; eauto.
+           LD.fsetdec.
+      * destruct (nullableGamma gsuf nu).
+        -- eexists; split.
+           ++ apply NtMapFacts.add_eq_o; auto.
+           ++ apply LaSetFacts.union_3.
+              eapply first_gamma_firstGamma; eauto.
+        -- eexists; split.
+           ++ apply NtMapFacts.add_eq_o; auto.
+           ++ eapply first_gamma_firstGamma; eauto.
+  - destruct sym as [y | rx']; auto.
+    destruct IHgpre as [rxFollow [Hf Hin]].
+    destruct (NtSetFacts.eq_dec rx' rx); subst.
+    + simpl.
+      rewrite Hf.
+      match goal with
+    | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
+      end.
+      * destruct (nullableGamma (gpre ++ NT rx :: gsuf) nu); eauto.
+      * destruct (nullableGamma (gpre ++ NT rx :: gsuf) nu).
+        -- eexists; split.
+           ++ apply NtMapFacts.add_eq_o; auto.
+           ++ apply LaSetFacts.union_2; auto.
+        -- eexists; split.
+           ++ apply NtMapFacts.add_eq_o; auto.
+           ++ apply LaSetFacts.union_2; auto.
+    + exists rxFollow; split; auto.
+      apply find_updateFo_cons_neq; auto.
+Qed.
+      
 Lemma followPass_equiv_right :
     forall (g : grammar)
            (nu : nullable_set)
@@ -297,7 +628,30 @@ Lemma followPass_equiv_right :
           NtMap.find (elt:=LaSet.t) rx fo = Some rxFollow /\
           LaSet.In la rxFollow.
 Proof.
-Admitted.
+  intros g nu Hnu fi Hfi fo lx rx gpre gsuf la Heq Hin Hfg.
+  induction (productions g) as [| (lx', gamma) ps]; simpl in *.
+  - inv Hin.
+  - destruct Hin; subst.
+    + clear IHps.
+      inv H.
+      destruct Heq as [Hkeys Hmt].
+      pose proof (exists_follow_set_containing_first_gamma
+                    g nu fi (followPass ps nu fi fo) lx rx gpre gsuf la) as Hex.
+      destruct Hex as [rxFollow [Hf Hin]]; auto.
+      pose proof Hf as Hf'.
+      apply ntmap_find_in in Hf'.
+      apply Hkeys in Hf'.
+      apply k_in_map_exists_v in Hf'.
+      destruct Hf' as [rxFollow' Hmt'].
+      rewrite <- NtMapFacts.find_mapsto_iff in Hf.
+      pose proof Hmt' as Hmt''.
+      rewrite NtMapFacts.find_mapsto_iff in Hmt'.
+      eapply Hmt in Hmt''; eauto.
+      eexists; split; eauto.
+      LD.fsetdec.
+    + apply followPass_equiv_cons_tl in Heq.
+      eapply IHps; eauto.
+Qed.
 
 Lemma followPass_equiv_left :
       forall (g : grammar)
