@@ -342,6 +342,7 @@ Proof.
     apply LP.equal_refl.
 Qed.
 
+(* not true! *)
 Lemma k_in_map_exists_pair :
   forall x m,
     NtMap.In x m
@@ -350,7 +351,7 @@ Lemma k_in_map_exists_pair :
 Proof.
   intros x m Hin.
   unfold pairsOf.
-Admitted.
+Abort.
 
 Lemma mapsto_in_pairsOf :
   forall x s m la,
@@ -365,6 +366,7 @@ Proof.
   rewrite Hmt; auto.
 Qed.
 
+(*
 Lemma pairsOf_equal_iff_maps_equiv :
   forall m1 m2,
     PairSet.Equal (pairsOf m1) (pairsOf m2)
@@ -423,7 +425,9 @@ Proof.
       eapply find_in_pairsOf; eauto.
       rewrite <- NtMapFacts.find_mapsto_iff; auto.
 Qed.
+ *)
 
+(* treating fo as m1, (fp fo) as m2, and (update (fp fo)) as m3 *)
 Lemma followPass_equiv_cons_tl :
   forall nu fi fo x gamma ps,
     NtMap.Equiv LaSet.Equal fo
@@ -431,16 +435,29 @@ Lemma followPass_equiv_cons_tl :
     -> NtMap.Equiv LaSet.Equal fo
                    (followPass ps nu fi fo).
 Proof.
-  intros.
+  intros nu fi fo x gamma ps Heq.
   simpl in *.
-  apply pairsOf_equal_iff_maps_equiv.
-  apply pairsOf_equal_iff_maps_equiv in H.
-  unfold PairSet.Equal in *.
-  intros (x', la); split; intros Hin.
-  - apply followPass_subset; auto.
-  - apply H.
-    apply updateFo_subset; auto.
-Qed.
+  unfold NtMap.Equiv in *.
+  destruct Heq as [Hkeys_13 Hmt_13].
+  split.
+  - intros x'; split; intros Hin.
+    + admit. (* followPass_preserves_map_keys *)
+    + apply Hkeys_13.
+      admit. (* updateFo_preserves_map_keys *)
+  - intros x' s1 s2 Hmt1 Hmt2.
+    unfold LaSet.Equal.
+    intros la; split; intros Hin.
+    + admit. (* followPass_value_subset *)
+    + pose proof Hmt1 as Hmt1'.
+      apply mapsto_in in Hmt1.
+      apply Hkeys_13 in Hmt1.
+      apply k_in_map_exists_v in Hmt1.
+      destruct Hmt1 as [s3 Hmt3].
+      pose proof Hmt3 as Hmt3'.
+      eapply Hmt_13 in Hmt3; eauto.
+      apply Hmt3.
+      admit. (* updateFo_value_subset *)
+Admitted.
 
 Lemma find_updateFo_cons_neq :
   forall x x' nu fi fo lx gsuf xFollow,
