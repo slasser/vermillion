@@ -48,7 +48,7 @@ Lemma subset_subset_diffs :
     -> NtSet.Subset (NtSet.diff c b) (NtSet.diff c a).
 Proof.
   ND.fsetdec.
-Qed.
+Defined.
 
 Lemma nullablePass_subset :
   forall ps nu,
@@ -59,7 +59,7 @@ Proof.
   destruct p as (x, gamma).
   destruct (nullableGamma gamma (nullablePass ps nu)); auto.
   apply NtSetEqProps.MP.subset_add_2; auto.
-Qed.
+Defined.
 
 Lemma In_lhSet_cons :
   forall x' ps x gamma,
@@ -68,7 +68,7 @@ Lemma In_lhSet_cons :
 Proof.
   intros.
   unfold lhSet in *; simpl in *; ND.fsetdec.
-Qed.
+Defined.
 
 Lemma nullablePass_eq_or_exists :
   forall ps nu,
@@ -93,7 +93,7 @@ Proof.
     destruct H as [x' [Hin [Hnin Hin']]].
     right; eexists; split; eauto.
     apply In_lhSet_cons; auto.
-Qed.
+Defined.
 
 Lemma nullablePass_neq_exists :
   forall ps nu,
@@ -105,7 +105,7 @@ Lemma nullablePass_neq_exists :
 Proof.
   intros ps nu Hneq.
   destruct (nullablePass_eq_or_exists ps nu); congruence.
-Qed.
+Defined.
 
 Definition countNullableCandidates (ps : list production) (nu : NtSet.t) : nat :=
   let candidates := lhSet ps in
@@ -122,7 +122,7 @@ Proof.
   apply NtSetEqProps.MP.subset_cardinal_lt with (x := x); try ND.fsetdec.
   apply subset_subset_diffs.
   apply nullablePass_subset.
-Qed.
+Defined.
   
 Program Fixpoint mkNullableSet' 
         (ps : list production) 
@@ -206,7 +206,7 @@ Proof.
     + unfold NtMapFacts.compat_cmp.
       intros s s'.
       rewrite LaSet.equal_spec; split; auto.
-Qed.
+Defined.
   
 Definition nt_la_pair := (nonterminal * lookahead)%type.
 
@@ -269,7 +269,7 @@ Lemma pairset_subset_subset_diffs :
     -> PairSet.Subset (PairSet.diff c b) (PairSet.diff c a).
 Proof.
   PD.fsetdec.
-Qed.
+Defined.
 
 Lemma in_A_not_in_B_in_diff :
   forall elt a b,
@@ -278,7 +278,7 @@ Lemma in_A_not_in_B_in_diff :
     -> PairSet.In elt (PairSet.diff a b).
 Proof.
   PD.fsetdec.
-Qed.
+Defined.
 
 Lemma in_elements_iff_in_laSet :
   forall la s,
@@ -292,7 +292,7 @@ Proof.
     apply SetoidList.InA_alt in Hin.
     destruct Hin as [la' [Heq Hin]].
     subst; auto.
-Qed.
+Defined.
 
 Lemma in_elements_iff_in_ntSet :
   forall x s,
@@ -306,7 +306,7 @@ Proof.
     apply SetoidList.InA_alt in Hin.
     destruct Hin as [x' [Heq Hin]].
     subst; auto.
-Qed.
+Defined.
 
 Lemma in_set_in_mkPairs' :
   forall (x   : nonterminal)
@@ -323,7 +323,7 @@ Proof.
   - inv Hin.
   - destruct Hin; subst; try PD.fsetdec.
     apply IHlas in H; PD.fsetdec.
-Qed.
+Defined.
 
 Lemma in_set_in_mkPairs :
   forall (x  : nonterminal)
@@ -336,7 +336,7 @@ Proof.
   unfold mkPairs.
   apply in_set_in_mkPairs'.
   apply in_elements_iff_in_laSet; auto.
-Qed.
+Defined.
 
 Lemma in_A_in_B_in_product' :
   forall (x : nonterminal)
@@ -358,7 +358,7 @@ Proof.
       PD.fsetdec.
     + eapply IHxs in H; eauto.
       PD.fsetdec.
-Qed.
+Defined.
 
 (* To do : add module name before all fsetdec uses *)
 Lemma in_A_in_B_in_product :
@@ -373,7 +373,7 @@ Proof.
   apply in_A_in_B_in_product'; auto.
   rewrite <- in_rev.
   apply in_elements_iff_in_ntSet; auto.
-Qed.
+Defined.
 
 Lemma in_leftmostLookaheads_cons :
   forall la p ps,
@@ -386,7 +386,7 @@ Proof.
   - inv Hin.
   - destruct (leftmostLookahead gamma) as [la' |]; 
     destruct (leftmostLookahead gamma') as [la'' |]; auto; LD.fsetdec.
-Qed.
+Defined.
 
 Definition all_pairs_are_candidates (fi : first_map) (ps : list production) :=
   forall x la,
@@ -399,7 +399,7 @@ Lemma cons_app_singleton :
     x :: ys = [x] ++ ys.
 Proof.
   auto.
-Qed.
+Defined.
 
 Definition all_nt (gamma : list symbol) :=
   Forall (fun sym => isNT sym = true) gamma.
@@ -416,7 +416,7 @@ Proof.
     inv H1. (* LEMMA *)
   - apply IHgpre.
     inv Han; auto.
-Qed.
+Defined.
 
 Lemma gpre_nullable_in_leftmost_lks :
   forall x y gpre gsuf ps,
@@ -434,7 +434,7 @@ Proof.
       LD.fsetdec.
     + apply IHps in H.
       apply in_leftmostLookaheads_cons; auto.
-Qed.
+Defined.
 
 Lemma Forall_app :
   forall A (P : A -> Prop) (xs ys : list A),
@@ -446,7 +446,7 @@ Proof.
   induction xs as [| x xs]; intros ys Hf Hf'; simpl in *; auto.
   - inv Hf. 
     constructor; auto.
-Qed.
+Defined.
 
 Lemma find_in :
   forall x (s : LaSet.t) fi,
@@ -460,7 +460,7 @@ Proof.
   - unfold NtMapFacts.eqb in *. 
     destruct (NtSetFacts.eq_dec x x'); subst; auto.
     inv H; auto.
-Qed.
+Defined.
 
 Lemma in_A_in_B_in_pairsOf :
   forall x la s fi,
@@ -477,7 +477,7 @@ Proof.
       apply PairSetFacts.union_2.
       apply in_set_in_mkPairs; auto.
     + apply PairSetFacts.union_3; auto.
-Qed.
+Defined.
 
 Lemma in_firstGamma_in_leftmost_lks' :
   forall nu ps la fi x gsuf gpre,
@@ -511,7 +511,7 @@ Proof.
               eapply in_A_in_B_in_pairsOf; eauto.
               apply find_in; eauto.
            ++ inv Hin'.
-Qed.
+Defined.
 
 Lemma in_firstGamma_in_leftmost_lks :
   forall nu ps la fi x gamma,
@@ -523,7 +523,7 @@ Proof.
   intros.
   eapply in_firstGamma_in_leftmost_lks' with (gpre := []); simpl; eauto.
   constructor.
-Qed.
+Defined.
 
 Definition list_subset A (xs xs' : list A) :=
   forall x, In x xs -> In x xs'.
@@ -552,7 +552,7 @@ Proof.
   - apply Exists_exists; auto.
   - intros x.
     destruct (in_dec Heq x xs); auto.
-Qed.
+Defined.
 
 Lemma subset_list_subset :
   forall s s',
@@ -567,7 +567,7 @@ Proof.
   apply Hsub.
   apply in_elements_iff_in_laSet.
   auto.
-Qed.
+Defined.
 
 Lemma not_equal_not_list_equal :
   forall s s',
@@ -587,7 +587,7 @@ Proof.
     apply H.
     apply in_elements_iff_in_laSet.
     auto.
-Qed.
+Defined.
 
 Lemma exists_list_elt_exists_set_elt :
   forall s s',
@@ -603,7 +603,7 @@ Proof.
   - unfold not; intros.
     apply Hnin.
     apply in_elements_iff_in_laSet; auto.
-Qed.
+Defined.
 
 Lemma subset_neq_exists_elt :
   forall s s',
@@ -619,7 +619,7 @@ Proof.
   apply exists_list_elt_exists_set_elt.
   apply list_subset_neq_exists_elt; auto.
   apply lookahead_eq_dec.
-Qed.    
+Defined.    
       
 Lemma union_neq_exists_elt :
   forall s s',
@@ -633,7 +633,7 @@ Proof.
   destruct H as [la [Hin Hnin]].
   assert (LaSet.In la s') by LD.fsetdec.
   exists la; split; auto.
-Qed.
+Defined.
 
 Lemma in_lhSet_app :
   forall x gamma pre suf,
@@ -644,7 +644,7 @@ Proof.
   - ND.fsetdec.
   - apply NtSetFacts.add_2.
     auto.
-Qed.
+Defined.
 
 Lemma in_app_cons :
   forall A (x : A) (pre suf : list A),
@@ -652,7 +652,7 @@ Lemma in_app_cons :
 Proof.
   intros A x pre suf.
   induction pre; simpl; auto.
-Qed.
+Defined.
 
 Lemma ntmap_find_in : forall k vT (v : vT) m,
     NtMap.find k m = Some v ->
@@ -660,7 +660,7 @@ Lemma ntmap_find_in : forall k vT (v : vT) m,
 Proof.
   intros. rewrite NtMapFacts.in_find_iff. rewrite H.
   unfold not. intro Hcontra. inv Hcontra.
-Qed.
+Defined.
 
 Lemma maps_equiv_in_findOrEmpty :
   forall fi fi' x la,
@@ -686,7 +686,7 @@ Proof.
     apply NtMapFacts.in_find_iff in Hf'.
     congruence.
   - inv Hin.
-Qed.
+Defined.
 
 Lemma maps_equiv_not_in_findOrEmpty :
   forall fi fi' x la,
@@ -698,7 +698,7 @@ Proof.
   unfold not; intros Hin.
   apply Hnin.
   eapply maps_equiv_in_findOrEmpty; eauto.
-Qed.
+Defined.
 
 Lemma maps_equiv_in_firstSym_iff :
   forall fi fi' la sym,
@@ -709,7 +709,7 @@ Proof.
   intros fi fi' la sym Heq Hin.
   destruct sym as [y | x]; simpl in *; auto.
   eapply maps_equiv_in_findOrEmpty; eauto.
-Qed.
+Defined.
 
 Lemma maps_equiv_in_firstGamma_iff :
   forall nu fi fi' la gamma,
@@ -728,7 +728,7 @@ Proof.
       * apply LaSetFacts.union_3.
         apply IHgamma; auto.
     + eapply maps_equiv_in_firstSym_iff; eauto.
-Qed.
+Defined.
 
 Lemma in_mkPairs_in_set' :
   forall x la las,
@@ -746,7 +746,7 @@ Proof.
     apply IHlas.
     eapply PairSetFacts.add_3; eauto.
     congruence.
-Qed.
+Defined.
 
 Lemma mkPairs_keys_eq :
   forall x x' la s,
@@ -761,7 +761,7 @@ Proof.
     apply IHelts.
     eapply PairSetFacts.add_3; eauto.
     congruence.
-Qed.
+Defined.
   
 Lemma in_mkPairs_in_set :
   forall x x' la s,
@@ -774,7 +774,7 @@ Proof.
   apply in_elements_iff_in_laSet.
   unfold mkPairs in *.
   eapply in_mkPairs_in_set'; eauto.
-Qed.
+Defined.
 
 Lemma nt_in_pairs_in_elements :
   forall x la s ps,
@@ -796,7 +796,7 @@ Proof.
       apply mkPairs_keys_eq in Hmk; subst. (* LTAC *)
       constructor.
     + apply InA_cons_tl; auto.
-Qed.
+Defined.
 
 Lemma In_InA_eq_key :
   forall x s s' ps,
@@ -811,7 +811,7 @@ Proof.
       apply InA_cons_hd.
       constructor.
     + apply InA_cons_tl; auto.
-Qed.
+Defined.
 
 (* To do : give the f argument to fold_right a name *)
 Lemma in_pairsOf_in_set' :
@@ -847,7 +847,7 @@ Proof.
         eapply In_InA_eq_key in Hin'; eauto.
       * inv Hnd.
         apply IHps; auto.
-Qed.        
+Defined.        
 
 Lemma in_pairsOf_in_set :
   forall x la fi s,
@@ -859,7 +859,7 @@ Proof.
   eapply in_pairsOf_in_set'; eauto.
   - apply find_in; auto.
   - apply NtMap.elements_3w.
-Qed.
+Defined.
 
 Lemma in_pairsOf_in_map_keys :
   forall x la fi,
@@ -881,7 +881,7 @@ Proof.
       destruct Hin as [s' Hin].
       exists s'.
       apply InA_cons_tl; auto.
-Qed.
+Defined.
 
 Lemma in_findOrEmpty_iff_in_pairsOf :
   forall x la fi,
@@ -900,7 +900,7 @@ Proof.
     + exfalso.
       eapply NtMapFacts.in_find_iff; eauto.
       eapply in_pairsOf_in_map_keys; eauto.
-Qed.
+Defined.
 
 Lemma not_in_findOrEmpty_not_in_pairsOf :
   forall x la fi,
@@ -917,7 +917,7 @@ Proof.
     apply NtMapFacts.not_find_in_iff in Hf.
     apply Hf; clear Hf.
     eapply in_pairsOf_in_map_keys; eauto.
-Qed.
+Defined.
 
 Lemma maps_equiv_sym :
   forall fi fi',
@@ -932,7 +932,7 @@ Proof.
   - intros x s s' Hmt' Hmt''.
     apply Hmt with (e := s') in Hmt'; auto.
     LD.fsetdec.
-Qed.
+Defined.
 
 Lemma map_elements_InA_iff_In :
   forall x s fi,
@@ -952,7 +952,7 @@ Proof.
       inv Heq.
       apply InA_cons_hd.
       unfold NtMap.eq_key_elt; auto.
-Qed.
+Defined.
 
 Lemma kv_in_map_iff_in_elements :
     forall (x  : nonterminal)
@@ -966,7 +966,7 @@ Proof.
     rewrite <- NtMapFacts.elements_mapsto_iff; auto.
   - rewrite NtMapFacts.elements_mapsto_iff.
     apply map_elements_InA_iff_In; auto.
-Qed.
+Defined.
 
 Lemma in_elements_add :
   forall (x  : nonterminal)
@@ -977,7 +977,7 @@ Proof.
   intros x s fi.
   apply kv_in_map_iff_in_elements.
   apply NtMap.add_1; auto.
-Qed.
+Defined.
 
 Lemma in_pairsOf_exists' :
   forall x la elts,
@@ -999,7 +999,7 @@ Proof.
     + apply IHelts in Hin.
       destruct Hin as [s' [Hin Hin']].
       exists s'; split; auto.
-Qed.
+Defined.
 
 Lemma in_pairsOf_exists :
   forall x la fi,
@@ -1014,7 +1014,7 @@ Proof.
   exists s; split; auto.
   apply NtMapFacts.elements_mapsto_iff.
   apply map_elements_InA_iff_In; auto.
-Qed.
+Defined.
 
 Lemma find_values_eq :
   forall x (s s' : LaSet.t) fi,
@@ -1027,7 +1027,7 @@ Proof.
   assert (H' : x = x) by auto.
   apply H in H'.
   congruence.
-Qed.
+Defined.
 
 Lemma map_key_in_add :
   forall x s fi,
@@ -1036,7 +1036,7 @@ Proof.
   intros x s fi.
   apply NtMapFacts.add_in_iff.
   left; auto.
-Qed.
+Defined.
 
 Lemma in_add_keys_eq :
   forall x s la fi,
@@ -1051,7 +1051,7 @@ Proof.
   - exfalso.
     eapply NtMapFacts.in_find_iff; eauto.
     apply map_key_in_add.
-Qed.
+Defined.
 
 Lemma in_add_keys_neq :
   forall x y s la fi,
@@ -1073,7 +1073,7 @@ Proof.
     eapply in_A_in_B_in_pairsOf; eauto.
     apply map_elements_InA_iff_In.
     rewrite <- NtMapFacts.elements_mapsto_iff; auto.
-Qed.
+Defined.
   
 Lemma firstPass_equiv_or_exists' :
   forall nu ps suf pre fi,
@@ -1145,7 +1145,7 @@ Proof.
               apply NtMapFacts.in_find_iff in Hin'''.
               congruence.
       * apply in_add_keys_neq; auto.
-Qed.
+Defined.
 
 Lemma in_pairsOf_in_value :
   forall x la s fi,
@@ -1161,7 +1161,7 @@ Proof.
   - exfalso.
     destruct Hneq.
     congruence.
-Qed.
+Defined.
 
 Lemma firstPass_preserves_apac' :
   forall nu ps suf pre fi,
@@ -1196,7 +1196,7 @@ Proof.
                  apply in_findOrEmpty_iff_in_pairsOf; eauto.
         -- apply in_add_keys_neq in Hin; auto.
       * subst; rewrite <- app_assoc; auto.
-Qed.                 
+Defined.                 
 
 Lemma firstPass_preserves_apac :
   forall nu ps fi,
@@ -1205,7 +1205,7 @@ Lemma firstPass_preserves_apac :
 Proof.
   intros.
   apply firstPass_preserves_apac' with (pre := []); auto.
-Qed.
+Defined.
 
 Lemma in_pairsOf_in_mkPairs :
   forall x la s fi,
@@ -1218,7 +1218,7 @@ Proof.
   - eapply in_A_in_B_in_pairsOf.
     + apply in_elements_add.
     + eapply in_mkPairs_in_set; eauto.
-Qed.
+Defined.
 
 Lemma firstPass_subset : 
   forall nu ps fi,
@@ -1237,7 +1237,7 @@ Proof.
       apply LaSetFacts.union_3.
       apply in_findOrEmpty_iff_in_pairsOf; auto.
     + apply in_add_keys_neq; auto.
-Qed.
+Defined.
 
 Lemma firstPass_equiv_or_exists :
   forall nu ps fi,
@@ -1252,7 +1252,7 @@ Proof.
   intros nu ps fi Hap.
   eapply firstPass_equiv_or_exists'; auto.
   rewrite app_nil_l; auto.
-Qed.
+Defined.
 
 Lemma firstPass_not_equiv_exists :
   forall nu ps fi,
@@ -1266,7 +1266,7 @@ Lemma firstPass_not_equiv_exists :
 Proof.
   intros nu ps fi Hneq.
   destruct (firstPass_equiv_or_exists nu ps fi); auto; try congruence.
-Qed.
+Defined.
   
 Lemma firstPass_not_equiv_candidates_lt :
   forall nu ps fi,
@@ -1282,7 +1282,7 @@ Proof.
     apply firstPass_subset.
   - apply in_A_not_in_B_in_diff; auto.
     apply in_A_in_B_in_product; auto.
-Qed.
+Defined.
 
 Program Fixpoint mkFirstMap'
         (ps : list production)
@@ -1309,7 +1309,7 @@ Proof.
   unfold all_pairs_are_candidates; intros x la Hin.
   unfold pairsOf in *; simpl in *.
   inv Hin.
-Qed.
+Defined.
 
 Definition mkFirstMap (g : grammar) (nu : nullable_set) :=
   let ps := g.(productions) in
@@ -1421,7 +1421,7 @@ Lemma app_cons_apps :
 Proof.
   intros.
   rewrite <- app_assoc; auto.
-Qed.
+Defined.
 
 Lemma find_in_pairsOf :
   forall x la s fo,
@@ -1433,7 +1433,7 @@ Proof.
   apply in_findOrEmpty_iff_in_pairsOf.
   unfold findOrEmpty.
   rewrite Hf; auto.
-Qed.
+Defined.
 
 Lemma medial_nt_in_ntsOfGamma :
   forall x gpre gsuf,
@@ -1444,7 +1444,7 @@ Proof.
   - ND.fsetdec.
   - destruct sym as [y | x']; auto.
     ND.fsetdec.
-Qed.
+Defined.
 
 Lemma medial_nt_in_ntsOf :
   forall g lx rx gpre gsuf,
@@ -1461,7 +1461,7 @@ Proof.
       apply NtSetFacts.add_2.
       apply medial_nt_in_ntsOfGamma.
     + apply NtSetFacts.union_3; auto.
-Qed.
+Defined.
 
 Lemma in_findOrEmpty_exists_set :
   forall x la m,
@@ -1474,7 +1474,7 @@ Proof.
   unfold findOrEmpty in *.
   destruct (NtMap.find x m) as [s |]; eauto.
   inv Hin.
-Qed.
+Defined.
 
 Lemma medial_t_in_lookaheadsOfGamma :
   forall y gpre gsuf,
@@ -1485,7 +1485,7 @@ Proof.
   - LD.fsetdec.
   - destruct sym as [y' | x]; auto.
     LD.fsetdec.
-Qed.
+Defined.
 
 Lemma medial_t_in_lookaheadsOf :
   forall g x gpre gsuf y,
@@ -1501,7 +1501,7 @@ Proof.
       apply LaSetFacts.union_2.
       apply medial_t_in_lookaheadsOfGamma.
     + apply LaSetFacts.union_3; auto.
-Qed.
+Defined.
 
 Lemma first_sym_in_lookaheadsOf :
   forall g la sym,
@@ -1518,7 +1518,7 @@ Proof.
     + inv Hfs.
       eapply medial_t_in_lookaheadsOf; eauto.
     + eapply IHHfs; eauto.
-Qed.
+Defined.
   
 
 Lemma first_map_la_in_lookaheadsOf :
@@ -1531,7 +1531,7 @@ Proof.
   intros g x s la fi Hfm Hf Hin.
   eapply first_sym_in_lookaheadsOf; eauto.
   eapply Hfm; eauto.
-Qed.
+Defined.
 
 Lemma in_firstGamma_in_lookaheadsOf :
   forall g nu fi x gsuf gpre la,
@@ -1561,7 +1561,7 @@ Proof.
       * apply in_findOrEmpty_exists_set in Hin'.
         destruct Hin' as [s [Hf Hin']].
         eapply first_map_la_in_lookaheadsOf; eauto.
-Qed.
+Defined.
 
 Lemma updateFo_preserves_apac :
   forall g nu fi lx gsuf gpre fo,
@@ -1638,7 +1638,7 @@ Proof.
            apply app_cons_apps; eauto.
     + apply Hap.
       apply in_add_keys_neq in Hin'; auto.
-Qed.
+Defined.
     
 Lemma followPass_preserves_apac' :
   forall g nu fi suf pre fo,
@@ -1656,7 +1656,7 @@ Proof.
   apply updateFo_preserves_apac with (gpre := nil); simpl in *; auto.
   rewrite <- Happ'.
   apply in_app_cons.
-Qed.
+Defined.
 
 Lemma followPass_preserves_apac :
   forall g nu fi fo,
@@ -1667,7 +1667,7 @@ Proof.
   intros.
   eapply followPass_preserves_apac'; eauto.
   rewrite app_nil_l; auto.
-Qed.
+Defined.
 
 (* to do : redefine this with PairSet.Subset *)
 Lemma updateFo_subset :
@@ -1698,7 +1698,7 @@ Proof.
       apply NtMapFacts.in_find_iff in IHgamma.
       congruence.
     + apply in_add_keys_neq; auto.    
-Qed.
+Defined.
 
 Lemma followPass_subset :
   forall nu fi fo ps,
@@ -1711,7 +1711,7 @@ Proof.
     unfold PairSet.Subset.
     intros (x', la) Hin.
     eapply updateFo_subset; eauto.
-Qed.
+Defined.
 
 Lemma subset_false_not_Subset :
   forall a b,
@@ -1721,7 +1721,7 @@ Proof.
   intros a b Hs.
   unfold not; intros HS.
   apply LaSetFacts.subset_iff in HS; congruence.
-Qed.
+Defined.
 
 Lemma not_Subset_exists_elt :
   forall a b,
@@ -1737,7 +1737,7 @@ Proof.
   apply Hns.
   intros la Hin.
   LD.fsetdec.
-Qed.
+Defined.
 
 Lemma la_in_fo_in_lookaheadsOf :
   forall g x fo xFollow la,
@@ -1749,7 +1749,7 @@ Proof.
   intros g x fo xFollow la Hf Hin Hap.
   eapply Hap.
   eapply find_in_pairsOf; eauto.
-Qed.
+Defined.
 
 Lemma not_empty_exists_elt :
   forall s,
@@ -1762,7 +1762,7 @@ Proof.
   destruct Hie as [la [_ Hmem]].
   exists la.
   rewrite <- LaSet.mem_spec; auto.
-Qed.
+Defined.
 
 Lemma updateFo_equiv_or_exists' :
   forall g nu fi lx gsuf gpre fo,
@@ -1851,7 +1851,7 @@ Proof.
         apply NtMapFacts.find_mapsto_iff in Hmt.
         congruence.
       * apply in_add_keys_eq; auto.
-Qed.
+Defined.
 
 Lemma updateFo_equiv_or_exists :
   forall g nu fi x gamma fo,
@@ -1868,7 +1868,7 @@ Proof.
   intros.
   eapply updateFo_equiv_or_exists'; eauto.
   rewrite app_nil_l; auto.
-Qed.
+Defined.
 
 Lemma mapsto_in :
   forall k (v : LaSet.t) m,
@@ -1878,7 +1878,7 @@ Proof.
   intros.
   rewrite NtMapFacts.find_mapsto_iff in H.
   eapply ntmap_find_in; eauto.
-Qed.
+Defined.
 
 (* to do : move this to Lemmas.v or some shared location *)
 Lemma k_in_map_exists_v :
@@ -1893,7 +1893,7 @@ Proof.
   - eexists.
     apply NtMapFacts.find_mapsto_iff; eauto.
   - congruence.
-Qed.
+Defined.
 
 Lemma ntmap_equiv_trans :
   forall m1 m2 m3,
@@ -1914,7 +1914,7 @@ Proof.
     eapply LP.equal_trans.
     + eapply H12; eauto.
     + eapply H23; eauto.   
-Qed.
+Defined.
 
 Lemma followPass_equiv_or_exists' :
   forall g nu fi suf pre fo,
@@ -1963,7 +1963,7 @@ Proof.
       right.
       exists x'; exists la; repeat split; auto.
       apply updateFo_subset; auto.
-Qed.
+Defined.
 
 Lemma followPass_equiv_or_exists :
   forall g nu fi fo,
@@ -1979,7 +1979,7 @@ Proof.
   intros.
   eapply followPass_equiv_or_exists'; eauto.
   rewrite app_nil_l; auto.
-Qed.
+Defined.
 
 Lemma followPass_not_equiv_exists :
   forall g nu fi fo,
@@ -1994,7 +1994,7 @@ Lemma followPass_not_equiv_exists :
 Proof.
   intros g nu fi fo Hap Hneq.
   destruct (followPass_equiv_or_exists g nu fi fo); auto; try congruence.
-Qed.
+Defined.
 
 (*
 Lemma updateFo_subset :
@@ -2032,7 +2032,7 @@ Proof.
         congruence.
       * apply in_add_keys_neq; auto.
         apply IHgamma; auto.
-Qed.      
+Defined.      
 
 
 Lemma followPass_subset :
@@ -2045,7 +2045,7 @@ Proof.
   - PD.fsetdec.
   - eapply PairSetFacts.Subset_trans; eauto.
     apply updateFo_subset.
-Qed.
+Defined.
 *)
 
   
@@ -2065,7 +2065,7 @@ Proof.
   - apply in_A_not_in_B_in_diff; auto.
     apply in_A_in_B_in_product; auto.
   - PD.fsetdec.
-Qed.
+Defined.
 
 Program Fixpoint mkFollowMap'
         (g  : grammar)
@@ -2094,7 +2094,7 @@ Proof.
   intros g.
   unfold ntsOf.
   induction (productions g) as [| (x, gamma) ps]; simpl in *; ND.fsetdec.
-Qed.
+Defined.
 
 Lemma EOF_in_lookaheadsOf :
   forall g,
@@ -2103,7 +2103,7 @@ Proof.
   intros g.
   unfold lookaheadsOf.
   induction (productions g) as [| (x, gamma) ps]; simpl in *; LD.fsetdec.
-Qed.
+Defined.
 
 Lemma initial_fo_apac :
   forall g,
@@ -2121,7 +2121,7 @@ Proof.
     + apply EOF_in_lookaheadsOf. 
   - apply in_add_keys_neq in Hin; auto.
     inv Hin.
-Qed.
+Defined.
 
 Definition mkFollowMap (g : grammar)
                        (nu : nullable_set)
