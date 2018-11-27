@@ -1,105 +1,11 @@
 Require Import FMaps List MSets String.
-Require Import Grammar ParseTable ParseTree Utils.
+Require Import Lib.Grammar.
+Require Import Lib.ParseTree.
+Require Import Lib.Utils.
+Require Import Lib.Tactics.
+Require Import LL1.ParseTable. 
 Import ListNotations.
 Open Scope string_scope.
-
-(*
-Definition mkNullableSet g fuel :=
-  let updateNu (prod : production) nSet :=
-      let (x, ys) := prod in
-      if forallb (nullable nSet) ys then SymbolSet.add x nSet else nSet
-  in  fixp (fun nu => fold_right updateNu nu g) SymbolSet.equal SymbolSet.empty fuel.
-
-
-Definition mkFirstSet g nu fuel :=
-  let fix updateFi (prod : production) fi :=
-      let (x, ys) := prod in
-      let fix helper x ys fi :=
-          match ys with
-          | nil => fi
-          | T s :: ys'  => SymbolMap.add x (SymbolSet.add (T s) (getOrEmpty x fi)) fi 
-          | NT s :: ys' =>
-            let vx := SymbolSet.union (getOrEmpty x fi) (getOrEmpty (NT s) fi) in
-            let fi' := SymbolMap.add x vx fi in
-            if SymbolSet.mem (NT s) nu then helper x ys' fi' else fi'
-          end
-      in  helper x ys fi
-  in  fixp (fun fi => fold_right updateFi fi g)
-           (SymbolMap.equal SymbolSet.equal)
-           (SymbolMap.empty SymbolSet.t)
-           fuel.
-
-
-Definition mkFollowSet g nu fi fuel :=
-  let updateFo (prod : production) fo :=
-      match prod with
-      | (x, ys) =>
-        let fix helper (x : symbol) (ys : list symbol) fo :=
-            match ys with
-            | nil => fo
-            | NT s :: ys' =>
-              let fix loopr ys' fo :=
-                  match ys' with
-                  | nil => SymbolMap.add (NT s) (SymbolSet.union (getOrEmpty x fo) (getOrEmpty (NT s) fo)) fo
-                  | z :: zs =>
-                    let fo' := SymbolMap.add (NT s) (SymbolSet.union (getOrEmpty (NT s) fo) (getOrEmpty z fi)) fo in
-                    if nullable nu z then loopr zs fo' else fo'
-                  end
-              in  helper x ys' (loopr ys' fo)
-            | _ :: ys' => helper x ys' fo
-            end
-        in  helper x ys fo
-      end            
-  in  fixp (fun fo => fold_right updateFo fo g) (SymbolMap.equal SymbolSet.equal) (SymbolMap.empty SymbolSet.t) fuel.
-
-
-Record nff := mkNFF {nu : SymbolSet.t;
-                     fi : SymbolMap.t SymbolSet.t;
-                     fo : SymbolMap.t SymbolSet.t}.
-
-Definition gToNFF g fuel :=
-  let nu := mkNullableSet g fuel in
-  let fi := mkFirstSet g nu fuel in
-  let fo := mkFollowSet g nu fi fuel in
-  mkNFF nu fi fo.
-
-
-Fixpoint firstGamma gamma nu fi :=
-  match gamma with
-  | nil => SymbolSet.empty
-  | y :: ys =>
-    if nullable nu y then
-      SymbolSet.union (first fi y) (firstGamma ys nu fi)
-    else
-      first fi y
-  end.
-
-Definition nullableGamma ys nu := forallb (nullable nu) ys.
-
-Definition mkParseTable g fuel :=
-  let nff := gToNFF g fuel in
-  let addEntry entry nt t ma :=
-      let row :=  match SymbolMap.find nt ma with
-                  | Some r => r
-                  | None   => (SymbolMap.empty (list production))
-                  end  in
-      let cell := match SymbolMap.find t row with
-                  | Some c => c
-                  | None   => nil
-                  end  in
-      SymbolMap.add nt (SymbolMap.add t (entry :: cell) row) ma  in
-  let addProd prod tbl :=
-      match prod with
-        | (x, ys) =>
-          let fg := firstGamma ys (nu nff) (fi nff) in
-          let ts := if nullableGamma ys (nu nff) then
-                      SymbolSet.union fg (getOrEmpty x (fo nff))
-                    else
-                      fg
-          in  SymbolSet.fold (addEntry (x, ys) x) ts tbl
-      end
-  in  fold_right addProd (SymbolMap.empty (SymbolMap.t (list production))) g.
- *)
 
 Definition peek input :=
   match input with
@@ -107,10 +13,12 @@ Definition peek input :=
   | token :: _ => LA token
   end.
 
+(* fuel-based parser *)
+
 Fixpoint parse (tbl : parse_table)
-               (sym : symbol)
-               (input : list string)
-               (fuel : nat) : (option tree * list string) :=
+         (sym : symbol)
+         (input : list string)
+         (fuel : nat) : (option tree * list string) :=
   match fuel with
   | O => (None, input)
   | S n => 
@@ -137,7 +45,7 @@ with parseForest (tbl : parse_table)
                  (gamma : list symbol)
                  (input : list string)
                  (fuel : nat) :
-                 (option (list tree) * list string) :=
+       (option (list tree) * list string) :=
        match fuel with
        | O => (None, input)
        | S n =>
@@ -155,3 +63,54 @@ with parseForest (tbl : parse_table)
            end
          end
        end.
+
+(* fuel-less implementation *)
+
+Section Lexicographic.
+
+Variables (A B : Type) (leA : relation A) (leB : relation B).
+
+Inductive lexprod : A * B -> A * B -> Prop :=
+| left_lex  : forall x x' y y', leA x x' -> lexprod (x, y) (x', y')
+| right_lex : forall x y y',    leB y y' -> lexprod (x, y) (x, y').
+
+Theorem lexprod_trans :
+  transitive _ leA
+  -> transitive _ leB
+  -> transitive _ lexprod.
+Proof.
+  intros tA tB [x1 y1] [x2 y2] [x3 y3] H12 H23.
+  inv H12; inv H23.
+  - apply left_lex; eauto.
+  - apply left_lex; auto.
+  - apply left_lex; auto.
+  - apply right_lex; eauto.
+Qed.
+
+Theorem lexprod_wf :
+  well_founded leA
+  -> well_founded leB
+  -> well_founded lexprod.
+Proof.
+  intros wfA wfB (x, y).
+  revert y.
+  induction (wfA x) as [x _ IHx].
+  intros y.
+  induction (wfB y) as [y _ IHy].
+  constructor.
+  intros (x', y') H.
+  inv H; eauto.
+Qed.
+
+End Lexicographic.
+
+Require Import Coq.Arith.Wf_nat.
+
+Definition nat_lexprod : relation (nat * nat) :=
+  lexprod nat nat lt lt.
+
+Lemma nat_lexprod_wf : well_founded nat_lexprod.
+Proof.
+  apply lexprod_wf; apply lt_wf.
+Qed.
+
