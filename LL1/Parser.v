@@ -114,3 +114,80 @@ Proof.
   apply lexprod_wf; apply lt_wf.
 Qed.
 
+Inductive parse_result (A : Type) : Type :=
+| Succ : (A * list string * list nonterminal) -> parse_result A
+| Fail : (string * list string) -> parse_result A
+| LRec : list nonterminal -> parse_result A.
+
+Inductive sym_input : Set :=
+| parse_input : symbol -> sym_input
+| parseForest_input : list symbol -> sym_input.
+
+Definition parse_type (sin : sym_input) : Type :=
+  match sin with
+  | parse_input _ => parse_result tree
+  | parseForest_input _ => parse_result (list tree)
+  end.
+
+Require Import Program.Wf.
+
+Definition parse_measure (word : list string) (tbl : parse_table) (visited : list nonterminal) :=
+  (List.length word, List.length word).
+
+Program Fixpoint parse' (tbl     : parse_table)
+                        (sym_in  : sym_input)
+                        (word    : list string)
+                        (visited : list nonterminal)
+                       {measure (parse_measure word tbl visited) (nat_lexprod)}
+                       : parse_type sym_in := 
+  match sym_in with
+  | parse_input sym =>
+    (* morally, a call to parse *)
+    match (sym, word) with
+    | (T y, nil) => Fail tree ("error message", word)
+    | (T y, token :: word') =>
+      match beqString y token with
+      | false => Fail tree ("error message", word)
+      | true => Succ tree (Leaf y, word', nil)
+      end
+    | (NT x, _) =>
+      if List.in_dec NT_as_DT.eq_dec x visited then
+        LRec tree (x :: visited)
+      else
+        match pt_lookup x (peek word) tbl with
+        | None => Fail tree ("error message", word)
+        | Some gamma =>
+          match parse' tbl (parseForest_input gamma) word (x :: visited) with
+          | LRec _ cycle => LRec tree cycle
+          | Fail _ pr => Fail tree pr
+          | Succ _ (sts, word', visited') => Succ tree (Node x sts, word', visited')
+          end
+        end
+    end
+  | parseForest_input gamma =>
+    match gamma with
+    | nil => Succ (list tree) (nil, word, visited)
+    | sym :: gamma' =>
+      match parse' tbl (parse_input sym) word visited with
+      | LRec _ cycle => LRec (list tree) cycle
+      | Fail _ pr => Fail (list tree) pr
+      | Succ _ (lSib, word', visited') =>
+        match parse' tbl (parseForest_input gamma') word' visited' with
+        | LRec _ cycle => LRec (list tree) cycle
+        | Fail _ pr => Fail (list tree) pr
+        | Succ _ (rSibs, word'', visited'') =>
+          Succ (list tree) (lSib :: rSibs, word'', visited'')
+        end
+      end
+    end
+  end.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+
+Extraction parse'.
