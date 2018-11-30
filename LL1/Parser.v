@@ -134,6 +134,10 @@ Require Import Program.Wf.
 Definition parse_measure (word : list string) (tbl : parse_table) (visited : list nonterminal) :=
   (List.length word, List.length word).
 
+
+(* based on Yves Bertot's suggestion for combining two mutually recursive functions
+   into a single function. Doesn't work, because there's not enough information in
+   the hypotheses to prove the generated goals. *)
 Program Fixpoint parse' (tbl     : parse_table)
                         (sym_in  : sym_input)
                         (word    : list string)
@@ -190,4 +194,134 @@ Admitted.
 Next Obligation.
 Admitted.
 
-Extraction parse'.
+Inductive either {A B : Type} : Type :=
+| Left  : A -> either
+| Right : B -> either.
+
+Inductive parse_failure : Set :=
+| Error    : parse_failure
+| Mismatch : string -> list string -> parse_failure
+| LeftRec  : list nonterminal -> parse_failure.
+
+(* Tried doing structural induction on the Acc proof, but don't know how yet *)
+(*
+Lemma foo :
+  forall input input' tbl tbl' visited visited',
+    nat_lexprod (parse_measure input tbl visited) (parse_measure input' tbl' visited').
+Admitted.
+
+Fixpoint parse'' (tbl : parse_table)
+                 (sym : symbol)
+                 (input : list string)
+                 (visited : list nonterminal)
+                 (acc : Acc nat_lexprod (parse_measure input tbl visited))
+                 : either :=
+  match (sym, input) with
+  | (T y, nil) => Left (Mismatch "error mesage" input)
+  | (T y, token :: input') =>
+    match beqString y token with
+    | false => Left (Mismatch "error message" input)
+    | true =>  Right (Leaf y, input', nil)
+    end
+  | (NT x, _) =>
+    match pt_lookup x (peek input) tbl with
+    | None => Left (Mismatch "error message" input)
+    | Some gamma =>
+      match parseForest'' tbl gamma input (x :: visited) (foo input input tbl tbl visited (x :: visited)) with
+      | Left pf => Left pf
+      | Right (sts, input', visited') => Right (Node x sts, input', visited')
+      end
+    end
+  end
+with parseForest'' (tbl : parse_table) 
+                   (gamma : list symbol)
+                   (input : list string)
+                   (visited : list nonterminal)
+                   (acc : Acc nat_lexprod (parse_measure input tbl visited))
+                   : either :=
+       match gamma with
+       | nil => Right (nil, input, visited)
+       | sym :: gamma' =>
+         match parse'' tbl sym input visited (foo input input tbl tbl visited visited) with
+           | Left pf => Left pf
+           | Right (lSib, input', visited') =>
+             match parseForest'' tbl gamma' input' visited' with
+             | Left pf => Left pf
+             | Right (rSibs, input'', visited'') =>
+               Right (lSib :: rSibs, input'', visited'')
+             end
+         end
+       end.
+end.
+*)
+
+Program Fixpoint parse'' (tbl     : parse_table)
+                         (sym_in  : sym_input)
+                         (word    : list string)
+                         (visited : list nonterminal)
+                         {measure (parse_measure word tbl visited) (nat_lexprod)}
+                         : either :=
+  match sym_in with
+  | parse_input sym =>
+    (* morally, a call to parse *)
+    match (sym, word) with
+    | (T y, nil) => Left (Mismatch "error message" word)
+    | (T y, token :: word') =>
+      match beqString y token with
+      | false => Left (Mismatch "error message" word)
+      | true => Right (Leaf y, word', nil)
+      end
+    | (NT x, _) =>
+      if List.in_dec NT_as_DT.eq_dec x visited then
+        Left (LeftRec (x :: visited))
+      else
+        match pt_lookup x (peek word) tbl with
+        | None => Left (Mismatch "error message" word)
+        | Some gamma =>
+          match parse'' tbl (parseForest_input gamma) word (x :: visited) with
+          | Left pf => Left pf
+          | Right (Leaf _, _, _) => Left Error
+          | Right (Node _ sts, word', visited') => Right (Node x sts, word', visited')
+          end
+        end
+    end
+  | parseForest_input gamma =>
+    match gamma with
+    | nil => Right (Node 0 nil, word, visited)
+    | sym :: gamma' =>
+      match parse'' tbl (parse_input sym) word visited with
+      | Left pf => Left pf
+      | Right (lSib, word', visited') =>
+        match parse'' tbl (parseForest_input gamma') word' visited' with
+        | Left pf => Left pf
+        | Right (t, word'', visited'') =>
+          match t with
+          | Leaf _ => Left Error
+          | Node _ rSibs => Right (Node 0 (lSib :: rSibs), word'', visited'')
+          end
+        (* Seems like a bug that a clause is marked as redundant here *)
+        (*        | Right (Leaf_, _, _) => Left Error
+        | Right (Node _ rSibs, word'', visited'') =>
+          Right (Node 0 (lSib :: rSibs), word'', visited'') *)
+        end
+      end
+    end
+  end.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+  unfold well_founded.
+  intros.
+  destruct a.
+  destruct s.
+  destruct s.
+  constructor.
+Admitted.
+
+(* Next idea: use the Fix combinator *)
+
+
