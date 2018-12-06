@@ -4,6 +4,7 @@ Require Import Lib.ParseTree.
 Require Import Lib.Utils.
 Require Import Lib.Tactics.
 Require Import LL1.ParseTable. 
+Require Import LL1.ParseTableGen. (* for fromNtList *)
 Import ListNotations.
 Open Scope string_scope.
 
@@ -114,6 +115,7 @@ Proof.
   apply lexprod_wf; apply lt_wf.
 Qed.
 
+(*
 Inductive parse_result (A : Type) : Type :=
 | Succ : (A * list string * list nonterminal) -> parse_result A
 | Fail : (string * list string) -> parse_result A
@@ -194,14 +196,13 @@ Admitted.
 Next Obligation.
 Admitted.
 
-Inductive either {A B : Type} : Type :=
-| Left  : A -> either
-| Right : B -> either.
 
 Inductive parse_failure : Set :=
 | Error    : parse_failure
 | Mismatch : string -> list string -> parse_failure
 | LeftRec  : list nonterminal -> parse_failure.
+*)
+
 
 (* Tried doing structural induction on the Acc proof, but don't know how yet *)
 (*
@@ -255,73 +256,145 @@ with parseForest'' (tbl : parse_table)
 end.
 *)
 
+Definition sym_input : Type := sum (list symbol) symbol.
+Definition sem_value : Type := sum (list tree) tree.
+
+Inductive parse_failure : Set :=
+| Mismatch : string -> list string -> parse_failure
+| LeftRec  : list nonterminal -> parse_failure
+| Error    : parse_failure.
+
+
+Fixpoint nt_keys (tbl : parse_table) : list nonterminal :=
+  List.map (fun pr => match pr with 
+                      | ((x, _), _) => x
+                      end)
+           (ParseTable.elements tbl).
+
+Definition parse_measure (word : list string) (tbl : parse_table) (visited : list nonterminal) :=
+  (List.length word, NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl))
+                                                (fromNtList visited))).
+
+Require Import Program.Wf.
+
+Lemma in_A_not_in_B_in_diff :
+  forall elt a b,
+    NtSet.In elt a
+    -> ~ NtSet.In elt b
+    -> NtSet.In elt (NtSet.diff a b).
+Proof.
+  ND.fsetdec.
+Defined.
+
+Lemma in_list_iff_in_fromNtList :
+  forall x l, In x l <-> NtSet.In x (fromNtList l).
+Proof.
+  split; intros; induction l; simpl in *.
+  - inv H.
+  - destruct H; subst; auto.
+    + ND.fsetdec.
+    + apply IHl in H; ND.fsetdec.
+  - ND.fsetdec.
+  - destruct (NtSetFacts.eq_dec x a); subst; auto.
+    right. apply IHl. ND.fsetdec.
+Defined.
+
+Lemma pt_lookup_elements :
+  forall x la tbl gamma,
+    pt_lookup x la tbl = Some gamma
+    -> In ((x, la), gamma) (ParseTable.elements tbl).
+Proof.
+  intros.
+  unfold pt_lookup in *.
+  induction (ParseTable.elements tbl) eqn:Helts.
+  - admit.
+Abort.
+
+Lemma pt_lookup_in_tbl :
+  forall x la tbl gamma,
+    pt_lookup x la tbl = Some gamma
+    -> In x (nt_keys tbl).
+Proof.
+  intros.
+  unfold nt_keys.
+  unfold pt_lookup in *.
+  induction (ParseTable.elements tbl) eqn:Helts; simpl in *; subst.
+  - unfold pt_lookup in H.
+    unfold nt_keys.
+Admitted.
+
 Program Fixpoint parse'' (tbl     : parse_table)
                          (sym_in  : sym_input)
                          (word    : list string)
                          (visited : list nonterminal)
                          {measure (parse_measure word tbl visited) (nat_lexprod)}
-                         : either :=
+                         : sum parse_failure (sem_value * list string * list nonterminal) := 
   match sym_in with
-  | parse_input sym =>
+  | inr sym =>
     (* morally, a call to parse *)
     match (sym, word) with
-    | (T y, nil) => Left (Mismatch "error message" word)
+    | (T y, nil) => inl (Mismatch "error message" word)
     | (T y, token :: word') =>
       match beqString y token with
-      | false => Left (Mismatch "error message" word)
-      | true => Right (Leaf y, word', nil)
+      | false => inl (Mismatch "error message" word)
+      | true => inr (inr (Leaf y), word', nil)
       end
     | (NT x, _) =>
       if List.in_dec NT_as_DT.eq_dec x visited then
-        Left (LeftRec (x :: visited))
+        inl (LeftRec (x :: visited))
       else
         match pt_lookup x (peek word) tbl with
-        | None => Left (Mismatch "error message" word)
+        | None => inl (Mismatch "error message" word)
         | Some gamma =>
-          match parse'' tbl (parseForest_input gamma) word (x :: visited) with
-          | Left pf => Left pf
-          | Right (Leaf _, _, _) => Left Error
-          | Right (Node _ sts, word', visited') => Right (Node x sts, word', visited')
+          match parse'' tbl (inl gamma) word (x :: visited) with
+          | inl pf => inl pf
+          | inr (inl sts, word', visited') => inr (inr (Node x sts), word', visited')
+          | inr (inr _, _, _) => inl Error
           end
         end
     end
-  | parseForest_input gamma =>
+  | inl gamma =>
     match gamma with
-    | nil => Right (Node 0 nil, word, visited)
+    | nil => inr (inl nil, word, visited)
     | sym :: gamma' =>
-      match parse'' tbl (parse_input sym) word visited with
-      | Left pf => Left pf
-      | Right (lSib, word', visited') =>
-        match parse'' tbl (parseForest_input gamma') word' visited' with
-        | Left pf => Left pf
-        | Right (t, word'', visited'') =>
-          match t with
-          | Leaf _ => Left Error
-          | Node _ rSibs => Right (Node 0 (lSib :: rSibs), word'', visited'')
-          end
-        (* Seems like a bug that a clause is marked as redundant here *)
-        (*        | Right (Leaf_, _, _) => Left Error
-        | Right (Node _ rSibs, word'', visited'') =>
-          Right (Node 0 (lSib :: rSibs), word'', visited'') *)
+      match parse'' tbl (inr sym) word visited with
+      | inl pf => inl pf
+      | inr (inr lSib, word', visited') =>
+        match parse'' tbl (inl gamma') word' visited' with
+        | inl pf => inl pf
+        | inr (inl rSibs, word'', visited'') =>
+          inr (inl (lSib :: rSibs), word'', visited'')
+        | inr (inr _, _, _) => inl Error
         end
+      | inr (inl _, _, _) => inl Error
       end
     end
   end.
 Next Obligation.
-Admitted.
+  apply right_lex; simpl.
+  apply NP.subset_cardinal_lt with (x := x); try ND.fsetdec.
+  apply in_A_not_in_B_in_diff.
+  - apply in_list_iff_in_fromNtList.
+    eapply pt_lookup_in_tbl; eauto.
+  - unfold not; intros.
+    apply H.
+    apply in_list_iff_in_fromNtList; auto.
+Defined.
 Next Obligation.
 Admitted.
 Next Obligation.
+  simpl in *. inv Heq_anonymous.
 Admitted.
 Next Obligation.
-  unfold well_founded.
-  intros.
-  destruct a.
-  destruct s.
-  destruct s.
+  apply measure_wf.
+  apply nat_lexprod_wf.
   constructor.
+  intros.
 Admitted.
 
 (* Next idea: use the Fix combinator *)
+
+
+
 
 

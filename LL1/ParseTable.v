@@ -63,19 +63,15 @@ Definition pt_add
            (la : lookahead)
            (gamma : list symbol)
            (tbl : parse_table) : parse_table :=
-  ParseTable.add (x, la) gamma tbl.
+  ParseTable.add (x, la) gamma tbl.                                            
 
 Inductive nullable_sym (g : grammar) : symbol -> Prop :=
-| NullableSym : forall x ys,
-    In (x, ys) g.(productions)
-    -> nullable_gamma g ys
-    -> nullable_sym g (NT x)
+| NullableSym : forall (x : nonterminal) (ys : list symbol),
+    In (x, ys) g.(productions) -> nullable_gamma g ys -> nullable_sym g (NT x)
 with nullable_gamma (g : grammar) : list symbol -> Prop :=
      | NullableNil  : nullable_gamma g []
-     | NullableCons : forall hd tl,
-         nullable_sym g hd
-         -> nullable_gamma g tl
-         -> nullable_gamma g (hd :: tl).
+     | NullableCons : forall (hd : symbol) (tl : list symbol),
+         nullable_sym g hd -> nullable_gamma g tl -> nullable_gamma g (hd :: tl).
 
 Hint Constructors nullable_sym nullable_gamma.
 
@@ -85,10 +81,10 @@ Scheme nullable_sym_mutual_ind := Induction for nullable_sym Sort Prop
 Definition nullable_set := NtSet.t.
 
 Definition nullable_set_sound (nu : nullable_set) (g  : grammar) : Prop :=
-  forall x, NtSet.In x nu -> nullable_sym g (NT x).
+  forall (x : nonterminal), NtSet.In x nu -> nullable_sym g (NT x).
 
 Definition nullable_set_complete (nu : nullable_set) (g  : grammar) : Prop :=
-  forall x, nullable_sym g (NT x) -> NtSet.In x nu.
+  forall (x : nonterminal), nullable_sym g (NT x) -> NtSet.In x nu.
 
 Definition nullable_set_for (nu : nullable_set) (g : grammar) : Prop :=
 nullable_set_sound nu g /\ nullable_set_complete nu g.
@@ -203,16 +199,12 @@ Definition lookahead_set_for
   lookahead_set_sound laSet x gamma g /\ lookahead_set_complete laSet x gamma g.
 
 Definition pt_sound (tbl : parse_table) (g : grammar) :=
-  forall x la gamma,
-    pt_lookup x la tbl = Some gamma
-    -> In (x, gamma) g.(productions)
-       /\ lookahead_for la x gamma g.
+  forall (x : nonterminal) (la : lookahead) (gamma : list symbol),
+    pt_lookup x la tbl = Some gamma -> In (x, gamma) g.(productions) /\ lookahead_for la x gamma g.
 
 Definition pt_complete (tbl : parse_table) (g : grammar) :=
-  forall la x gamma,
-    In (x, gamma) g.(productions)
-    -> lookahead_for la x gamma g
-    -> pt_lookup x la tbl = Some gamma.
+  forall (x : nonterminal) (la : lookahead) (gamma : list symbol),
+    In (x, gamma) g.(productions) -> lookahead_for la x gamma g -> pt_lookup x la tbl = Some gamma.
 
 Definition parse_table_for (tbl : parse_table) (g : grammar) :=
   pt_sound tbl g /\ pt_complete tbl g.

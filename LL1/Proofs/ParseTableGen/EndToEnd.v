@@ -21,9 +21,8 @@ Definition parseTableOf (g : grammar) : option parse_table :=
   mkParseTable es.
 
 Theorem parseTableOf_sound : 
-  forall g tbl,
-  parseTableOf g = Some tbl
-  -> parse_table_for tbl g.
+  forall (g : grammar) (tbl : parse_table), 
+    parseTableOf g = Some tbl -> parse_table_for tbl g.
 Proof.
   intros g tbl Hf.
   eapply mkParseTable_sound; eauto.
@@ -36,11 +35,10 @@ Proof.
 Qed.
 
 Theorem parseTableOf_complete :
-  forall g tbl,
-    parse_table_for tbl g
-    -> exists tbl',
-      ParseTable.Equal tbl tbl'
-      /\ parseTableOf g = Some tbl'.
+  forall (g : grammar) (tbl : parse_table),
+    parse_table_for tbl g 
+    -> exists (tbl' : parse_table),
+      ParseTable.Equal tbl tbl' /\ parseTableOf g = Some tbl'.
 Proof.
   intros g tbl Hpt.
   eapply mkParseTable_complete; eauto.
