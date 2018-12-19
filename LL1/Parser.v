@@ -71,7 +71,7 @@ Section Lexicographic.
 
 Variables (A B : Type) (leA : relation A) (leB : relation B).
 
-Inductive lexprod : A * B -> A * B -> Prop :=
+Inductive lexprod : A * B  -> A * B -> Prop :=
 | left_lex  : forall x x' y y', leA x x' -> lexprod (x, y) (x', y')
 | right_lex : forall x y y',    leB y y' -> lexprod (x, y) (x, y').
 
@@ -264,17 +264,19 @@ Inductive parse_failure : Set :=
 | LeftRec  : list nonterminal -> parse_failure
 | Error    : parse_failure.
 
-
+(*
 Fixpoint nt_keys (tbl : parse_table) : list nonterminal :=
   List.map (fun pr => match pr with 
                       | ((x, _), _) => x
                       end)
            (ParseTable.elements tbl).
+ *)
 
+(*
 Definition parse_measure (word : list string) (tbl : parse_table) (visited : list nonterminal) :=
   (List.length word, NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl))
                                                 (fromNtList visited))).
-
+*)
 Require Import Program.Wf.
 
 Lemma in_A_not_in_B_in_diff :
@@ -299,6 +301,25 @@ Proof.
     right. apply IHl. ND.fsetdec.
 Defined.
 
+Lemma pt_lookup_elements' :
+  forall (k : ParseTable.key) (gamma : list symbol) (l : list (ParseTable.key * list symbol)),
+    findA (ParseTableFacts.eqb k) l = Some gamma
+    -> In (k, gamma) l.
+Proof.
+  intros.
+  induction l.
+  - inv H.
+  - simpl in *.
+    destruct a as (k', gamma').
+    destruct (ParseTableFacts.eqb k k') eqn:Heq.
+    + inv H.
+      unfold ParseTableFacts.eqb in *.
+      destruct (ParseTableFacts.eq_dec k k').
+      * subst; auto.
+      * inv Heq.
+    + right; auto.
+Qed.
+      
 Lemma pt_lookup_elements :
   forall x la tbl gamma,
     pt_lookup x la tbl = Some gamma
@@ -306,10 +327,11 @@ Lemma pt_lookup_elements :
 Proof.
   intros.
   unfold pt_lookup in *.
-  induction (ParseTable.elements tbl) eqn:Helts.
-  - admit.
-Abort.
+  rewrite ParseTableFacts.elements_o in H.
+  apply pt_lookup_elements'; auto.
+Qed.
 
+(*
 Lemma pt_lookup_in_tbl :
   forall x la tbl gamma,
     pt_lookup x la tbl = Some gamma
@@ -322,7 +344,9 @@ Proof.
   - unfold pt_lookup in H.
     unfold nt_keys.
 Admitted.
+ *)
 
+(*
 Program Fixpoint parse'' (tbl     : parse_table)
                          (sym_in  : sym_input)
                          (word    : list string)
@@ -391,10 +415,406 @@ Next Obligation.
   constructor.
   intros.
 Admitted.
+ *)
 
-(* Next idea: use the Fix combinator *)
+Section TripleLT.
 
+Variables (A B C : Type) (ltA : relation A) (ltB : relation B) (ltC : relation C).
 
+Inductive triple_lex : A * B * C -> A * B * C -> Prop :=
+| fst_lt : forall x x' y y' z z', ltA x x' -> triple_lex (x, y, z) (x', y', z')
+| snd_lt : forall x y y' z z', ltB y y' -> triple_lex (x, y, z) (x, y', z')
+| thd_lt : forall x y z z', ltC z z' -> triple_lex (x, y, z) (x, y, z').
 
+Hint Constructors triple_lex.
 
+Theorem triple_lex_trans :
+  transitive _ ltA -> transitive _ ltB -> transitive _ ltC -> transitive _ triple_lex.
+Proof.
+  intros tA tB tC [[x1 y1] z1] [[x2 y2] z2] [[x3 y3] z3] H12 H23.
+  inv H12; inv H23; eauto.
+Qed.
 
+Theorem triple_lex_wf :
+  well_founded ltA -> well_founded ltB -> well_founded ltC -> well_founded triple_lex.
+Proof.
+  intros wfA wfB wfC [[x y] z].
+  revert y z.
+  induction (wfA x) as [x _ IHx].
+  intros y.
+  induction (wfB y) as [y _ IHy].
+  intros z.
+  induction (wfC z) as [z _ IHz].
+  constructor.
+  intros [[x' y'] z'] H.
+  inv H; eauto.
+Qed.
+
+Definition lengthOrder (xs ys : list A) :=
+  List.length xs < List.length ys.
+
+Require Import Omega.
+
+Require Import Wellfounded.Inverse_Image.
+
+Theorem lengthOrder_wf : well_founded lengthOrder.
+Proof.
+  apply wf_inverse_image with (R := lt).
+  apply lt_wf.
+Defined.
+
+Theorem lengthOrder_trans : transitive _ lengthOrder.
+Proof.
+  red; unfold lengthOrder; intros; omega.
+Defined.
+  
+Definition cardOrder (s1 s2 : NtSet.t) :=
+  NtSet.cardinal s1 < NtSet.cardinal s2.
+
+Theorem cardOrder_trans : transitive _ cardOrder.
+Proof.
+  red; unfold cardOrder; intros; omega.
+Defined.
+
+Theorem cardOrder_wf : well_founded cardOrder.
+Proof.
+  apply wf_inverse_image with (R := lt).
+  apply lt_wf.
+Defined.
+
+Definition bool_order (b1 b2 : bool) : Prop :=
+  b1 = false /\ b2 = true.
+
+Theorem bool_order_trans : transitive _ bool_order.
+Proof.
+  intros x y z Hxy Hyz.
+  inv Hxy; inv Hyz; congruence.
+Defined.
+  
+Theorem bool_order_wf : well_founded bool_order.
+Proof.
+  intros b2.
+  constructor.
+  intros b1 Hbo.
+  inv Hbo.
+  constructor.
+  intros b1 Hbo.
+  inv Hbo.
+  congruence.
+Defined.
+
+End TripleLT.
+
+Require Import Coq.Arith.Wf_nat.
+
+Set Implicit Arguments.
+
+Definition triple_lt : relation (nat * nat * bool) :=
+  triple_lex nat nat bool lt lt bool_order.
+
+Definition parse_measure (triple : list string * list nonterminal * bool) :=
+  match triple with
+  | (input, visited, b) => (List.length input, List.length visited, b)
+  end.
+
+Lemma input_decrease_lt :
+  forall (tr' tr : list string * list nonterminal * bool)
+         (token : string)
+         (vis : list nonterminal)
+         (b : bool),
+    match tr' with
+    | (input', vis', b') => 
+      triple_lt (parse_measure tr') (parse_measure (token :: input', vis, b))
+    end.
+Proof.
+  intros.
+  destruct tr'.
+  destruct p.
+  apply fst_lt.
+  simpl.
+  omega.
+Defined.
+
+(*
+Fixpoint parse (tbl : parse_table)
+               (sym : symbol)
+               (input : list string)
+               (vis : list nonterminal)
+               (b : bool)
+               (a : Acc parse_triple_lt (parse_measure (input, vis, b)))
+               {struct a}          
+  : sum parse_failure (tree * {triple' | parse_triple_lt (parse_measure triple') (parse_measure (input, vis, b))}) :=
+  match (sym, input) with
+  | (T y, nil) => inl (Mismatch "error message" input)
+  | (T y, token :: input') =>
+    if beqString y token then
+      inr (Leaf y, exist _
+                         (input', nil, false)
+                         (input_decrease_lt (input', nil, false)))
+    else
+      inl (Mismatch "error message" input)
+  | (NT x, _) =>
+    if List.in_dec NT_as_DT.eq_dec x visited then
+      inl (LeftRec (x :: visited))
+    else
+      match pt_lookup x (peek input) tbl with
+      | None => inl (Mismatch "error message" input)
+      | Some gamma =>
+        match parseForest tbl gamma (input, (x :: visited), true) _ with
+        | inl pf => inl pf
+        | inr (sts, _) =>
+          inr (Node x sts, _)
+        end
+      end
+  end
+with parseForest (tbl : parse_table) 
+                 (gamma : list symbol)
+                 (triple : list string * list nonterminal * bool)
+                 (a : Acc parse_triple_lt (parse_measure triple))
+                 {struct a}
+     : sum parse_failure (list tree * {triple' | triple' = triple \/ parse_triple_lt (parse_measure triple') (parse_measure triple)}) :=
+       match triple with
+       | (input, visited, b) =>
+         match gamma with
+         | nil => inr (nil, _)
+         | sym :: gamma' =>
+           match b with
+           | false => inl Error
+           | true =>
+             match parse tbl sym (input, visited, false) _ with
+             | inl pf => inl pf
+             | inr (lSib, _) =>
+               match parseForest tbl gamma' _ _ with
+               | inl pf => inl pf
+               | inr (rSibs, _) =>
+                 inr (lSib :: rSibs, _)
+               end
+             end
+           end
+         end
+       end.
+ *)
+
+Program Fixpoint div2 (n : nat) : { x : nat | n = 2 * x \/ n = 2 * x + 1 } :=
+  match n with
+  | S (S p) => S (div2 p)
+  | _ => O
+  end.
+Obligation 1.
+omega.
+Defined.
+Obligation 2.
+destruct n.
+- auto.
+- destruct n.
+  + auto.
+  + specialize (H n).
+    congruence.
+Defined.
+
+Inductive sym_arg : Set :=
+| F_arg : symbol -> sym_arg
+| G_arg : list symbol -> sym_arg.
+
+Definition boolOf (sa : sym_arg) : bool :=
+  match sa with
+  | F_arg _ => false
+  | G_arg _ => true
+  end.
+
+Definition nt_keys (tbl : parse_table) : list nonterminal :=
+  List.map (fun pr => match pr with 
+                      | ((x, _), _) => x
+                      end)
+           (ParseTable.elements tbl).
+
+Definition meas (tbl : parse_table) (triple : list string * list nonterminal * sym_arg) : nat * nat * bool :=
+  match triple with
+  | (word, visited, sa) =>
+    (List.length word,
+     NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl)) (fromNtList visited)),
+     boolOf sa)
+  end.
+
+Definition triple_le (tr1 tr2 : nat * nat * bool) : Prop :=
+  triple_lt tr1 tr2 \/ tr1 = tr2.
+
+Lemma not_in_list_iff_not_in_fromNtList:
+  forall (x : NtSet.elt) (l : list NtSet.elt),
+    ~ In x l <-> ~ NtSet.In x (fromNtList l).
+Proof.
+  split; unfold not; intros H1 H2.
+  - apply H1.
+    apply in_list_iff_in_fromNtList; auto.
+  - apply H1.
+    apply in_list_iff_in_fromNtList; auto.
+Qed.
+
+Lemma lt_trans : transitive nat lt.
+Proof.
+  red.
+  apply Nat_as_DT.lt_trans.
+Qed.
+
+Lemma triple_lt_le_trans :
+  forall (x y z : nat * nat * bool),
+    triple_lt x y
+    -> triple_le y z
+    -> triple_lt x z.
+Proof.
+  intros x y z Hlt Hle.
+  destruct Hle.
+  - eapply triple_lex_trans; eauto.
+    + apply lt_trans.
+    + apply lt_trans.
+    + apply bool_order_trans.
+  - subst; auto.
+Qed.
+
+Lemma triple_le_lt_trans :
+  forall (x y z : nat * nat * bool),
+    triple_le x y
+    -> triple_lt y z
+    -> triple_lt x z.
+Proof.
+  intros x y z Hle Hlt.
+  destruct Hle.
+  - eapply triple_lex_trans; eauto.
+    + apply lt_trans.
+    + apply lt_trans.
+    + apply bool_order_trans.
+  - subst; auto.
+Qed.
+
+Lemma triple_lt_trans :
+  forall (x y z : nat * nat * bool),
+    triple_lt x y
+    -> triple_lt y z
+    -> triple_lt x z.
+Proof.
+  intros x y z Hxy Hyz.
+  eapply triple_lex_trans; eauto.
+  - apply lt_trans.
+  - apply lt_trans.
+  - apply bool_order_trans.
+Qed.
+
+Lemma pt_lookup_in_nt_keys :
+  forall x la tbl gamma,
+    pt_lookup x la tbl = Some gamma
+    -> In x (nt_keys tbl).
+Proof.
+  intros.
+  unfold nt_keys.
+  apply pt_lookup_elements in H.
+  induction (ParseTable.elements tbl).
+  - inv H.
+  - simpl in *.
+    destruct H.
+    + subst; auto.
+    + right; auto.
+Qed.
+        
+Program Fixpoint parse'' (tbl     : parse_table)
+                         (tri     : list string * list nonterminal * sym_arg)
+                         {measure (meas tbl tri) (triple_lt)}
+                         : sum parse_failure
+                               (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl tri)})
+                                    (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl tri)})) :=
+  match tri with
+  | (word, vis, sa) =>
+    match sa with
+    | F_arg sym =>
+      (* morally, a call to parse *)
+      match (sym, word) with
+      | (T y, nil) => inl (Mismatch "error message" word)
+      | (T y, token :: word') =>
+        if beqString y token then
+          inr (inr (Leaf y, (word', nil, sa)))
+        else
+          inl (Mismatch "error message" word)
+      | (NT x, _) =>
+        if List.in_dec NT_as_DT.eq_dec x vis then
+          inl (LeftRec (x :: vis))
+        else
+          match pt_lookup x (peek word) tbl with
+          | None => inl (Mismatch "error message" word)
+          | Some gamma =>
+            match parse'' tbl (word, x :: vis, G_arg gamma) with
+            | inl pf => inl pf
+            | inr (inr (_, _)) => inl Error
+            | inr (inl (sts, exist _ tri' _)) => inr (inr (Node x sts, exist _ tri' _))
+            end
+          end
+      end
+    | G_arg gamma =>
+      (* a call to parseForest *)
+      match gamma with
+      | nil => inr (inl (nil, (word, vis, sa)))
+      | sym :: gamma' =>
+        match parse'' tbl (word, vis, F_arg sym) with
+        | inl pf => inl pf
+        | inr (inl (_, _)) => inl Error
+        | inr (inr (lSib, exist _ tri' _)) =>
+          match parse'' tbl tri' with
+          | inl pf => inl pf
+          | inr (inr (_, _)) => inl Error
+          | inr (inl (rSibs, exist _ tri'' _)) =>
+            inr (inl (lSib :: rSibs, exist _ tri'' _))
+          end
+        end
+      end
+    end
+  end.
+Obligation 1.
+apply fst_lt; auto.
+Defined.
+Obligation 2.
+apply snd_lt.
+apply NP.subset_cardinal_lt with (x := x).
+- ND.fsetdec. 
+- apply in_A_not_in_B_in_diff.
+  + apply in_list_iff_in_fromNtList.
+    eapply pt_lookup_in_nt_keys; eauto.
+  + apply not_in_list_iff_not_in_fromNtList; auto.
+- ND.fsetdec.
+Defined.
+Obligation 3.
+destruct Heq_tri.
+eapply triple_le_lt_trans; eauto.
+apply snd_lt.
+apply NP.subset_cardinal_lt with (x := x).
+- ND.fsetdec. 
+- apply in_A_not_in_B_in_diff.
+  + apply in_list_iff_in_fromNtList.
+    eapply pt_lookup_in_nt_keys; eauto.
+  + apply not_in_list_iff_not_in_fromNtList; auto.
+- ND.fsetdec.
+Defined.
+Obligation 4.
+red; auto.
+Defined.
+Obligation 5.
+apply thd_lt; red; auto.
+Defined.
+Obligation 6.
+destruct Heq_tri.
+simpl.
+eapply triple_lt_trans; eauto.
+apply thd_lt; red; auto.
+Defined.
+Obligation 7.
+(* there might be a shorter proof for this one *)
+destruct Heq_tri.
+left.
+eapply triple_le_lt_trans; eauto.
+eapply triple_lt_trans; eauto.
+apply thd_lt; red; auto.
+Defined.
+Obligation 8.
+apply measure_wf.
+apply triple_lex_wf.
+- apply lt_wf.
+- apply lt_wf.
+- apply bool_order_wf.
+Defined.
