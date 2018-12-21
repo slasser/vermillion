@@ -715,12 +715,12 @@ Proof.
     + right; auto.
 Qed.
         
-Program Fixpoint parse'' (tbl     : parse_table)
-                         (tri     : list string * list nonterminal * sym_arg)
-                         {measure (meas tbl tri) (triple_lt)}
-                         : sum parse_failure
-                               (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl tri)})
-                                    (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl tri)})) :=
+Program Fixpoint parse' (tbl     : parse_table)
+                        (tri     : list string * list nonterminal * sym_arg)
+                        {measure (meas tbl tri) (triple_lt)}
+                        : sum parse_failure
+                              (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl tri)})
+                                   (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl tri)})) :=
   match tri with
   | (word, vis, sa) =>
     match sa with
@@ -740,7 +740,7 @@ Program Fixpoint parse'' (tbl     : parse_table)
           match pt_lookup x (peek word) tbl with
           | None => inl (Mismatch "error message" word)
           | Some gamma =>
-            match parse'' tbl (word, x :: vis, G_arg gamma) with
+            match parse' tbl (word, x :: vis, G_arg gamma) with
             | inl pf => inl pf
             | inr (inr (_, _)) => inl Error
             | inr (inl (sts, exist _ tri' _)) => inr (inr (Node x sts, exist _ tri' _))
@@ -752,11 +752,11 @@ Program Fixpoint parse'' (tbl     : parse_table)
       match gamma with
       | nil => inr (inl (nil, (word, vis, sa)))
       | sym :: gamma' =>
-        match parse'' tbl (word, vis, F_arg sym) with
+        match parse' tbl (word, vis, F_arg sym) with
         | inl pf => inl pf
         | inr (inl (_, _)) => inl Error
         | inr (inr (lSib, exist _ tri' _)) =>
-          match parse'' tbl tri' with
+          match parse' tbl tri' with
           | inl pf => inl pf
           | inr (inr (_, _)) => inl Error
           | inr (inl (rSibs, exist _ tri'' _)) =>
@@ -770,6 +770,7 @@ Obligation 1.
 apply fst_lt; auto.
 Defined.
 Obligation 2.
+simpl.
 apply snd_lt.
 apply NP.subset_cardinal_lt with (x := x).
 - ND.fsetdec. 
@@ -818,3 +819,185 @@ apply triple_lex_wf.
 - apply lt_wf.
 - apply bool_order_wf.
 Defined.
+
+Fixpoint parse' (tbl     : parse_table)
+         (tri     : list string * list nonterminal * sym_arg)
+  : sum parse_failure
+        (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl tri)})
+             (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl tri)})).
+  refine (match tri return _ with
+          | (word, vis, sa) =>
+            match sa return _ with
+            | F_arg sym =>
+              (* morally, a call to parse *)
+              match sym with
+              | T y  => match word with
+                        | [] => inl (Mismatch "error message" word)
+                        | token :: word' =>
+                          if beqString y token then
+                            inr (inr (Leaf y, exist _ (word', nil, sa) _))
+                          else
+                            inl (Mismatch "error message" word)
+                        end
+              | NT x =>
+                if List.in_dec NT_as_DT.eq_dec x vis then
+                  inl (LeftRec (x :: vis))
+                else
+                  (match pt_lookup x (peek word) tbl as H return  pt_lookup x (peek word) tbl = H -> _ with
+                   | None => fun _ => inl (Mismatch "error message" word)
+                   | Some gamma =>
+                     fun _ => match parse' tbl (word, x :: vis, G_arg gamma) with
+                     | inl pf => inl pf
+                     | inr (inr (_, _)) => inl Error
+                     | inr (inl (sts, exist _ tri' _)) => inr (inr (Node x sts, exist _ tri' _))
+                     end
+                   end) (eq_refl _) 
+              end
+            | G_arg gamma =>
+              (* a call to parseForest *)
+              match gamma with
+              | nil => inr (inl (nil, exist _ (word, vis, sa) _))
+              | sym :: gamma' =>
+                match parse' tbl (word, vis, F_arg sym) with
+                | inl pf => inl pf
+                | inr (inl (_, _)) => inl Error
+                | inr (inr (lSib, exist _ tri' _)) =>
+                  match parse' tbl tri' with
+                  | inl pf => inl pf
+                  | inr (inr (_, _)) => inl Error
+                  | inr (inl (rSibs, exist _ tri'' _)) =>
+                    inr (inl (lSib :: rSibs, exist _ tri'' _))
+                  end
+                end
+              end
+            end
+          end).
+  - apply fst_lt.
+    auto.
+  - eapply triple_le_lt_trans; eauto.
+    apply snd_lt.
+    simpl.
+    apply NP.subset_cardinal_lt with (x := x).
+    + ND.fsetdec. 
+    + apply in_A_not_in_B_in_diff.
+      * apply in_list_iff_in_fromNtList.
+        eapply pt_lookup_in_nt_keys; eauto.
+       * apply not_in_list_iff_not_in_fromNtList; auto.
+    + ND.fsetdec.
+    
+  - simpl in *.
+    destruct sa; simpl.
+    + red.
+      left.
+      apply thd_lt.
+      red; auto.
+    + right. auto.
+  - left.
+    eapply triple_le_lt_trans; eauto.
+    eapply triple_lt_trans; eauto.
+    apply thd_lt; red; auto.
+
+    
+Abort.
+ *)
+
+Definition isLeft (A B : Type) (e : sum A B) : bool :=
+  match e with
+  | inl _ => true
+  | inr _ => false
+  end.
+
+Definition isRight (A B : Type) (e : sum A B) : bool :=
+  negb (isLeft e).
+
+Definition triple_lt_ind :=
+  triple_lex_ind nat nat bool lt lt bool_order.
+
+(*
+Lemma parse'_eq_body :
+  forall (tbl : parse_table)
+         (tri : list string * list nonterminal * sym_arg),
+  exists pf1 pf2 pf3 pf4,
+      parse' tbl tri =
+      match tri with
+      | (word, vis, sa) =>
+        match sa with
+        | F_arg sym =>
+          (* morally, a call to parse *)
+          match (sym, word) with
+          | (T y, nil) => inl (Mismatch "error message" word)
+          | (T y, token :: word') =>
+            if beqString y token then
+              inr (inr (Leaf y, exist _ (word', nil, sa) (pf1 word' sa)))
+            else
+              inl (Mismatch "error message" word)
+          | (NT x, _) =>
+            if List.in_dec NT_as_DT.eq_dec x vis then
+              inl (LeftRec (x :: vis))
+            else
+              match pt_lookup x (peek word) tbl with
+              | None => inl (Mismatch "error message" word)
+              | Some gamma =>
+                match parse' tbl (word, x :: vis, G_arg gamma) with
+                | inl pf => inl pf
+                | inr (inr (_, _)) => inl Error
+                | inr (inl (sts, exist _ tri' _)) => inr (inr (Node x sts, exist _ tri' (pf2 tri')))
+                end
+              end
+          end
+        | G_arg gamma =>
+          (* a call to parseForest *)
+          match gamma with
+          | nil => inr (inl (nil, exist _ (word, vis, sa) (pf3 word vis sa)))
+          | sym :: gamma' =>
+            match parse' tbl (word, vis, F_arg sym) with
+            | inl pf => inl pf
+            | inr (inl (_, _)) => inl Error
+            | inr (inr (lSib, exist _ tri' _)) =>
+              match parse' tbl tri' with
+              | inl pf => inl pf
+              | inr (inr (_, _)) => inl Error
+              | inr (inl (rSibs, exist _ tri'' _)) =>
+                inr (inl (lSib :: rSibs, exist _ tri'' (pf4 tri'')))
+              end
+            end
+          end
+        end
+      end.
+Proof.
+  intros.
+  do 4 eexists.
+  unfold parse'.
+  unfold parse'_func.
+  rewrite Wf.fix_sub_eq.
+  - destruct tri as [[word vis] sa].
+    cbv zeta.
+    lazy beta.
+    cbv zeta. *)
+
+Lemma sym_ret_inr :
+  forall (tbl : parse_table)
+         (word : list string)
+         (vis : list nonterminal)
+         (sa : sym_arg)
+         e,
+    parse' tbl (word, vis, sa) = inr e
+    -> forall (sym : symbol),
+      sa = F_arg sym
+      -> isRight e = true.
+Proof.
+  intros.
+  induction word as [| tok word'].
+  - unfold parse' in H.
+    unfold parse'_func in H. subst.
+    destruct e.
+    + destruct p.
+      inv H.
+      
+    simpl in *.
+    destruct sym.
+    + unfold parse' in H.
+      unfold parse'_func in H.
+      simpl in *.
+  
+
