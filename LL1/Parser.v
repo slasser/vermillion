@@ -823,8 +823,9 @@ Defined.
 (* Plan :
 
    - replace obligations with proof terms (* done! *)
-   - add Acc arg
-   - see if Function allows you to prove termination as separate obligations
+   - add Acc arg  (* done! *)
+   - replace refine-generated termination proofs with lemmas (* done! *)
+   - see if Function can generate correct rewriting lemma
    - switch to two mutually recursive functions *)
 
 Lemma tail_lt_word :
@@ -883,9 +884,63 @@ Proof.
   apply thd_lt; red; auto.
 Qed.
 
+Lemma acc_vis_add :
+  forall tbl tri word vis sa sym x gamma,
+    tri = (word, vis, sa)
+    -> sa = F_arg sym
+    -> ~ In x vis
+    -> pt_lookup x (peek word) tbl = Some gamma
+    -> Acc triple_lt (meas tbl tri)
+    -> Acc triple_lt (meas tbl (word, x :: vis, G_arg gamma)).
+Proof.
+  intros; subst; simpl.
+  eapply Acc_inv; eauto.
+  apply snd_lt.
+  apply NP.subset_cardinal_lt with (x := x).
+  - ND.fsetdec.
+  - apply in_A_not_in_B_in_diff.
+    + apply in_list_iff_in_fromNtList.
+      eapply pt_lookup_in_nt_keys; eauto.
+    + apply not_in_list_iff_not_in_fromNtList; auto.
+  - ND.fsetdec.
+Defined.
+
+(* to do : more hypotheses than needed, probably *)
+Lemma if_acc_gamma_then_acc_sym :
+  forall tbl tri word vis sa gamma sym gamma',
+    Acc triple_lt (meas tbl tri)
+    -> tri = (word, vis, sa)
+    -> sa = G_arg gamma
+    -> gamma = sym :: gamma'
+    -> Acc triple_lt (meas tbl (word, vis, F_arg sym)).
+Proof.
+  intros; subst; simpl.
+  eapply Acc_inv; eauto.
+  apply thd_lt.
+  red; eauto.
+Defined.
+
+Lemma acc_triple_lt_trans :
+  forall tbl tri word vis sa gamma sym gamma' tri',
+  Acc triple_lt (meas tbl tri)
+  -> tri = (word, vis, sa)
+  -> sa = G_arg gamma
+  -> gamma = sym :: gamma'
+  -> triple_lt (meas tbl tri') (meas tbl (word, vis, F_arg sym))
+  -> Acc triple_lt (meas tbl tri').
+Proof.
+  intros; subst; simpl in *.
+  eapply Acc_inv; eauto.
+  eapply triple_lt_trans; eauto.
+  apply thd_lt.
+  red; auto.
+Defined.
+
 (* to do : some of the match annotations might actually be unnecessary *)
-Fixpoint parse' (tbl     : parse_table)
+Fixpoint parse_no_fuel (tbl     : parse_table)
          (tri     : list string * list nonterminal * sym_arg)
+         (a : Acc triple_lt (meas tbl tri))
+         {struct a}
   : sum parse_failure
         (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl tri)})
              (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl tri)})).
@@ -894,7 +949,7 @@ Fixpoint parse' (tbl     : parse_table)
             fun Htri => match sa as sa' return sa = sa' -> _ with
                         | F_arg sym =>
                           (* morally, a call to parse *)
-                          fun _ => match sym with
+                          fun Hsa => match sym with
                                    | T y  => match word as w return word = w -> _ with
                                              | [] => fun _ => inl (Mismatch "error message" word)
                                              | token :: word' =>
@@ -911,7 +966,7 @@ Fixpoint parse' (tbl     : parse_table)
                                        match pt_lookup x (peek word) tbl as H return  pt_lookup x (peek word) tbl = H -> _ with
                                        | None => fun _ => inl (Mismatch "error message" word)
                                        | Some gamma =>
-                                         fun Hlk => match parse' tbl (word, x :: vis, G_arg gamma) with
+                                         fun Hlk => match parse_no_fuel tbl (word, x :: vis, G_arg gamma) (acc_vis_add tbl x Htri Hsa Hnin Hlk a) with
                                                     | inl pf => inl pf
                                                     | inr (inr (_, _)) => inl Error
                                                     | inr (inl (sts, exist _ tri' Htri')) =>
@@ -926,11 +981,11 @@ Fixpoint parse' (tbl     : parse_table)
                                      | nil =>
                                        fun _ => inr (inl (nil, exist _ (word, vis, sa) (triple_le_refl tbl Htri)))
                                      | sym :: gamma' =>
-                                       fun Hgamma => match parse' tbl (word, vis, F_arg sym) with
+                                       fun Hgamma => match parse_no_fuel tbl (word, vis, F_arg sym) (if_acc_gamma_then_acc_sym tbl a Htri Hsa Hgamma) with
                                                      | inl pf => inl pf
                                                      | inr (inl (_, _)) => inl Error
                                                      | inr (inr (lSib, exist _ tri' Htri')) =>
-                                                       match parse' tbl tri' with
+                                                       match parse_no_fuel tbl tri' (acc_triple_lt_trans tri' a Htri Hsa Hgamma Htri') with
                                                        | inl pf => inl pf
                                                        | inr (inr (_, _)) => inl Error
                                                        | inr (inl (rSibs, exist _ tri'' Htri'')) =>
@@ -1016,29 +1071,24 @@ Proof.
     lazy beta.
     cbv zeta. *)
 
+Lemma triple_lt_wf :
+  well_founded triple_lt.
+Proof.
+  apply triple_lex_wf.
+  - apply lt_wf.
+  - apply lt_wf.
+  - apply bool_order_wf.
+Qed.
+
 Lemma sym_ret_inr :
   forall (tbl : parse_table)
          (word : list string)
          (vis : list nonterminal)
          (sa : sym_arg)
          e,
-    parse' tbl (word, vis, sa) = inr e
+    parse_no_fuel tbl (word, vis, sa) (triple_lt_wf (meas tbl (word, vis, sa))) = inr e
     -> forall (sym : symbol),
       sa = F_arg sym
       -> isRight e = true.
 Proof.
-  intros.
-  induction word as [| tok word'].
-  - unfold parse' in H.
-    unfold parse'_func in H. subst.
-    destruct e.
-    + destruct p.
-      inv H.
-      
-    simpl in *.
-    destruct sym.
-    + unfold parse' in H.
-      unfold parse'_func in H.
-      simpl in *.
-  
-
+Abort.
