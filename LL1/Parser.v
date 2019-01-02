@@ -997,6 +997,65 @@ Fixpoint parse_no_fuel (tbl     : parse_table)
           end eq_refl).
 Defined.
 
+Program Fixpoint parse_no_fuel' (tbl     : parse_table)
+         (tri     : list string * list nonterminal * sym_arg)
+         (a : Acc triple_lt (meas tbl tri))
+         {struct a}
+  : sum parse_failure
+        (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl tri)})
+             (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl tri)})) :=
+  match tri as tri' return tri = tri' -> _ with
+  | (word, vis, sa) =>
+    fun Htri => match sa as sa' return sa = sa' -> _ with
+                | F_arg sym =>
+                  (* morally, a call to parse *)
+                  fun Hsa => match sym with
+                             | T y  => match word as w return word = w -> _ with
+                                       | [] => fun _ => inl (Mismatch "error message" word)
+                                       | token :: word' =>
+                                         if beqString y token then
+                                           fun Hword =>
+                                             inr (inr (Leaf y, exist _ (word', nil, sa) (tail_lt_word tbl _ _ Htri Hword)))
+                                         else
+                                           fun _ => inl (Mismatch "error message" word)
+                                       end eq_refl
+                             | NT x =>
+                               match List.in_dec NT_as_DT.eq_dec x vis with
+                               | left _ => inl (LeftRec (x :: vis))
+                               | right Hnin => 
+                                 match pt_lookup x (peek word) tbl as H return  pt_lookup x (peek word) tbl = H -> _ with
+                                 | None => fun _ => inl (Mismatch "error message" word)
+                                 | Some gamma =>
+                                   fun Hlk => match parse_no_fuel' tbl (word, x :: vis, G_arg gamma) (acc_vis_add tbl x Htri Hsa Hnin Hlk a) with
+                                              | inl pf => inl pf
+                                              | inr (inr (_, _)) => inl Error
+                                              | inr (inl (sts, exist _ tri' Htri')) =>
+                                                inr (inr (Node x sts, exist _ tri' (vis_lt_add tri' Htri Hnin Hlk Htri')))
+                                              end
+                                 end eq_refl
+                               end
+                             end
+                | G_arg gamma =>
+                  (* a call to parseForest *)
+                  fun Hsa => match gamma as g return gamma = g -> _ with
+                             | nil =>
+                               fun _ => inr (inl (nil, exist _ (word, vis, sa) (triple_le_refl tbl Htri)))
+                             | sym :: gamma' =>
+                               fun Hgamma => match parse_no_fuel' tbl (word, vis, F_arg sym) (if_acc_gamma_then_acc_sym tbl a Htri Hsa Hgamma) with
+                                             | inl pf => inl pf
+                                             | inr (inl (_, _)) => inl Error
+                                             | inr (inr (lSib, exist _ tri' Htri')) =>
+                                               match parse_no_fuel' tbl tri' (acc_triple_lt_trans tri' a Htri Hsa Hgamma Htri') with
+                                               | inl pf => inl pf
+                                               | inr (inr (_, _)) => inl Error
+                                               | inr (inl (rSibs, exist _ tri'' Htri'')) =>
+                                                 inr (inl (lSib :: rSibs, exist _ tri'' (pf_lt_args _ _ Htri Hsa Hgamma Htri' Htri'')))
+                                               end
+                                             end
+                             end eq_refl
+                end eq_refl
+  end eq_refl.
+
 Definition isLeft (A B : Type) (e : sum A B) : bool :=
   match e with
   | inl _ => true
@@ -1009,6 +1068,69 @@ Definition isRight (A B : Type) (e : sum A B) : bool :=
 Definition triple_lt_ind :=
   triple_lex_ind nat nat bool lt lt bool_order.
 
+Lemma foo :
+  forall tbl tri a,
+    parse_no_fuel' tbl tri a =
+    match tri as tri' return tri = tri' -> _ with
+    | (word, vis, sa) =>
+      fun Htri => match sa as sa' return sa = sa' -> _ with
+                  | F_arg sym =>
+                    (* morally, a call to parse *)
+                    fun Hsa => match sym with
+                               | T y  => match word as w return word = w -> _ with
+                                         | [] => fun _ => inl (Mismatch "error message" word)
+                                         | token :: word' =>
+                                           if beqString y token then
+                                             fun Hword =>
+                                               inr (inr (Leaf y, exist _ (word', nil, sa) (tail_lt_word tbl _ _ Htri Hword)))
+                                           else
+                                             fun _ => inl (Mismatch "error message" word)
+                                         end eq_refl
+                               | NT x =>
+                                 match List.in_dec NT_as_DT.eq_dec x vis with
+                                 | left _ => inl (LeftRec (x :: vis))
+                                 | right Hnin => 
+                                   match pt_lookup x (peek word) tbl as H return  pt_lookup x (peek word) tbl = H -> _ with
+                                   | None => fun _ => inl (Mismatch "error message" word)
+                                   | Some gamma =>
+                                     fun Hlk => match parse_no_fuel' tbl (word, x :: vis, G_arg gamma) (acc_vis_add tbl x Htri Hsa Hnin Hlk a) with
+                                                | inl pf => inl pf
+                                                | inr (inr (_, _)) => inl Error
+                                                | inr (inl (sts, exist _ tri' Htri')) =>
+                                                  inr (inr (Node x sts, exist _ tri' (vis_lt_add tri' Htri Hnin Hlk Htri')))
+                                                end
+                                   end eq_refl
+                                 end
+                               end
+                  | G_arg gamma =>
+                    (* a call to parseForest *)
+                    fun Hsa => match gamma as g return gamma = g -> _ with
+                               | nil =>
+                                 fun _ => inr (inl (nil, exist _ (word, vis, sa) (triple_le_refl tbl Htri)))
+                               | sym :: gamma' =>
+                                 fun Hgamma => match parse_no_fuel' tbl (word, vis, F_arg sym) (if_acc_gamma_then_acc_sym tbl a Htri Hsa Hgamma) with
+                                               | inl pf => inl pf
+                                               | inr (inl (_, _)) => inl Error
+                                               | inr (inr (lSib, exist _ tri' Htri')) =>
+                                                 match parse_no_fuel' tbl tri' (acc_triple_lt_trans tri' a Htri Hsa Hgamma Htri') with
+                                                 | inl pf => inl pf
+                                                 | inr (inr (_, _)) => inl Error
+                                                 | inr (inl (rSibs, exist _ tri'' Htri'')) =>
+                                                   inr (inl (lSib :: rSibs, exist _ tri'' (pf_lt_args _ _ Htri Hsa Hgamma Htri' Htri'')))
+                                                 end
+                                               end
+                               end eq_refl
+                  end eq_refl
+    end eq_refl.
+Proof.
+  intros.
+  unfold parse_no_fuel'.
+  destruct tri as [[word vis] sa].
+  progress destruct sa.
+  - progress destruct s.
+    + progress destruct word.
+      * simpl in *.
+        
 (*
 Lemma parse'_eq_body :
   forall (tbl : parse_table)
@@ -1086,9 +1208,18 @@ Lemma sym_ret_inr :
          (vis : list nonterminal)
          (sa : sym_arg)
          e,
-    parse_no_fuel tbl (word, vis, sa) (triple_lt_wf (meas tbl (word, vis, sa))) = inr e
+    parse_no_fuel' tbl (word, vis, sa) (triple_lt_wf (meas tbl (word, vis, sa))) = inr e
     -> forall (sym : symbol),
       sa = F_arg sym
       -> isRight e = true.
 Proof.
+  intros.
+  subst.
+  destruct sym.
+  - simpl in *.
+    destruct word.
+    + simpl in *.
+      unfold parse_no_fuel' in *.
 Abort.
+
+
