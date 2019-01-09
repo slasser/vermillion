@@ -952,8 +952,8 @@ Fixpoint parse5 (tbl     : parse_table)
          {struct a}
   : sum parse_failure
         (sum (list tree * {tri' | triple_le (meas tbl tri') (meas tbl (word, vis, sa))})
-             (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl (word, vis, sa))})).
-  refine (match sa as sa' return sa = sa' -> _ with
+             (tree      * {tri' | triple_lt (meas tbl tri') (meas tbl (word, vis, sa))})) :=
+  match sa as sa' return sa = sa' -> _ with
           | F_arg sym =>
             fun Hsa => match sym with
                        | T y  => match word as w return word = w -> _ with
@@ -973,7 +973,7 @@ Fixpoint parse5 (tbl     : parse_table)
                            | inl _ => inl (Mismatch "error message" word)
                            | inr (exist _ gamma Hlk) =>
                              (* Why do I need these two wildcards? *)
-                             match parse5 tbl word (x :: vis) (G_arg gamma) (hole2 _ _ a Hnin Hlk) with 
+                             match parse5 (*tbl word (x :: vis) (G_arg gamma) *) (hole2 (G_arg gamma) _ a Hnin Hlk) with 
                                         | inl pf => inl pf
                                         | inr (inr _) => inl Error
                                         | inr (inl (sts, exist _ tri' Htri')) =>
@@ -987,13 +987,13 @@ Fixpoint parse5 (tbl     : parse_table)
                        | nil =>
                          fun _ => inr (inl (nil, exist _ (word, vis, sa) (hole4 _ _ _ _)))
                        | sym :: gamma' =>
-                         fun Hgamma => match parse5 tbl word vis (F_arg sym) (hole5 _ a Hsa) with (* tbl word vis F_arg sym (if_acc_gamma_then_acc_sym tbl a _ Hsa Hgamma) with *)
+                         fun Hgamma => match parse5 (* tbl word vis (F_arg sym) *) (hole5 sym a Hsa) with (* tbl word vis F_arg sym (if_acc_gamma_then_acc_sym tbl a _ Hsa Hgamma) with *)
                                        | inl pf => inl pf
                                        | inr (inl _) => inl Error
                                        | inr (inr (lSib, exist _ tri' Htri')) =>
                                          match tri' as tri'2 return tri' = tri'2 -> _ with
                                          | (word', vis', _) =>
-                                           fun Htri'eq => match parse5 tbl word' vis' (G_arg gamma') (hole6 _ a Hsa Htri' Htri'eq) with (* tbl word' vis' (G_arg gamma') (acc_triple_lt_trans _ a _ Hsa Hgamma Htri') with*)
+                                           fun Htri'eq => match parse5 (* tbl word' vis' (G_arg gamma') *) (hole6 gamma a Hsa Htri' Htri'eq) with (* tbl word' vis' (G_arg gamma') (acc_triple_lt_trans _ a _ Hsa Hgamma Htri') with*)
                                                           | inl pf => inl pf
                                                           | inr (inr _) => inl Error
                                                           | inr (inl (rSibs, exist _ tri'' Htri'')) =>
@@ -1002,9 +1002,69 @@ Fixpoint parse5 (tbl     : parse_table)
                                          end eq_refl
                                        end
                        end eq_refl
-          end eq_refl).
-Defined.
+  end eq_refl.
 
+Lemma foo :
+  forall tbl word vis sa (a : Acc triple_lt (meas tbl (word, vis, sa))),
+    parse5 a =
+    match sa as sa' return sa = sa' -> _ with
+          | F_arg sym =>
+            fun Hsa => match sym with
+                       | T y  => match word as w return word = w -> _ with
+                                 | [] => fun _ => inl (Mismatch "error message" word)
+                                 | token :: word' =>
+                                   if beqString y token then
+                                     fun Hword =>
+                                       inr (inr (Leaf y, exist _ (word', nil, sa) (hole1 _ _ _ _ _ _ _)))
+                                   else
+                                     fun _ => inl (Mismatch "error message" word)
+                                 end eq_refl
+                       | NT x =>
+                         match List.in_dec NT_as_DT.eq_dec x vis with
+                         | left _ => inl (LeftRec (x :: vis))
+                         | right Hnin =>
+                           match ptlk_dec x (peek word) tbl with
+                           | inl _ => inl (Mismatch "error message" word)
+                           | inr (exist _ gamma Hlk) =>
+                             (* Why do I need these two wildcards? *)
+                             match parse5 (*tbl word (x :: vis) (G_arg gamma) *) (hole2 (G_arg gamma) _ a Hnin Hlk) with 
+                                        | inl pf => inl pf
+                                        | inr (inr _) => inl Error
+                                        | inr (inl (sts, exist _ tri' Htri')) =>
+                                          inr (inr (Node x sts, exist _ tri' (hole3 _ _ Hnin Hlk Htri')))
+                                        end
+                           end
+                         end
+                       end
+          | G_arg gamma =>
+            fun Hsa => match gamma as g return gamma = g -> _ with
+                       | nil =>
+                         fun _ => inr (inl (nil, exist _ (word, vis, sa) (hole4 _ _ _ _)))
+                       | sym :: gamma' =>
+                         fun Hgamma => match parse5 (* tbl word vis (F_arg sym) *) (hole5 sym a Hsa) with (* tbl word vis F_arg sym (if_acc_gamma_then_acc_sym tbl a _ Hsa Hgamma) with *)
+                                       | inl pf => inl pf
+                                       | inr (inl _) => inl Error
+                                       | inr (inr (lSib, exist _ tri' Htri')) =>
+                                         match tri' as tri'2 return tri' = tri'2 -> _ with
+                                         | (word', vis', _) =>
+                                           fun Htri'eq => match parse5 (* tbl word' vis' (G_arg gamma') *) (hole6 gamma a Hsa Htri' Htri'eq) with (* tbl word' vis' (G_arg gamma') (acc_triple_lt_trans _ a _ Hsa Hgamma Htri') with*)
+                                                          | inl pf => inl pf
+                                                          | inr (inr _) => inl Error
+                                                          | inr (inl (rSibs, exist _ tri'' Htri'')) =>
+                                                            inr (inl (lSib :: rSibs, exist _ tri'' (hole7 _ _ Htri'' Htri' Htri'eq)))
+                                                          end
+                                         end eq_refl
+                                       end
+                       end eq_refl
+    end eq_refl.
+Proof.
+  intros.
+  unfold parse5.
+  simpl.
+  destruct a. (* this is the key! *)
+  auto.
+Qed.
+      
 Lemma parse5_sym_ret_inr :
   forall (tbl : parse_table)
          (word : list string)
@@ -1038,4 +1098,87 @@ Proof.
         -- congruence.
         -- inv H; auto.
         -- congruence.
+Qed.
+
+Fixpoint parse6 (tbl     : parse_table)
+         (word : list string)
+         (vis : list nonterminal)
+         (sa : sym_arg)
+         (a       : Acc triple_lt (meas tbl (word, vis, sa)))
+         {struct a}
+  : sum parse_failure
+        (tree * {tri' | triple_lt (meas tbl tri') (meas tbl (word, vis, sa))}) :=
+  match sa as sa' return sa = sa' -> _ with
+  | G_arg _ => fun _ => inl Error
+  | F_arg sym =>
+    fun Hsa => match sym with
+               | T y => match word as w return word = w -> _ with
+                        | [] => fun _ => inl (Mismatch "error message" word)
+                        | token :: word' =>
+                          if beqString y token then
+                            fun Hword =>
+                              inr (Leaf y, exist _ (word', nil, sa) (hole1 _ _ _ _ _ _ _))
+                          else
+                            fun _ => inl (Mismatch "error message" word)
+                        end eq_refl
+               | NT x =>
+                 match List.in_dec NT_as_DT.eq_dec x vis with
+                 | left _ => inl (LeftRec (x :: vis))
+                 | right Hnin =>
+                   match ptlk_dec x (peek word) tbl with
+                   | inl _ => inl (Mismatch "error message" word)
+                   | inr (exist _ gamma Hlk) =>
+                     match parseForest6 (hole2 (G_arg gamma) _ a Hnin Hlk) with 
+                     | inl pf => inl pf
+                     | inr (sts, exist _ tri' Htri') =>
+                       inr (Node x sts, exist _ tri' (hole3 _ _ Hnin Hlk Htri'))
+                     end
+                   end
+                 end
+               end
+  end eq_refl
+with parseForest6 (tbl     : parse_table)
+                  (word : list string)
+                  (vis : list nonterminal)
+                  (sa : sym_arg)
+                  (a       : Acc triple_lt (meas tbl (word, vis, sa)))
+                  {struct a}
+     : sum parse_failure
+           (list tree * {tri' | triple_le (meas tbl tri') (meas tbl (word, vis, sa))}) :=
+       match sa as sa' return sa = sa' -> _ with
+       | F_arg _ => fun _ => inl Error
+       | G_arg gamma =>
+         fun Hsa => match gamma as g return gamma = g -> _ with
+                    | nil =>
+                      fun _ => inr (nil, exist _ (word, vis, sa) (hole4 _ _ _ _))
+                    | sym :: gamma' =>
+                      fun Hgamma => match parse6 (hole5 sym a Hsa) with
+                                    | inl pf => inl pf
+                                    | inr (lSib, exist _ tri' Htri') =>
+                                      match tri' as tri'2 return tri' = tri'2 -> _ with
+                                      | (word', vis', _) =>
+                                        fun Htri'eq => match parseForest6 (hole6 gamma a Hsa Htri' Htri'eq) with
+                                                       | inl pf => inl pf
+                                                       | inr (rSibs, exist _ tri'' Htri'') =>
+                                                         inr (lSib :: rSibs, exist _ tri'' (hole7 _ _ Htri'' Htri' Htri'eq))
+                                                       end
+                                      end eq_refl
+                                    end
+                    end eq_refl
+       end eq_refl.
+
+Lemma parse_t_ret_leaf :
+  forall tbl word vis sa y (a : Acc triple_lt (meas tbl (word, vis, sa))) tr tri' pf,
+    sa = F_arg (T y)
+    -> parse6 a = inr (tr, exist _ tri' pf)
+    -> isLeaf tr = true.
+Proof.
+  intros.
+  unfold parse6 in H; destruct a; subst; simpl in *.
+  - destruct word.
+    + congruence.
+    + destruct (beqString y s).
+      * inv H0.
+        auto.
+      * congruence.
 Qed.
