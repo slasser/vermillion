@@ -1,5 +1,5 @@
 Require Import List.
-Require Import Grammar LL1.Parser ParseTree ParseTable
+Require Import Grammar Parser ParseTree ParseTable
         Lib.Tactics.
 Import ListNotations.
 Open Scope list_scope.

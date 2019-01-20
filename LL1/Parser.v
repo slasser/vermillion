@@ -8,23 +8,6 @@ Require Import LL1.ParseTableGen. (* for fromNtList *)
 Import ListNotations.
 Open Scope string_scope.
 
-Lemma decon :
-  forall (n : nat) A R (f0 : A -> R) (fSn : A -> nat -> R),
-    (fun a : A => match n with
-                  | 0 => fun _ : A => f0 a
-                  | S n' => fun _ : A => fSn a n'
-                  end a) =
-    (fun a : A => match n with
-                  | 0 => f0 a
-                  | S n' => fSn a n'
-                  end).
-Proof.
-  intros.
-  destruct n.
-  - apply eq_refl.
-  - apply eq_refl.
-Qed.
-
 Definition peek input :=
   match input with
   | nil => EOF
@@ -196,6 +179,38 @@ Section TripleLT.
   Defined.
 
 End TripleLT.
+
+Section PairLT.
+
+  Variables (A B : Type) (ltA : relation A) (ltB : relation B).
+
+  Inductive pair_lex : A * B -> A * B -> Prop :=
+  | pr_fst_lt : forall x x' y y', ltA x x' -> pair_lex (x, y) (x', y')
+  | pr_snd_lt : forall x y y', ltB y y' -> pair_lex (x, y) (x, y').
+
+  Hint Constructors pair_lex.
+
+  Theorem pair_lex_trans :
+    transitive _ ltA -> transitive _ ltB -> transitive _ pair_lex.
+  Proof.
+    intros tA tB [x1 y1] [x2 y2] [x3 y3] H12 H23.
+    inv H12; inv H23; eauto.
+  Defined.
+
+  Theorem pair_lex_wf :
+    well_founded ltA -> well_founded ltB -> well_founded pair_lex.
+  Proof.
+    intros wfA wfB [x y].
+    revert y.
+    induction (wfA x) as [x _ IHx].
+    intros y.
+    induction (wfB y) as [y _ IHy].
+    constructor.
+    intros [x' y'] H.
+    inv H; eauto.
+  Defined.
+
+End PairLT.
 
 Set Implicit Arguments.
 
@@ -1182,3 +1197,936 @@ Proof.
         auto.
       * congruence.
 Qed.
+
+Ltac crush :=
+  repeat (simpl in *;
+          match goal with
+          | H : context[match ?X with | _ => _ end] |- _ =>
+            let Heq := fresh "Heq" in
+            destruct X eqn:Heq
+          | H : inr _ = inr _ |- _ => inv H
+
+          | H : inl _ = inr _ |- _ => congruence
+          | H : isNode (Leaf _) = true |- _ => inv H
+          end;
+          auto).
+          
+Lemma parse_nt_ret_node :
+  forall tbl word vis x (a : Acc triple_lt (meas tbl (word, vis, F_arg (NT x)))) tr tri' pf,
+    parse6 a = inr (tr, exist _ tri' pf)
+    -> isNode tr = true.
+Proof.
+  intros.
+  destruct a.
+  crush.
+Qed.
+
+(*
+Require Import Lib.Lemmas.
+Require Import LL1.Derivation.
+
+Lemma parse_correct' :
+  forall (g   : grammar)
+         (tbl : parse_table),
+    parse_table_for tbl g
+    -> forall (input rem : list string)
+              (vis vis' : list nonterminal)
+              (sym   : symbol)
+              (sa' : sym_arg)
+              (a : Acc triple_lt (meas tbl (input, vis, F_arg sym)))
+              (tr : tree)
+              pf,
+      parse6 a = inr (tr, exist _ (rem, vis', sa') pf)
+      -> exists word,
+        word ++ rem = input
+        /\ (@sym_derives_prefix g) sym word tr rem.
+Proof.
+  intros.
+  induction tr as [ s
+                  | s f IHpf
+                  |
+                  | tr IHp f IHpf ]
+                    using tree_nested_ind with
+      
+      (P := fun tr =>
+              parse6 a = inr (tr, exist _ (rem, vis', sa') pf)
+              -> exists word : list string,
+                word ++ rem = input /\ sym_derives_prefix sym word tr rem)
+      
+      (Q := fun f =>
+              forall input rem vis vis' gamma sa' pf (a : Acc triple_lt (meas tbl (input, vis, G_arg gamma))),
+                parseForest6 a = inr (f, exist _ (rem, vis', sa') pf)
+                -> exists word,
+                  word ++ rem = input
+                  /\ gamma_derives_prefix gamma word f rem).
+
+  - destruct a.
+    destruct sym as [y | x] eqn:Hsym.
+    + destruct input as [| token word'].
+      * crush.
+      * crush.
+        exists [token]; split; auto.
+        apply beqString_eq in Heq; subst.
+        constructor.
+    + crush.
+
+  - destruct a.
+    destruct sym as [y | x].
+    + crush.
+    + simpl in H0.
+      destruct (in_dec ND.F.eq_dec x vis).
+      * crush.
+      * destruct (ptlk_dec x (peek input) tbl).
+        -- crush.
+        -- destruct s0 as [gamma Hlk].
+           crush.
+Abort.
+ *)
+
+Fixpoint pf7 (p : parse_table -> symbol -> list string -> list nonterminal -> (option tree * list string))
+             (tbl : parse_table) 
+             (gamma : list symbol)
+             (input : list string)
+             (vis : list nonterminal)
+             : (option (list tree) * list string) :=
+  match gamma with
+  | nil => (Some nil, input)
+  | sym :: gamma' =>
+    match p tbl sym input vis with
+    | (None, _) => (None, input)
+    | (Some lSib, input') =>
+      match pf7 p tbl gamma' input' [] with
+      | (None, _) => (None, input)
+      | (Some rSibs, input'') =>
+        (Some (lSib :: rSibs), input'')
+      end
+    end
+  end.
+
+Definition m7 (tbl : parse_table)
+              (vis : list nonterminal) :=
+  NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl))
+                             (fromNtList vis)).
+
+Program Fixpoint p7 (tbl : parse_table)
+                    (sym : symbol)
+                    (input : list string)
+                    (vis : list nonterminal)
+                    {measure (m7 tbl vis)}
+  : (option tree * list string) :=
+  match (sym, input) with
+  | (T _, nil) => (None, input)
+  | (T y, token :: input') =>
+    if beqString y token then
+      (Some (Leaf y), input')
+    else
+      (None, input)
+  | (NT x, _) =>
+    match pt_lookup x (peek input) tbl with
+    | None => (None, input)
+    | Some gamma =>
+      if List.in_dec NT_as_DT.eq_dec x vis then
+        (None, input)
+      else
+        let fix pf7 gamma input :=
+            match gamma with
+            | nil => (Some nil, input)
+            | sym :: gamma' =>
+              match p7 tbl sym input (x :: vis) with
+              | (None, _) => (None, input)
+              | (Some lSib, input') =>
+                match pf7 gamma' input' with
+                | (None, _) => (None, input)
+                | (Some rSibs, input'') =>
+                  (Some (lSib :: rSibs), input'')
+                end
+              end
+            end
+        in  match pf7 gamma input with
+            | (None, _) => (None, input)
+            | (Some sts, input') =>
+              (Some (Node x sts), input')
+            end
+    end
+  end.
+Next Obligation.
+  unfold m7; simpl.
+  apply NP.subset_cardinal_lt with (x := x).
+  - ND.fsetdec.
+  - apply in_A_not_in_B_in_diff.
+    + apply in_list_iff_in_fromNtList.
+      eapply pt_lookup_in_nt_keys; eauto.
+    + apply not_in_list_iff_not_in_fromNtList; auto.
+  - ND.fsetdec.
+Defined.
+
+Lemma p8_hole :
+  forall tbl vis x input gamma,
+  Acc lt (m7 tbl vis)
+  -> pt_lookup x (peek input) tbl = Some gamma
+  -> ~ In x vis
+  -> Acc lt (m7 tbl (x :: vis)).
+Proof.
+  intros.
+  eapply Acc_inv; eauto.
+  unfold m7; simpl.
+  apply NP.subset_cardinal_lt with (x := x).
+  - ND.fsetdec.
+  - apply in_A_not_in_B_in_diff.
+    + apply in_list_iff_in_fromNtList.
+      eapply pt_lookup_in_nt_keys; eauto.
+    + apply not_in_list_iff_not_in_fromNtList; auto.
+  - ND.fsetdec.
+Defined.
+
+Fixpoint p8 (tbl : parse_table)
+         (sym : symbol)
+         (input : list string)
+         (vis : list nonterminal)
+         (a : Acc lt (m7 tbl vis))
+         {struct a}
+  : (option tree * list string) :=
+  match (sym, input) with
+  | (T _, nil) => (None, input)
+  | (T y, token :: input') =>
+    if beqString y token then
+      (Some (Leaf y), input')
+    else
+      (None, input)
+  | (NT x, _) =>
+    match ptlk_dec x (peek input) tbl with
+    | inl _ => (None, input)
+    | inr (exist _ gamma Hlk) =>
+      match List.in_dec NT_as_DT.eq_dec x vis with
+      | left _ => (None, input)
+      | right Hnin => 
+        let fix pf8 gamma input :=
+            match gamma with
+            | nil => (Some nil, input)
+            | sym :: gamma' =>
+              match p8 tbl sym input (x :: vis) (p8_hole _ _ _ _ a Hlk Hnin) with
+              | (None, _) => (None, input)
+              | (Some lSib, input') =>
+                match pf8 gamma' input' with
+                | (None, _) => (None, input)
+                | (Some rSibs, input'') =>
+                  (Some (lSib :: rSibs), input'')
+                end
+              end
+            end
+        in  match pf8 gamma input with
+            | (None, _) => (None, input)
+            | (Some sts, input') =>
+              (Some (Node x sts), input')
+            end
+      end
+    end
+  end.
+
+Lemma p8_eq_body :
+  forall tbl sym input vis a,
+    p8 tbl sym input vis a =
+    match (sym, input) with
+    | (T _, nil) => (None, input)
+    | (T y, token :: input') =>
+      if beqString y token then
+        (Some (Leaf y), input')
+      else
+        (None, input)
+    | (NT x, _) =>
+      match ptlk_dec x (peek input) tbl with
+      | inl _ => (None, input)
+      | inr (exist _ gamma Hlk) =>
+        match List.in_dec NT_as_DT.eq_dec x vis with
+        | left _ => (None, input)
+        | right Hnin => 
+          let fix pf8 gamma input :=
+              match gamma with
+              | nil => (Some nil, input)
+              | sym :: gamma' =>
+                match p8 tbl sym input (x :: vis) (p8_hole _ _ _ _ a Hlk Hnin) with
+                | (None, _) => (None, input)
+                | (Some lSib, input') =>
+                  match pf8 gamma' input' with
+                  | (None, _) => (None, input)
+                  | (Some rSibs, input'') =>
+                    (Some (lSib :: rSibs), input'')
+                  end
+                end
+              end
+          in  match pf8 gamma input with
+              | (None, _) => (None, input)
+              | (Some sts, input') =>
+                (Some (Node x sts), input')
+              end
+        end
+      end
+    end.
+Proof.
+  intros.
+  unfold p8.
+  destruct a.
+  destruct sym.
+  - destruct input; auto.
+  - destruct (ptlk_dec n (peek input) tbl); auto.
+Qed.
+
+Ltac dest_match :=
+  repeat match goal with
+         | H : context[match ?x with | _ => _ end] |- _ =>
+           destruct x
+         end.
+
+Lemma p8_t_ret_leaf :
+  forall tbl y word vis a tr rem,
+    p8 tbl (T y) word vis a = (Some tr, rem)
+    -> isLeaf tr = true.
+Proof.
+  intros.
+  destruct a.
+  rewrite p8_eq_body in H.
+  dest_match; try inv H; auto.
+Qed.
+
+Lemma p8_nt_ret_node :
+  forall tbl x word vis a tr rem,
+    p8 tbl (NT x) word vis a = (Some tr, rem)
+    -> isNode tr = true.
+Proof.
+  intros.
+  rewrite p8_eq_body in H.
+  dest_match; try inv H.
+  destruct x0; simpl in *.
+  - inv H1; auto.
+  - dest_match; try congruence.
+    subst.
+    inv H1; auto.
+Qed.
+
+Require Import LL1.Derivation.  
+
+Lemma p8_sound' :
+  forall (g   : grammar)
+         (tbl : parse_table),
+    parse_table_for tbl g
+    -> forall (tr        : tree)
+              (sym       : symbol)
+              (input rem : list terminal)
+              (vis : list nonterminal)
+              a,
+      p8 tbl sym input vis a = (Some tr, rem)
+      -> exists word,
+        word ++ rem = input
+        /\ (@sym_derives_prefix g) sym word tr rem.
+Proof.
+  intros g tbl Htbl tr. 
+  induction tr as [ s
+                  | s f IHpf
+                  |
+                  | tr IHp f IHpf ]
+                    using tree_nested_ind with
+      
+      (P := fun tr =>
+              forall (sym : symbol) (input rem : list terminal)
+                     (vis : list nonterminal) (a : Acc lt (m7 tbl vis)),
+                p8 tbl sym input vis a = (Some tr, rem) ->
+                exists word : list terminal,
+                  word ++ rem = input /\
+                  sym_derives_prefix sym word tr rem)
+
+      (Q := fun f =>
+              forall gamma input rem vis a,
+                (fix pf8 gamma input :=
+                   match gamma with
+                   | nil => (Some nil, input)
+                   | sym :: gamma' =>
+                     match p8 tbl sym input vis a with
+                     | (None, _) => (None, input)
+                     | (Some lSib, input') =>
+                       match pf8 gamma' input' with
+                       | (None, _) => (None, input)
+                       | (Some rSibs, input'') =>
+                         (Some (lSib :: rSibs), input'')
+                       end
+                     end
+                   end) gamma input = (Some f, rem)
+                -> exists word,
+                  word ++ rem = input
+                  /\ gamma_derives_prefix gamma word f rem).
+
+  - intros.
+    destruct sym as [y|x].
+    + rewrite p8_eq_body in H.
+      destruct input; try congruence.
+      destruct (beqString y t) eqn:Hb; try congruence.
+      inv H.
+      apply beqSym_eq in Hb; subst.
+      eexists; split.
+      * replace (t :: rem) with ([t] ++ rem); auto.
+      * constructor.
+    + apply p8_nt_ret_node in H.
+      inv H.
+
+  - intros.
+    destruct sym as [y|x].
+    + apply p8_t_ret_leaf in H; inv H.
+    + rewrite p8_eq_body in H.
+      destruct (ptlk_dec x (peek input) tbl); try congruence.
+      destruct s0 as [gamma Hlk].
+      destruct (in_dec ND.F.eq_dec x vis); try congruence.
+      progress simpl in H.
+      match goal with
+      | H : context[?f gamma input] |- _ =>
+        destruct (f gamma input) eqn:Hpf
+      end.
+      destruct o; try congruence.
+      inv H.
+      specialize (IHpf gamma input rem (s :: vis) (p8_hole tbl vis s input a Hlk n)).
+      apply IHpf in Hpf; clear IHpf.
+      destruct Hpf as [word [Happ Hd]].
+      subst.
+      eexists; split; eauto.
+      apply Htbl in Hlk.
+      destruct Hlk.
+      econstructor; eauto.
+
+  - intros.
+    destruct gamma.
+    + inv H.
+      exists nil; split; auto.
+      constructor.
+    + destruct (p8 tbl s input vis a).
+      * destruct o; try congruence.
+        match goal with
+        | H : context[?f ?a ?b] |- _ =>
+          destruct (f a b)
+        end.
+        destruct o; try congruence.
+        
+  - intros.
+    destruct gamma; try congruence.
+    destruct (p8 tbl s input vis a) eqn:Hp.
+    destruct o; try congruence.
+    match goal with
+    | H : context[?f ?a ?b] |- _ =>
+      destruct (f a b) eqn:Hpf
+    end.
+    destruct o; try congruence.
+    inv H.
+    apply IHp in Hp; clear IHp.
+    apply IHpf with (a := a) in Hpf.
+    destruct Hp as [wpre [Happ Hs]].
+    destruct Hpf as [wsuf [Happ' Hg]].
+    subst.
+    exists (wpre ++ wsuf).
+    split.
+    + rewrite app_assoc; auto.
+    + constructor; auto.
+Qed.
+
+Definition X := 0.
+Definition Y := 1.
+Definition Z := 2.
+
+Definition yy_grammar :=
+  {|
+     start := X
+   ; productions := [(X, [NT Y; NT Y; T "a"]);
+                     (Y, [])]
+  |}.
+
+Require Import EndToEnd.
+
+Eval compute in match parseTableOf yy_grammar with
+                | None => None
+                | Some tbl => Some (p8 tbl (NT X) ["a"] [] (lt_wf (m7 tbl [])))
+                end.
+
+Definition a_generator :=
+  {|
+     start := X
+   ; productions := [(X, [T "a"; NT X]);
+                     (X, [])]
+  |}.
+
+Eval compute in parseTableOf a_generator.
+
+(* This example shows that p8 is incomplete as written --
+   a valid LL(1) parser generated with this grammar should
+   accept any sequence of a's *)
+Eval compute in match parseTableOf a_generator with
+                | None => None
+                | Some tbl => Some (p8 tbl
+                                       (NT X)
+                                       ["a"; "a"; "a"]
+                                       []
+                                       (lt_wf (m7 tbl [])))
+                end.
+
+Eval compute in match parseTableOf a_generator with
+                | None => None
+                | Some tbl => Some (parse tbl
+                                       (NT X)
+                                       ["a"; "a"; "a"]
+                                       17)
+                end.
+
+Definition lr_table :=
+  ParseTable.add (X, LA "a") [NT Y; NT Z]
+                 (ParseTable.add (Y, LA "a") []
+                                 (ParseTable.add (Z, LA "a") [NT X]
+                                                 (ParseTable.empty (list symbol)))).
+
+Eval compute in (p8 lr_table (NT X) ["a"] [] (lt_wf (m7 lr_table []))).
+
+Definition pair_lt := pair_lex nat nat lt lt.
+
+Definition m9 tbl (input : list string) vis :=
+  (List.length input, NtSet.cardinal
+                        (NtSet.diff (fromNtList (nt_keys tbl))                                     (fromNtList vis))).
+
+(* things to try today:
+
+   nested recursion--inner func is structurally recursive on gamma
+   + extra "lt fact" arg
+   + extra Acc arg
+
+   mutual recursion on Acc arg
+   + need "sym_arg order" relation in which gamma < x :: gamma
+ *)
+
+Require Import Omega.
+Program Fixpoint p9 (tbl : parse_table)
+                    (sym : symbol)
+                    (input : list string)
+                    (vis : list nonterminal)
+                    {measure (m9 tbl input vis) (pair_lt)}
+  : (option tree * list string) :=
+  match (sym, input) with
+  | (T _, nil) => (None, input)
+  | (T y, token :: input') =>
+    if beqString y token then
+      (Some (Leaf y), input')
+    else
+      (None, input)
+  | (NT x, _) =>
+    match pt_lookup x (peek input) tbl with
+    | None => (None, input)
+    | Some gamma =>
+      if List.in_dec NT_as_DT.eq_dec x vis then
+        (None, input)
+      else
+        let fix pf9 gamma pf_input pf_vis (H : pair_lt (m9 tbl pf_input pf_vis) (m9 tbl input vis)) :=
+            match gamma with
+            | nil => (Some nil, pf_input)
+            | sym :: gamma' =>
+              match p9 tbl sym pf_input pf_vis with
+              | (None, _) => (None, input)
+              | (Some lSib, lrem) =>
+                match Compare_dec.lt_dec (List.length lrem) (List.length pf_input) with
+                | left Hlt =>
+                  match pf9 gamma' lrem [] _ with
+                  | (None, _) => (None, lrem)
+                  | (Some rSibs, rrem) =>
+                    (Some (lSib :: rSibs), rrem)
+                  end
+                | right Hnlt =>
+                  match pf9 gamma' pf_input pf_vis _ with
+                  | (None, _) => (None, pf_input)
+                  | (Some rSibs, rrem) =>
+                    (Some (lSib :: rSibs), rrem)
+                  end
+                end
+              end
+            end
+        in  match pf9 gamma input (x :: vis) _ with
+            | (None, _) => (None, input)
+            | (Some sts, input') =>
+              (Some (Node x sts), input')
+            end
+    end
+  end.
+Next Obligation.
+  apply pr_fst_lt.
+  clear Heq_anonymous2.
+  inv H.
+  - omega.
+  - omega.
+Defined.
+Next Obligation.
+  unfold m9; simpl in *.
+  apply pr_snd_lt.
+  apply NP.subset_cardinal_lt with (x := x).
+  - ND.fsetdec.
+  - apply in_A_not_in_B_in_diff.
+    + apply in_list_iff_in_fromNtList.
+      eapply pt_lookup_in_nt_keys; eauto.
+    + apply not_in_list_iff_not_in_fromNtList; auto.
+  - ND.fsetdec.
+Defined.
+Next Obligation.
+  apply measure_wf.
+  apply pair_lex_wf; apply lt_wf.
+Defined.
+
+Eval compute in match parseTableOf yy_grammar with
+                | None => None
+                | Some tbl => Some (p9 tbl (NT X) ["a"] [])
+                end.
+
+Eval compute in match parseTableOf a_generator with
+                | None => None
+                | Some tbl => Some (p9 tbl
+                                       (NT X)
+                                       ["a"; "a"; "a"]
+                                       [])
+                end.
+
+Eval compute in (p9 lr_table (NT X) ["a"] []).
+
+Inductive sa_order : sym_arg -> sym_arg -> Prop := 
+| f_lt_g : forall sym gamma,
+    sa_order (F_arg sym) (G_arg gamma)
+| g'_lt_g : forall gamma' gamma,
+    List.length gamma' < List.length gamma
+    -> sa_order (G_arg gamma') (G_arg gamma).
+
+Definition m10 tbl (word : list string) (vis : list nonterminal) (sa : sym_arg) :=
+  (List.length word,
+   NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl))                                     (fromNtList vis)),
+   sa).
+
+Definition lt10 : relation (nat * nat * sym_arg) :=
+  triple_lex nat nat sym_arg lt lt sa_order.
+
+
+(* working towards mutual recursion *)
+Fixpoint p10 (tbl : parse_table)
+             (sym : symbol)
+             (input : list string)
+             (vis : list nonterminal)
+             (a : Acc lt10 (m10 tbl input vis (F_arg sym)))
+             {struct a}
+  : (option tree * list string).
+  refine (match (sym, input) with
+          | (T _, nil) => (None, input)
+          | (T y, token :: input') =>
+            if beqString y token then
+              (Some (Leaf y), input')
+            else
+              (None, input)
+          | (NT x, _) =>
+            match ptlk_dec x (peek input) tbl with
+            | inl _ => (None, input)
+            | inr (exist _ gamma Hlk) =>
+              match List.in_dec NT_as_DT.eq_dec x vis with
+              | left _ => (None, input)
+              | right Hnin => 
+                let fix pf10 (tbl : parse_table)
+                        (gamma : list symbol)
+                        (input : list string)
+                        (vis : list nonterminal)
+                        (a : Acc lt10 (m10 tbl input vis (G_arg gamma)))
+                        {struct a}
+                    : (option (list tree) * list string) :=
+                    match gamma as g return gamma = g -> _  with
+                    | nil => fun _ => (Some nil, input)
+                    | sym :: gamma' => fun Hg => 
+                                         match p10 tbl sym input vis _ with
+                                         | (None, _) => (None, input)
+                                         | (Some lSib, input') =>
+                                           match Compare_dec.lt_dec (List.length input') (List.length input) with
+                                           | left Hlt =>
+                                             match pf10 tbl gamma' input' [] _ with
+                                             | (None, _) => (None, input)
+                                             | (Some rSibs, input'') =>
+                                               (Some (lSib :: rSibs), input'')
+                                             end
+                                           | right Hnlt =>
+                                             match pf10 tbl gamma' input vis _ with
+                                             | (None, _) => (None, input)
+                                             | (Some rSibs, input'') =>
+                                               (Some (lSib :: rSibs), input'')
+                                             end
+                                           end
+                                         end
+                    end eq_refl
+              in  match pf10 tbl gamma input (x :: vis) _ with
+                  | (None, _) => (None, input)
+                  | (Some sts, input') =>
+                    (Some (Node x sts), input')
+                  end
+              end
+            end
+          end).
+  clear pf10.
+  eapply Acc_inv; eauto.
+  unfold m10; simpl.
+  apply snd_lt.
+  apply NP.subset_cardinal_lt with (x := x).
+  - ND.fsetdec.
+  - apply in_A_not_in_B_in_diff.
+    + apply in_list_iff_in_fromNtList.
+      eapply pt_lookup_in_nt_keys; eauto.
+    + apply not_in_list_iff_not_in_fromNtList; auto.
+  - ND.fsetdec.
+    Unshelve.
+    + eapply Acc_inv; eauto.
+      * unfold m10.
+        apply thd_lt.
+        constructor.
+    + eapply Acc_inv; eauto.
+      apply fst_lt; auto.
+    + eapply Acc_inv; eauto.
+      apply thd_lt.
+      constructor.
+      subst.
+      auto.
+Defined.
+
+
+Theorem sa_order_wf : well_founded sa_order.
+Proof.
+  unfold well_founded.
+  intros a.
+  induction a.
+  - constructor; intros.
+    inv H.
+  - induction l.
+    + constructor; intros.
+      inv H.
+      * constructor; intros.
+        inv H.
+      * inv H2.
+    + constructor; intros.
+      inv H.
+      * constructor; intros.
+        inv H.
+      * destruct gamma'.
+        -- constructor; intros.
+           inv H.
+           ++ constructor; intros.
+              inv H.
+           ++ inv H3.
+        -- simpl in *.
+           constructor; intros.
+           inv H.
+           ++ constructor; intros.
+              inv H.
+           ++ simpl in *.
+              eapply Acc_inv; eauto.
+              constructor.
+              omega.
+Defined.
+
+Extraction p10.
+
+Theorem lt10_wf : well_founded lt10.
+  apply triple_lex_wf; try apply lt_wf.
+  apply sa_order_wf.
+Defined.
+
+Eval compute in match parseTableOf yy_grammar with
+                | None => None
+                | Some tbl => Some (p10 (lt10_wf (m10 tbl ["a"] [] (F_arg (NT X)))))
+                end.
+
+Eval compute in match parseTableOf a_generator with
+                | None => None
+                | Some tbl => Some (p10 (lt10_wf (m10 tbl ["a"; "a"; "a"] [] (F_arg (NT X)))))
+                end.
+
+Eval compute in (p10 (lt10_wf (m10 lr_table ["a"] [] (F_arg (NT X))))).
+
+Lemma p11_hole1 :
+  forall tbl input vis sa sa' x gamma,
+    Acc lt10 (m10 tbl input vis sa)
+    -> pt_lookup x (peek input) tbl = Some gamma
+    -> ~ In x vis
+    -> Acc lt10 (m10 tbl input (x :: vis) sa').
+Proof.
+  intros.
+  eapply Acc_inv; eauto.
+  unfold m10.
+  apply snd_lt; simpl.
+  apply NP.subset_cardinal_lt with (x := x); try ND.fsetdec.
+  apply in_A_not_in_B_in_diff.
+  - apply in_list_iff_in_fromNtList.
+    eapply pt_lookup_in_nt_keys; eauto.
+  - apply not_in_list_iff_not_in_fromNtList; auto.
+Defined.
+
+Lemma p11_hole2 :
+  forall tbl input vis gamma sym,
+    Acc lt10 (m10 tbl input vis (G_arg gamma))
+    -> Acc lt10 (m10 tbl input vis (F_arg sym)).
+Proof.
+  intros.
+  eapply Acc_inv; eauto.
+  apply thd_lt; constructor.
+Defined.
+
+Lemma p11_hole3 :
+  forall tbl input input' vis vis' sa sa',
+    Acc lt10 (m10 tbl input vis sa)
+    -> List.length input' < List.length input
+    -> Acc lt10 (m10 tbl input' vis' sa').
+Proof.
+  intros.
+  eapply Acc_inv; eauto.
+  apply fst_lt; auto.
+Defined.
+
+Lemma p11_hole4 :
+  forall tbl input vis gamma sym gamma',
+    Acc lt10 (m10 tbl input vis (G_arg gamma))
+    -> gamma = sym :: gamma'
+    -> Acc lt10 (m10 tbl input vis (G_arg gamma')).
+Proof.
+  intros.
+  eapply Acc_inv; eauto.
+  apply thd_lt; subst.
+  constructor; auto.
+Defined.
+
+Fixpoint p11 (tbl : parse_table)
+             (sym : symbol)
+             (input : list string)
+             (vis : list nonterminal)
+             (a : Acc lt10 (m10 tbl input vis (F_arg sym)))
+             {struct a}
+  : (option tree * list string).
+  refine (match (sym, input) with
+          | (T _, nil) => (None, input)
+          | (T y, token :: input') =>
+            if beqString y token then
+              (Some (Leaf y), input')
+            else
+              (None, input)
+          | (NT x, _) =>
+            match ptlk_dec x (peek input) tbl with
+            | inl _ => (None, input)
+            | inr (exist _ gamma Hlk) =>
+              match List.in_dec NT_as_DT.eq_dec x vis with
+              | left _ => (None, input)
+              | right Hnin => 
+                let fix pf11 (tbl : parse_table)
+                        (gamma : list symbol)
+                        (input : list string)
+                        (vis : list nonterminal)
+                        (a : Acc lt10 (m10 tbl input vis (G_arg gamma)))
+                        {struct a}
+                    : (option (list tree) * list string) :=
+                    match gamma as g return gamma = g -> _  with
+                    | nil => fun _ => (Some nil, input)
+                    | sym :: gamma' => fun Hg => 
+                                         match p11 tbl sym input vis (p11_hole2 _ a) with
+                                         | (None, _) => (None, input)
+                                         | (Some lSib, input') =>
+                                           match Compare_dec.lt_dec (List.length input') (List.length input) with
+                                           | left Hlt =>
+                                             match pf11 tbl gamma' input' [] (p11_hole3 _ _ _ a Hlt) with
+                                             | (None, _) => (None, input)
+                                             | (Some rSibs, input'') =>
+                                               (Some (lSib :: rSibs), input'')
+                                             end
+                                           | right Hnlt =>
+                                             match pf11 tbl gamma' input vis (p11_hole4 a Hg) with
+                                             | (None, _) => (None, input)
+                                             | (Some rSibs, input'') =>
+                                               (Some (lSib :: rSibs), input'')
+                                             end
+                                           end
+                                         end
+                    end eq_refl
+              in  match pf11 tbl gamma input (x :: vis) (p11_hole1 _ _ a Hlk Hnin) with
+                  | (None, _) => (None, input)
+                  | (Some sts, input') =>
+                    (Some (Node x sts), input')
+                  end
+              end
+            end
+          end).
+Defined.
+
+Fixpoint p12 (tbl : parse_table)
+             (sym : symbol)
+             (input : list string)
+             (vis : list nonterminal)
+             (a : Acc lt10 (m10 tbl input vis (F_arg sym)))
+             {struct a}
+             : (option tree * list string) := 
+  match (sym, input) with
+  | (T _, nil) => (None, input)
+  | (T y, token :: input') =>
+    if beqString y token then
+      (Some (Leaf y), input')
+    else
+      (None, input)
+  | (NT x, _) =>
+    match pt_lookup x (peek input) tbl as o return pt_lookup x (peek input) tbl = o -> _ with
+    | None => fun _ => (None, input)
+    | Some gamma =>
+      fun Hlk => match List.in_dec NT_as_DT.eq_dec x vis with
+                 | left _ => (None, input)
+                 | right Hnin => 
+                   match pf12 (p11_hole1 (G_arg gamma) x a Hlk Hnin) with
+                   | (None, _) => (None, input)
+                   | (Some sts, input') =>
+                     (Some (Node x sts), input')
+                   end
+                 end
+    end eq_refl
+  end
+with pf12 (tbl : parse_table)
+          (gamma : list symbol)
+          (input : list string)
+          (vis : list nonterminal)
+          (a : Acc lt10 (m10 tbl input vis (G_arg gamma)))
+          {struct a}
+     : (option (list tree) * list string) :=
+       match gamma as g return gamma = g -> _  with
+       | nil => fun _ => (Some nil, input)
+       | sym :: gamma' => fun Hg => 
+                            match p12 (p11_hole2 sym a) with
+                            | (None, _) => (None, input)
+                            | (Some lSib, input') =>
+                              match Compare_dec.lt_dec (List.length input') (List.length input) with
+                              | left Hlt =>
+                                match pf12 (p11_hole3 input' [] (G_arg gamma') a Hlt) with
+                                | (None, _) => (None, input)
+                                | (Some rSibs, input'') =>
+                                  (Some (lSib :: rSibs), input'')
+                                end
+                              | right Hnlt =>
+                                match pf12 (p11_hole4 a Hg) with
+                                | (None, _) => (None, input)
+                                | (Some rSibs, input'') =>
+                                  (Some (lSib :: rSibs), input'')
+                                end
+                              end
+                            end
+       end eq_refl.
+
+Extraction p12.
+
+Eval compute in match parseTableOf yy_grammar with
+                | None => None
+                | Some tbl => Some (p12 (lt10_wf (m10 tbl ["a"] [] (F_arg (NT X)))))
+                end.
+
+Eval compute in match parseTableOf a_generator with
+                | None => None
+                | Some tbl => Some (p12 (lt10_wf (m10 tbl ["a"; "a"; "a"] [] (F_arg (NT X)))))
+                end.
+
+Eval compute in (p10 (lt10_wf (m10 lr_table ["a"] [] (F_arg (NT X))))).
+
+(* next steps :
+
+   - more expressive return type (partial parse tree, left-recursive nonterminal, etc.
+   - condense two match expressions in parseForest into single expression? 
+   - way to make arguments to recursive calls more syntactically obvious? 
+   - soundness proof
+   - remove previous drafts from code base
+*)
