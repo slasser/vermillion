@@ -1,8 +1,14 @@
 Require Import List.
-Require Import Grammar Parser ParseTree ParseTable
+Require Import Grammar ParseTree ParseTable
         Lib.Tactics.
 Import ListNotations.
 Open Scope list_scope.
+
+Definition peek input :=
+  match input with
+  | nil => EOF
+  | token :: _ => LA token
+  end.
 
 Inductive sym_derives_prefix {g : grammar} :
   symbol -> list terminal -> tree -> list terminal -> Prop :=
