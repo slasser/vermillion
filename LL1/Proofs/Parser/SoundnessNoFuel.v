@@ -25,10 +25,10 @@ Lemma parse_nf_eq_body :
     match ptlk_dec x (peek input) tbl with
     | inl _ => inl (Reject "lookup failure" input)
     | inr (exist _ gamma Hlk) =>
-      match List.in_dec NT_as_DT.eq_dec x vis with
+      match mem_dec x vis with
       | left _ => inl (LeftRec x vis input)
       | right Hnin => 
-        match parseForest_nf tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
+        match parseForest_nf tbl gamma input (NtSet.add x vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
         | inl pfail => inl pfail
         | inr (sts, input') =>
           inr (Node x sts, input')
@@ -51,7 +51,7 @@ Lemma parseForest_nf_eq_body :
                          | inr (lSib, input') =>
                            match Compare_dec.lt_dec (List.length input') (List.length input) with
                            | left Hlt =>
-                             match parseForest_nf tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
+                             match parseForest_nf tbl gamma' input' NtSet.empty (hole3 _ _ _ _ _ _ _ a Hlt) with
                              | inl pfail => inl pfail
                              | inr (rSibs, input'') =>
                                inr (lSib :: rSibs, input'')
@@ -104,7 +104,7 @@ Lemma input_length_invariant :
     -> forall (tr        : tree)
               (sym       : symbol)
               (input rem : list terminal)
-              (vis       : list nonterminal)
+              (vis       : NtSet.t)
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
       parse_nf tbl sym input vis a = inr (tr, rem)
       -> List.length rem < List.length input
@@ -120,7 +120,7 @@ Proof.
       (Q := fun f =>
               forall (gamma : list symbol)
                      (input rem : list string)
-                     (vis : list nonterminal)
+                     (vis : NtSet.t)
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
                 parseForest_nf tbl gamma input vis a = inr (f, rem)
                 -> List.length rem < List.length input
@@ -169,7 +169,7 @@ Lemma parse_sound' :
     -> forall (tr        : tree)
               (sym       : symbol)
               (input rem : list terminal)
-              (vis       : list nonterminal)
+              (vis       : NtSet.t)
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
       parse_nf tbl sym input vis a = inr (tr, rem)
       -> exists word,
@@ -186,7 +186,7 @@ Proof.
       (Q := fun f =>
               forall (gamma : list symbol)
                      (input rem : list string)
-                     (vis : list nonterminal)
+                     (vis : NtSet.t)
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
                 parseForest_nf tbl gamma input vis a = inr (f, rem)
                 -> exists word,
@@ -262,7 +262,7 @@ Lemma parse_sound :
     -> forall (tr        : tree)
               (sym       : symbol)
               (word rem  : list terminal)
-              (vis       : list nonterminal)
+              (vis       : NtSet.t)
               (a : Acc triple_lt (meas tbl (word ++ rem) vis (F_arg sym))),
       parse_nf tbl sym (word ++ rem) vis a = inr (tr, rem)
       -> (@sym_derives_prefix g) sym word tr rem.
