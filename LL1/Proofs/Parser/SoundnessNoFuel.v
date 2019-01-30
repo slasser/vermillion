@@ -11,9 +11,9 @@ Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
 Import ListNotations.
 
-Lemma p2_eq_body :
+Lemma parse_nf_eq_body :
   forall tbl sym input vis a,
-    p2 tbl sym input vis a = 
+    parse_nf tbl sym input vis a = 
   match (sym, input) with
   | (T _, nil) => inl (Reject "input exhausted" input)
   | (T y, token :: input') =>
@@ -28,7 +28,7 @@ Lemma p2_eq_body :
       match List.in_dec NT_as_DT.eq_dec x vis with
       | left _ => inl (LeftRec x vis input)
       | right Hnin => 
-        match pf2 tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
+        match parseForest_nf tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
         | inl pfail => inl pfail
         | inr (sts, input') =>
           inr (Node x sts, input')
@@ -40,24 +40,24 @@ Proof.
   intros; simpl; destruct a; cr.
 Qed.
 
-Lemma pf2_eq_body :
+Lemma parseForest_nf_eq_body :
   forall tbl gamma input vis a,
-    pf2 tbl gamma input vis a =
+    parseForest_nf tbl gamma input vis a =
     match gamma as g return gamma = g -> _  with
     | nil => fun _ => inr (nil, input)
     | sym :: gamma' => fun Hg => 
-                         match p2 tbl sym input vis (hole2 _ _ _ _ _ a) with
+                         match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
                          | inl pfail => inl pfail
                          | inr (lSib, input') =>
                            match Compare_dec.lt_dec (List.length input') (List.length input) with
                            | left Hlt =>
-                             match pf2 tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
+                             match parseForest_nf tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
                              | inl pfail => inl pfail
                              | inr (rSibs, input'') =>
                                inr (lSib :: rSibs, input'')
                              end
                            | right Hnlt =>
-                             match pf2 tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
+                             match parseForest_nf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
                              | inl pfail => inl pfail
                              | inr (rSibs, input'') =>
                                inr (lSib :: rSibs, input'')
@@ -69,28 +69,28 @@ Proof.
   intros; simpl; destruct a; cr.
 Qed.
 
-Lemma p2_t_ret_leaf :
+Lemma parse_t_ret_leaf :
   forall tbl
          input rem
          vis
          y
          (a : Acc triple_lt (meas tbl input vis (F_arg (T y))))
          tr,
-    p2 tbl (T y) input vis a = inr (tr, rem)
+    parse_nf tbl (T y) input vis a = inr (tr, rem)
     -> isLeaf tr = true.
 Proof.
   intros; destruct a; cr; tc.
   inv H; auto.
 Qed.
 
-Lemma p2_nt_ret_node :
+Lemma parse_nt_ret_node :
   forall tbl
          input rem
          vis
          x
          (a : Acc triple_lt (meas tbl input vis (F_arg (NT x))))
          tr,
-    p2 tbl (NT x) input vis a = inr (tr, rem)
+    parse_nf tbl (NT x) input vis a = inr (tr, rem)
     -> isNode tr = true.
 Proof.
   intros; destruct a; cr; tc.
@@ -106,7 +106,7 @@ Lemma input_length_invariant :
               (input rem : list terminal)
               (vis       : list nonterminal)
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      p2 tbl sym input vis a = inr (tr, rem)
+      parse_nf tbl sym input vis a = inr (tr, rem)
       -> List.length rem < List.length input
          \/ rem = input.
 Proof.
@@ -122,17 +122,17 @@ Proof.
                      (input rem : list string)
                      (vis : list nonterminal)
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                pf2 tbl gamma input vis a = inr (f, rem)
+                parseForest_nf tbl gamma input vis a = inr (f, rem)
                 -> List.length rem < List.length input
                    \/ rem = input); intros; destruct a.
 
   - destruct sym as [y | x].
     + cr; tc.
       inv H; auto.
-    + apply p2_nt_ret_node in H; inv H.
+    + apply parse_nt_ret_node in H; inv H.
 
   - destruct sym as [y | x].
-    + apply p2_t_ret_leaf in H; inv H.
+    + apply parse_t_ret_leaf in H; inv H.
     + step; tc.
       step.
       step; tc.
@@ -162,7 +162,7 @@ Proof.
       apply IHpf in Hpf; clear IHpf; auto.
 Qed.
 
-Lemma p2_sound' :
+Lemma parse_sound' :
   forall (g   : grammar)
          (tbl : parse_table),
     parse_table_for tbl g
@@ -171,7 +171,7 @@ Lemma p2_sound' :
               (input rem : list terminal)
               (vis       : list nonterminal)
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      p2 tbl sym input vis a = inr (tr, rem)
+      parse_nf tbl sym input vis a = inr (tr, rem)
       -> exists word,
         word ++ rem = input
         /\ (@sym_derives_prefix g) sym word tr rem.
@@ -188,23 +188,23 @@ Proof.
                      (input rem : list string)
                      (vis : list nonterminal)
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                pf2 tbl gamma input vis a = inr (f, rem)
+                parseForest_nf tbl gamma input vis a = inr (f, rem)
                 -> exists word,
                   word ++ rem = input
                   /\ gamma_derives_prefix gamma word f rem); intros; destruct a.
 
   - destruct sym as [y | x].
-    + rewrite p2_eq_body in H.
+    + rewrite parse_nf_eq_body in H.
       step; tc.
       step_eq Hbeq; tc.
       inv H.
       eexists; split.
       * rewrite cons_app_singleton; auto.
       * constructor; auto.
-    + apply p2_nt_ret_node in H; inv H.
+    + apply parse_nt_ret_node in H; inv H.
 
   - destruct sym as [y | x].
-    + apply p2_t_ret_leaf in H; inv H.
+    + apply parse_t_ret_leaf in H; inv H.
     + simpl in H.
       destruct (ptlk_dec x (peek input) tbl) as [| e]; tc.
       destruct e as [gamma Hlk].
@@ -218,13 +218,13 @@ Proof.
       apply Htbl in Hlk; destruct Hlk.
       econstructor; eauto.
 
-  - rewrite pf2_eq_body in H.
+  - rewrite parseForest_nf_eq_body in H.
     cr; tc.
     inv H.
     exists nil; split; auto.
     constructor.
 
-  - rewrite pf2_eq_body in H.
+  - rewrite parseForest_nf_eq_body in H.
     step; tc.
     step_eq Hp; tc.
     step.
@@ -255,7 +255,7 @@ Proof.
       constructor; auto.
 Qed.
 
-Lemma p2_sound :
+Lemma parse_sound :
   forall (g   : grammar)
          (tbl : parse_table),
     parse_table_for tbl g
@@ -264,12 +264,12 @@ Lemma p2_sound :
               (word rem  : list terminal)
               (vis       : list nonterminal)
               (a : Acc triple_lt (meas tbl (word ++ rem) vis (F_arg sym))),
-      p2 tbl sym (word ++ rem) vis a = inr (tr, rem)
+      parse_nf tbl sym (word ++ rem) vis a = inr (tr, rem)
       -> (@sym_derives_prefix g) sym word tr rem.
 Proof.
   intros g tbl Htbl tr sym word rem vis a Hp.
   pose proof Hp as Hp'.
-  eapply p2_sound' in Hp; eauto.
+  eapply parse_sound' in Hp; eauto.
   destruct Hp as [word' [Happ Hder]].
   apply app_inv_tail in Happ.
   subst; auto.

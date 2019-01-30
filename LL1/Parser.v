@@ -323,84 +323,6 @@ Proof.
   constructor; auto.
 Defined.
 
-Fixpoint p (tbl : parse_table)
-         (sym : symbol)
-         (input : list string)
-         (vis : list nonterminal)
-         (a : Acc triple_lt (meas tbl input vis (F_arg sym)))
-         {struct a}
-         : (option tree * list string) :=
-  match (sym, input) with
-  | (T _, nil) => (None, input)
-  | (T y, token :: input') =>
-    if beqString y token then
-      (Some (Leaf y), input')
-    else
-      (None, input)
-  | (NT x, _) =>
-    match ptlk_dec x (peek input) tbl with
-    | inl _ => (None, input)
-    | inr (exist _ gamma Hlk) =>
-      match List.in_dec NT_as_DT.eq_dec x vis with
-      | left _ => (None, input)
-      | right Hnin => 
-        match pf tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
-        | (None, _) => (None, input)
-        | (Some sts, input') =>
-          (Some (Node x sts), input')
-        end
-      end
-    end
-  end
-with pf (tbl : parse_table)
-        (gamma : list symbol)
-        (input : list string)
-        (vis : list nonterminal)
-        (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
-        {struct a}
-        : (option (list tree) * list string) :=
-       match gamma as g return gamma = g -> _  with
-       | nil => fun _ => (Some nil, input)
-       | sym :: gamma' => fun Hg => 
-                            match p tbl sym input vis (hole2 _ _ _ _ _ a) with
-                            | (None, _) => (None, input)
-                            | (Some lSib, input') =>
-                              match Compare_dec.lt_dec (List.length input') (List.length input) with
-                              | left Hlt =>
-                                match pf tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
-                                | (None, _) => (None, input)
-                                | (Some rSibs, input'') =>
-                                  (Some (lSib :: rSibs), input'')
-                                end
-                              | right Hnlt =>
-                                match pf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
-                                | (None, _) => (None, input)
-                                | (Some rSibs, input'') =>
-                                  (Some (lSib :: rSibs), input'')
-                                end
-                              end
-                            end
-       end eq_refl.
-
-Extraction p.
-
-Definition parse_wrapper tbl sym input vis :=
-  p tbl sym input vis (triple_lt_wf (meas tbl input vis (F_arg sym))).
-
-(*
-Eval compute in match parseTableOf yy_grammar with
-                | None => None
-                | Some tbl => Some (parse_wrapper tbl (NT X) ["a"] [])
-                end.
-
-Eval compute in match parseTableOf a_generator with
-                | None => None
-                | Some tbl => Some (parse_wrapper tbl (NT X) ["a"; "a"; "a"] [])
-                end.
-
-Eval compute in parse_wrapper lr_table (NT X) ["a"] [].
-*)
-
 Ltac step_h := match goal with
                | H : context[match ?x with | _ => _ end] |- _ => destruct x
               end.
@@ -421,100 +343,6 @@ Ltac cr := repeat step.
 Ltac cr_eq s := repeat (step_eq s).
 Ltac tc := try congruence.
 
-Lemma p_eq_body :
-  forall (tbl : parse_table)
-         (sym : symbol)
-         (input : list string)
-         (vis : list nonterminal)
-         (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-    p tbl sym input vis a =
-    match (sym, input) with
-    | (T _, nil) => (None, input)
-    | (T y, token :: input') =>
-      if beqString y token then
-        (Some (Leaf y), input')
-      else
-        (None, input)
-    | (NT x, _) =>
-      match ptlk_dec x (peek input) tbl with
-      | inl _ => (None, input)
-      | inr (exist _ gamma Hlk) =>
-        match List.in_dec NT_as_DT.eq_dec x vis with
-        | left _ => (None, input)
-        | right Hnin => 
-          match pf tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
-          | (None, _) => (None, input)
-          | (Some sts, input') =>
-            (Some (Node x sts), input')
-          end
-        end
-      end
-    end.
-Proof.
-  intros; destruct a; simpl; cr.
-Qed.
-
-Lemma pf_eq_body :
-  forall (tbl : parse_table)
-         (gamma : list symbol)
-         (input : list string)
-         (vis : list nonterminal)
-         (a : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-    pf tbl gamma input vis a =
-    match gamma as g return gamma = g -> _  with
-    | nil => fun _ => (Some nil, input)
-    | sym :: gamma' => fun Hg => 
-                         match p tbl sym input vis (hole2 _ _ _ _ _ a) with
-                         | (None, _) => (None, input)
-                         | (Some lSib, input') =>
-                           match Compare_dec.lt_dec (List.length input') (List.length input) with
-                           | left Hlt =>
-                             match pf tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
-                             | (None, _) => (None, input)
-                             | (Some rSibs, input'') =>
-                               (Some (lSib :: rSibs), input'')
-                             end
-                           | right Hnlt =>
-                             match pf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
-                             | (None, _) => (None, input)
-                             | (Some rSibs, input'') =>
-                               (Some (lSib :: rSibs), input'')
-                             end
-                           end
-                         end
-    end eq_refl.
-Proof.
-  intros; destruct a; cr.
-Qed.
-
-Lemma p_t_ret_leaf :
-  forall tbl
-         input rem
-         vis
-         y
-         (a : Acc triple_lt (meas tbl input vis (F_arg (T y))))
-         tr,
-    p tbl (T y) input vis a = (Some tr, rem)
-    -> isLeaf tr = true.
-Proof.
-  intros; destruct a; cr; tc.
-  inv H; auto.
-Qed.
-
-Lemma p_nt_ret_node :
-  forall tbl
-         input rem
-         vis
-         x
-         (a : Acc triple_lt (meas tbl input vis (F_arg (NT x))))
-         tr,
-    p tbl (NT x) input vis a = (Some tr, rem)
-    -> isNode tr = true.
-Proof.
-  intros; destruct a; cr; tc.
-  inv H; auto.
-Qed.
-
 Open Scope list_scope.
 
 Lemma l_ident_eq_nil :
@@ -525,195 +353,15 @@ Proof.
   apply app_inv_tail in H; auto.
 Qed.
 
-Lemma input_length_invariant :
-  forall (g   : grammar)
-         (tbl : parse_table),
-    parse_table_for tbl g
-    -> forall (tr        : tree)
-              (sym       : symbol)
-              (input rem : list terminal)
-              (vis       : list nonterminal)
-              (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      p tbl sym input vis a = (Some tr, rem)
-      -> List.length rem < List.length input
-         \/ rem = input.
-Proof.
-  intros g tbl Htbl tr.
-  induction tr as [ s
-                  | s f IHpf
-                  |
-                  | tr IHp f IHpf ]
-                    using tree_nested_ind with
-      
-      (Q := fun f =>
-              forall (gamma : list symbol)
-                     (input rem : list string)
-                     (vis : list nonterminal)
-                     (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                pf tbl gamma input vis a = (Some f, rem)
-                -> List.length rem < List.length input
-                   \/ rem = input); intros; destruct a.
-
-  - destruct sym as [y | x].
-    + cr; tc.
-      inv H; auto.
-    + apply p_nt_ret_node in H; inv H.
-
-  - destruct sym as [y | x].
-    + apply p_t_ret_leaf in H; inv H.
-    + step; tc.
-      step.
-      step; tc.
-      step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHpf in Hpf; auto.
-
-  - cr; tc.
-    inv H; auto.
-
-  - step; tc.
-    step_eq Hp.
-    step; tc.
-    step.
-    + step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHp in Hp; clear IHp.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hpf.
-      * left; omega.
-      * subst; auto.
-    + step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHpf in Hpf; clear IHpf.
-      auto.
-Qed.
-          
-Lemma p_sound' :
-  forall (g   : grammar)
-         (tbl : parse_table),
-    parse_table_for tbl g
-    -> forall (tr        : tree)
-              (sym       : symbol)
-              (input rem : list terminal)
-              (vis       : list nonterminal)
-              (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      p tbl sym input vis a = (Some tr, rem)
-      -> exists word,
-        word ++ rem = input
-        /\ (@sym_derives_prefix g) sym word tr rem.
-Proof.
-  intros g tbl Htbl tr.
-  induction tr as [ s
-                  | s f IHpf
-                  |
-                  | tr IHp f IHpf ]
-                    using tree_nested_ind with
-
-      (Q := fun f =>
-              forall (gamma : list symbol)
-                     (input rem : list string)
-                     (vis : list nonterminal)
-                     (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                pf tbl gamma input vis a = (Some f, rem)
-                -> exists word,
-                  word ++ rem = input
-                  /\ gamma_derives_prefix gamma word f rem); intros; destruct a.
-
-  - destruct sym as [y | x].
-    + rewrite p_eq_body in H.
-      step; tc.
-      step_eq Hbeq; tc.
-      inv H.
-      eexists; split.
-      * rewrite cons_app_singleton; auto.
-      * rewrite beqSym_eq in Hbeq; subst.
-        constructor; auto.
-    + apply p_nt_ret_node in H; inv H.
-
-  - destruct sym as [y | x].
-    + apply p_t_ret_leaf in H; inv H.
-    + simpl in H.
-      destruct (ptlk_dec x (peek input) tbl) as [| e]; tc.
-      destruct e as [gamma Hlk].
-      step; tc.
-      step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hpf as [word [Happ Hg]]; subst.
-      eexists; split; eauto.
-      apply Htbl in Hlk; destruct Hlk.
-      econstructor; eauto.
-
-  - rewrite pf_eq_body in H.
-    cr; tc.
-    inv H.
-    exists nil; split; auto.
-    constructor.
-
-  - rewrite pf_eq_body in H.
-    step; tc.
-    step_eq Hp.
-    step; tc.
-    step.
-    + step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHp in Hp; clear IHp.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hp  as [wpre [Happ Hs]]; subst.
-      destruct Hpf as [wsuf [Happ Hg]]; subst.
-      exists (wpre ++ wsuf); split.
-      * rewrite app_assoc; auto.
-      * constructor; auto.
-    + pose proof Hp as Hp'.
-      eapply input_length_invariant in Hp'; eauto.
-      destruct Hp'; try contradiction.
-      subst.
-      step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHp in Hp; clear IHp.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hp as [wpre [Happ Hs]].
-      apply l_ident_eq_nil in Happ; subst.
-      destruct Hpf as [wsuf [Happ Hg]]; subst.
-      exists ([] ++ wsuf); split; auto.
-      constructor; auto.
-Qed.
-
-Lemma p_sound :
-  forall (g   : grammar)
-         (tbl : parse_table),
-    parse_table_for tbl g
-    -> forall (tr        : tree)
-              (sym       : symbol)
-              (word rem  : list terminal)
-              (vis       : list nonterminal)
-              (a : Acc triple_lt (meas tbl (word ++ rem) vis (F_arg sym))),
-      p tbl sym (word ++ rem) vis a = (Some tr, rem)
-      -> (@sym_derives_prefix g) sym word tr rem.
-Proof.
-  intros g tbl Htbl tr sym word rem vis a Hp.
-  pose proof Hp as Hp'.
-  eapply p_sound' in Hp; eauto.
-  destruct Hp as [word' [Happ Hder]].
-  apply app_inv_tail in Happ.
-  subst; auto.
-Qed.
-
 Inductive parse_failure : Set :=
 | Reject   : string -> list string -> parse_failure
 | LeftRec  : nonterminal -> list nonterminal -> list string -> parse_failure.
 
-Fixpoint p2 (tbl : parse_table)
-            (sym : symbol)
-            (input : list string)
-            (vis : list nonterminal)
-            (a : Acc triple_lt (meas tbl input vis (F_arg sym)))
+Fixpoint parse_nf (tbl : parse_table)
+                  (sym : symbol)
+                  (input : list string)
+                  (vis : list nonterminal)
+                  (a : Acc triple_lt (meas tbl input vis (F_arg sym)))
             {struct a}
             : sum parse_failure (tree * list string) :=
   match (sym, input) with
@@ -730,7 +378,7 @@ Fixpoint p2 (tbl : parse_table)
       match List.in_dec NT_as_DT.eq_dec x vis with
       | left _ => inl (LeftRec x vis input)
       | right Hnin => 
-        match pf2 tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
+        match parseForest_nf tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
         | inl pfail => inl pfail
         | inr (sts, input') =>
           inr (Node x sts, input')
@@ -738,28 +386,28 @@ Fixpoint p2 (tbl : parse_table)
       end
     end
   end
-with pf2 (tbl : parse_table)
-         (gamma : list symbol)
-         (input : list string)
-         (vis : list nonterminal)
-         (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
+with parseForest_nf (tbl : parse_table)
+                    (gamma : list symbol)
+                    (input : list string)
+                    (vis : list nonterminal)
+                    (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
          {struct a}
          : sum parse_failure (list tree * list string) :=
        match gamma as g return gamma = g -> _  with
        | nil => fun _ => inr (nil, input)
        | sym :: gamma' => fun Hg => 
-                            match p2 tbl sym input vis (hole2 _ _ _ _ _ a) with
+                            match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
                             | inl pfail => inl pfail
                             | inr (lSib, input') =>
                               match Compare_dec.lt_dec (List.length input') (List.length input) with
                               | left Hlt =>
-                                match pf2 tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
+                                match parseForest_nf tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
                                 | inl pfail => inl pfail
                                 | inr (rSibs, input'') =>
                                   inr (lSib :: rSibs, input'')
                                 end
                               | right Hnlt =>
-                                match pf2 tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
+                                match parseForest_nf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
                                 | inl pfail => inl pfail
                                 | inr (rSibs, input'') =>
                                   inr (lSib :: rSibs, input'')
@@ -768,9 +416,26 @@ with pf2 (tbl : parse_table)
                             end
        end eq_refl.
 
-Lemma p2_eq_body :
+Definition parse_wrapper tbl sym input vis :=
+  parse_nf tbl sym input vis (triple_lt_wf (meas tbl input vis (F_arg sym))).
+
+(*
+Eval compute in match parseTableOf yy_grammar with
+                | None => None
+                | Some tbl => Some (parse_wrapper tbl (NT X) ["a"] [])
+                end.
+
+Eval compute in match parseTableOf a_generator with
+                | None => None
+                | Some tbl => Some (parse_wrapper tbl (NT X) ["a"; "a"; "a"] [])
+                end.
+
+Eval compute in parse_wrapper lr_table (NT X) ["a"] [].
+*)
+
+Lemma parse_nf_eq_body :
   forall tbl sym input vis a,
-    p2 tbl sym input vis a = 
+    parse_nf tbl sym input vis a = 
   match (sym, input) with
   | (T _, nil) => inl (Reject "input exhausted" input)
   | (T y, token :: input') =>
@@ -785,7 +450,7 @@ Lemma p2_eq_body :
       match List.in_dec NT_as_DT.eq_dec x vis with
       | left _ => inl (LeftRec x vis input)
       | right Hnin => 
-        match pf2 tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
+        match parseForest_nf tbl gamma input (x :: vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
         | inl pfail => inl pfail
         | inr (sts, input') =>
           inr (Node x sts, input')
@@ -798,131 +463,6 @@ Proof.
 Qed.
 
 (*
-with pf2 (tbl : parse_table)
-         (gamma : list symbol)
-         (input : list string)
-         (vis : list nonterminal)
-         (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
-         {struct a}
-         : sum parse_failure (list tree * list string) :=
-       match gamma as g return gamma = g -> _  with
-       | nil => fun _ => inr (nil, input)
-       | sym :: gamma' => fun Hg => 
-                            match p2 tbl sym input vis (hole2 _ _ _ _ _ a) with
-                            | inl pfail => inl pfail
-                            | inr (lSib, input') =>
-                              match Compare_dec.lt_dec (List.length input') (List.length input) with
-                              | left Hlt =>
-                                match pf2 tbl gamma' input' [] (hole3 _ _ _ _ _ _ _ a Hlt) with
-                                | inl pfail => inl pfail
-                                | inr (rSibs, input'') =>
-                                  inr (lSib :: rSibs, input'')
-                                end
-                              | right Hnlt =>
-                                match pf2 tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
-                                | inl pfail => inl pfail
-                                | inr (rSibs, input'') =>
-                                  inr (lSib :: rSibs, input'')
-                                end
-                              end
-                            end
-       end eq_refl.
-
-Lemma p2_sound' :
-  forall (g   : grammar)
-         (tbl : parse_table),
-    parse_table_for tbl g
-    -> forall (tr        : tree)
-              (sym       : symbol)
-              (input rem : list terminal)
-              (vis       : list nonterminal)
-              (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      p2 tbl sym input vis a = inr (tr, rem)
-      -> exists word,
-        word ++ rem = input
-        /\ (@sym_derives_prefix g) sym word tr rem.
-Proof.
-  intros g tbl Htbl tr.
-  induction tr as [ s
-                  | s f IHpf
-                  |
-                  | tr IHp f IHpf ]
-                    using tree_nested_ind with
-
-      (Q := fun f =>
-              forall (gamma : list symbol)
-                     (input rem : list string)
-                     (vis : list nonterminal)
-                     (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                pf2 tbl gamma input vis a = inr (f, rem)
-                -> exists word,
-                  word ++ rem = input
-                  /\ gamma_derives_prefix gamma word f rem); intros; destruct a.
-
-  - destruct sym as [y | x].
-    + rewrite p2_eq_body in H.
-      step; tc.
-      step_eq Hbeq; tc.
-      inv H.
-      eexists; split.
-      * rewrite cons_app_singleton; auto.
-      * rewrite beqSym_eq in Hbeq; subst.
-        constructor; auto.
-    + apply p_nt_ret_node in H; inv H.
-
-  - destruct sym as [y | x].
-    + apply p_t_ret_leaf in H; inv H.
-    + simpl in H.
-      destruct (ptlk_dec x (peek input) tbl) as [| e]; tc.
-      destruct e as [gamma Hlk].
-      step; tc.
-      step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hpf as [word [Happ Hg]]; subst.
-      eexists; split; eauto.
-      apply Htbl in Hlk; destruct Hlk.
-      econstructor; eauto.
-
-  - rewrite pf_eq_body in H.
-    cr; tc.
-    inv H.
-    exists nil; split; auto.
-    constructor.
-
-  - rewrite pf_eq_body in H.
-    step; tc.
-    step_eq Hp.
-    step; tc.
-    step.
-    + step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHp in Hp; clear IHp.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hp  as [wpre [Happ Hs]]; subst.
-      destruct Hpf as [wsuf [Happ Hg]]; subst.
-      exists (wpre ++ wsuf); split.
-      * rewrite app_assoc; auto.
-      * constructor; auto.
-    + pose proof Hp as Hp'.
-      eapply input_length_invariant in Hp'; eauto.
-      destruct Hp'; try contradiction.
-      subst.
-      step_eq Hpf.
-      step; tc.
-      inv H.
-      apply IHp in Hp; clear IHp.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hp as [wpre [Happ Hs]].
-      apply l_ident_eq_nil in Happ; subst.
-      destruct Hpf as [wsuf [Happ Hg]]; subst.
-      exists ([] ++ wsuf); split; auto.
-      constructor; auto.
-Qed.
-
-
 Inductive nullable_path g (la : lookahead) :
   nonterminal -> nonterminal -> Prop :=
 | DirectPath : forall x z gamma pre suf,
