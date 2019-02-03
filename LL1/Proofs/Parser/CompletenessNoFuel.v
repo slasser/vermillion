@@ -596,13 +596,57 @@ with nlr_forest_der (g : grammar) :
 Scheme nlr_tree_mutual_ind := Induction for nlr_tree_der Sort Prop
   with nlr_forest_mutual_ind := Induction for nlr_forest_der Sort Prop.
 
-Lemma lookups_eq :
+Lemma lookups_neq_contra :
   forall x la t gamma,
     pt_lookup x la t = Some gamma
     -> pt_lookup x la t = None
     -> False.
 Proof.
   intros; congruence.
+Qed.
+
+Lemma lookups_eq :
+  forall x la t gamma gamma',
+    pt_lookup x la t = Some gamma
+    -> pt_lookup x la t = Some gamma'
+    -> gamma = gamma'.
+Proof.
+  intros; tc.
+Qed.
+
+Lemma lookahead_for_ptlk_dec :
+  forall g t x gamma la,
+    parse_table_for t g
+    -> In (x, gamma) (productions g)
+    -> lookahead_for la x gamma g
+    -> exists (pf : pt_lookup x la t = Some gamma),
+        ptlk_dec x la t = inr (exist _ gamma pf).
+Proof.
+  intros.
+  destruct (ptlk_dec x la t).
+  - apply H in H1; auto; tc.
+  - destruct s.
+    apply H in H1; auto.
+    assert (gamma = x0) by congruence; subst.
+    exists e; auto.
+Qed.
+
+Lemma non_nil_list_length :
+  forall A (xs : list A),
+    xs <> [] -> List.length xs > 0.
+Proof.
+  intros; destruct xs; simpl in *; tc.
+  omega.
+Qed.
+
+Lemma app_length_lt :
+  forall A (xs ys : list A), xs <> [] -> List.length ys < List.length (xs ++ ys).
+Proof.
+  intros.
+  apply non_nil_list_length in H.
+  destruct xs; simpl in *.
+  - omega.
+  - rewrite app_length; omega.
 Qed.
 
 Lemma parse_complete_wrt_nlr :
@@ -628,21 +672,45 @@ Proof.
     step.
     + apply Ht in l; auto.
       (* not sure why we need a lemma instead of using congruence here *)
-      exfalso.
-      eapply lookups_eq; eauto.
+      exfalso; eapply lookups_neq_contra; eauto.
     + destruct s as [gamma' Hlk].
-Abort.
-      
-    
-    
-    
-    
-  
+      step; tc.
+      assert (gamma = gamma').
+      { apply Ht in l; auto.
+        eapply lookups_eq; eauto. }
+      subst.
+      rewrite IHHd; auto.
 
-  
+  - destruct a; simpl; auto.
 
+  - destruct a; simpl.
+    rewrite IHHd.
+    step; try omega.
+    rewrite IHHd0; auto.
 
-Require Import LL1.Parser.
+  - destruct a; simpl.
+    rewrite app_assoc in IHHd.
+    rewrite IHHd.
+    step.
+    + rewrite IHHd0; auto.
+    + exfalso.
+      apply n1.
+      simpl in *.
+      rewrite <- app_assoc.
+      apply app_length_lt; auto.
+Qed.
+
+Fixpoint null_tree (tr : tree) : bool :=
+  match tr with
+  | Leaf _ => false
+  | Node _ sts =>
+    let fix null_forest (l : list tree) : bool :=
+        match l with
+        | [] => true
+        | t :: l' => andb (null_tree t) (null_forest l')
+        end
+    in  null_forest sts
+  end.
 
 Lemma der_func :
   forall g tbl (H : parse_table_for tbl g) sym word tr rem,
