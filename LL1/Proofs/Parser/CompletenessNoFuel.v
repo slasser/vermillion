@@ -4,6 +4,7 @@ Require Import String.
 Require Import Lib.Grammar.
 Require Import Lib.ParseTree.
 Require Import Lib.Tactics.
+Require Import Lib.Utils.
 Require Import LL1.Derivation.
 Require Import LL1.Parser.
 Require Import LL1.ParseTable.
@@ -11,23 +12,24 @@ Require Import LL1.ParseTableGen.
 Require Import LL1.Proofs.Lemmas.
 Import ListNotations.
 
-Inductive nullable_path g (la : lookahead) (x z : nonterminal) : Prop :=
-| DirectPath : forall gamma pre suf,
+Inductive nullable_path g (la : lookahead) :
+  symbol -> symbol -> Prop :=
+| DirectPath : forall x z gamma pre suf,
     In (x, gamma) (productions g)
     -> gamma = pre ++ NT z :: suf
     -> nullable_gamma g pre
     -> lookahead_for la x gamma g
-    -> nullable_path g la x z
-| IndirectPath : forall y gamma pre suf,
+    -> nullable_path g la (NT x) (NT z)
+| IndirectPath : forall x y z gamma pre suf,
     In (x, gamma) (productions g)
     -> gamma = pre ++ NT y :: suf
     -> nullable_gamma g pre
     -> lookahead_for la x gamma g
-    -> nullable_path g la y z
-    -> nullable_path g la x z.
+    -> nullable_path g la (NT y) (NT z)
+    -> nullable_path g la (NT x) (NT z).
 
-Definition left_recursive g x la :=
-  nullable_path g la x x.
+Definition left_recursive g sym la :=
+  nullable_path g la sym sym.
 
 Inductive fg' (g : grammar) (la : lookahead) :
   list symbol -> Prop :=
@@ -133,68 +135,6 @@ Proof.
       * rewrite <- app_assoc; simpl; auto.
 Qed.
 
-Lemma no_direct_left_recursion_in_LL1_first' :
-  forall g t la sym,
-    parse_table_for t g
-    -> first_sym g la sym
-    -> forall x pre suf,
-        NT x = sym
-        -> nullable_gamma g pre
-        -> In (x, pre ++ sym :: suf) (productions g)
-        -> False.
-Proof.
-  intros g t la sym Ht Hf; induction Hf.
-  - intros x pre suf He Hn Hi; inv He.
-  - intros x' pre suf He Hn Hi; inv He.
-    assert (Heq : gpre ++ s :: gsuf = pre ++ NT x :: suf).
-    { assert (Hl : lookahead_for la x (gpre ++ s :: gsuf) g).
-      { left; auto. }
-      assert (Hl' : lookahead_for la x (pre ++ NT x :: suf) g).
-      { left; eauto. }
-      apply Ht in Hl; apply Ht in Hl'; auto.
-      rewrite Hl in Hl'.
-      inv Hl'; auto. }
-    apply medial in Heq.
-    destruct Heq as [Hin | [Hin' | Heq]].
-    + eapply Lemmas.no_first_follow_conflicts; eauto.
-      * eapply nullable_sym_in; eauto.
-      * eapply follow_pre; eauto.
-        apply FirstGamma with (gpre := []) (s := NT x); eauto.
-    + eapply Lemmas.no_first_follow_conflicts with (sym := NT x); eauto.
-      * eapply nullable_sym_in with (gamma := gpre); auto.
-      * eapply follow_pre with (pre := gpre); eauto.
-        apply FirstGamma with (gpre := []); auto.
-    + destruct Heq as [He [He' He'']]; subst; eauto.
-Qed.
-
-Lemma no_direct_left_recursion_in_LL1_first :
-  forall g t la x pre suf,
-    parse_table_for t g
-    -> first_sym g la (NT x)
-    -> nullable_gamma g pre
-    -> ~ In (x, pre ++ NT x :: suf) (productions g).
-Proof.
-  unfold not; intros.
-  eapply no_direct_left_recursion_in_LL1_first'; eauto.
-Qed.
-
-Lemma no_direct_left_recursion_in_LL1_follow' :
-  forall g t la x gamma sym,
-    parse_table_for t g
-    -> In (x, gamma) (productions g)
-    -> nullable_gamma g gamma
-    -> follow_sym g la sym
-    -> forall pre suf,
-        sym = NT x
-        -> nullable_gamma g pre
-        -> In (x, pre ++ NT x :: suf) (productions g)
-        -> lookahead_for la x (pre ++ NT x :: suf) g
-        -> False.
-Proof.
-  intros g t la x gamma sym Ht Hi Hn Hf.
-  intros; subst.
-Abort.
-
 Inductive first_sym_i (g : grammar) : lookahead -> symbol -> nat -> Prop :=
   FirstT_i : forall y : terminal, first_sym_i g (LA y) (T y) 0
 | FirstNT_i : forall (x : nonterminal) (gpre : list symbol)
@@ -279,10 +219,10 @@ Qed.
 Lemma first_sym_i_np :
   forall g la x y,
     nullable_path g la x y
-    -> first_sym g la (NT y)
+    -> first_sym g la y
     -> exists nx ny,
-        first_sym_i g la (NT x) nx
-        /\ first_sym_i g la (NT y) ny
+        first_sym_i g la x nx
+        /\ first_sym_i g la y ny
         /\ ny < nx.
 Proof.
   intros g la x y Hn.
@@ -427,7 +367,7 @@ Proof.
     eexists; econstructor; eauto.
 Qed.
 
-Lemma foo :
+Lemma sym_in_gamma_size_le :
   forall g gamma,
     nullable_gamma g gamma
     -> forall sym,
@@ -471,7 +411,7 @@ Lemma sized_ns_np :
         /\ ny < nx.
 Proof.
   intros.
-  eapply foo with (sym := NT y) in H0; eauto.
+  eapply sym_in_gamma_size_le with (sym := NT y) in H0; eauto.
   - destruct H0 as [n [n' [Hs [Hs' Hle]]]].
     exists (S n').
     exists n.
@@ -484,16 +424,16 @@ Qed.
 Lemma exist_decreasing_nullable_sym_sizes_in_null_path :
   forall g t la x y,
     parse_table_for t g
-    -> nullable_sym g (NT x)
-    -> follow_sym g la (NT x)
+    -> nullable_sym g x 
+    -> follow_sym g la x
     -> nullable_path g la x y
     -> exists nx ny,
-        sized_nullable_sym g (NT x) nx
-        /\ sized_nullable_sym g (NT y) ny
+        sized_nullable_sym g x nx
+        /\ sized_nullable_sym g y ny
         /\ ny < nx.
 Proof.
   intros g t la x y Ht Hn Hf Hnp.
-  induction Hnp as [x y gamma pre suf Hi He Hng Hl | x z y gamma pre suf Hi Heq Hng Hl Hnp IH]; intros; subst.
+  induction Hnp as [x y gamma pre suf Hi He Hng Hl | x y z gamma pre suf Hi Heq Hng Hl Hnp IH]; intros; subst.
   - inv Hn.
     destruct Hl as [Hfg | [Hng' Hfo]].
     + (* LEMMA *)
@@ -522,7 +462,7 @@ Qed.
 
 Lemma nullable_path_exists_production :
     forall g la x y,
-      nullable_path g la x y
+      nullable_path g la (NT x) y
       -> exists gamma, In (x, gamma) (productions g)
                        /\ lookahead_for la x gamma g.
 Proof.
@@ -532,7 +472,7 @@ Qed.
 Lemma LL1_parse_table_impl_no_left_recursion :
   forall g t la x,
     parse_table_for t g
-    -> ~ left_recursive g x la.
+    -> ~ left_recursive g (NT x) la.
 Proof.
   intros g t la x Ht; unfold not; intros Hlr; red in Hlr.
   assert (Hex : exists gamma,
@@ -700,17 +640,184 @@ Proof.
       apply app_length_lt; auto.
 Qed.
 
-Fixpoint null_tree (tr : tree) : bool :=
+Fixpoint nullTree (tr : tree) : bool :=
   match tr with
   | Leaf _ => false
   | Node _ sts =>
-    let fix null_forest (l : list tree) : bool :=
+    let fix nullForest (l : list tree) : bool :=
         match l with
         | [] => true
-        | t :: l' => andb (null_tree t) (null_forest l')
+        | t :: l' => andb (nullTree t) (nullForest l')
         end
-    in  null_forest sts
+    in  nullForest sts
   end.
+
+Fixpoint nullForest (l : list tree) : bool :=
+  match l with
+  | [] => true
+  | t :: l' => andb (nullTree t) (nullForest l')
+  end.
+    
+Lemma nullTree_nullable_sym :
+  forall g sym word tr rem,
+    (@sym_derives_prefix g) sym word tr rem
+    -> nullTree tr = true
+    -> nullable_sym g sym.
+Proof.
+  intros g sym word tr rem Hd.
+  induction Hd using sdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+              nullTree tr = true
+              -> nullable_sym g sym)
+
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               nullForest f = true
+               -> nullable_gamma g gamma).
+                 
+  - intros Hn; inv Hn.
+    
+  - intros Hn; simpl in *.
+    fold nullForest in Hn.
+    apply IHHd in Hn.
+    econstructor; eauto.
+
+  - intros; constructor.
+
+  - intros Hn; simpl in *.
+    apply andb_prop in Hn.
+    destruct Hn as [Hhd Htl].
+    apply IHHd in Hhd.
+    apply IHHd0 in Htl.
+    econstructor; eauto.
+Qed.
+
+Lemma nullTree_word_eq_nil :
+  forall g sym word tr rem,
+    (@sym_derives_prefix g) sym word tr rem
+    -> nullTree tr = true
+    -> word = [].
+Proof.
+  intros g sym word tr rem Hd.
+  induction Hd using sdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+              nullTree tr = true
+              -> word = [])
+
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               nullForest f = true
+               -> word = []).
+
+  - intros Hn; inv Hn.
+
+  - intros Hn; simpl in *.
+    apply IHHd in Hn; auto.
+
+  - intros; auto.
+
+  - intros Hn; simpl in *.
+    apply andb_prop in Hn; destruct Hn as [Hhd Htl].
+    apply IHHd in Hhd.
+    apply IHHd0 in Htl.
+    subst; auto.
+Qed.
+    
+Fixpoint reachableNts (tr : tree) : NtSet.t :=
+  match tr with
+  | Leaf _ => NtSet.empty
+  | Node x sts =>
+    let fix reachableNtsF (l : list tree) : NtSet.t :=
+        match l with
+        | [] => NtSet.empty
+        | t :: l' => if nullTree t then
+                       NtSet.union (reachableNts t) (reachableNtsF l')
+                     else
+                       reachableNts t
+        end
+    in  NtSet.add x (reachableNtsF sts)
+  end.
+
+Fixpoint reachableNtsF (l : list tree) : NtSet.t :=
+  match l with
+  | [] => NtSet.empty
+  | t :: l' => if nullTree t then
+                 NtSet.union (reachableNts t) (reachableNtsF l')
+               else
+                 reachableNts t
+  end.
+
+Lemma nullable_path_isNT :
+  forall g la sym sym',
+    nullable_path g la sym sym'
+    -> isNT sym = true /\ isNT sym' = true.
+Proof.
+  intros g la sym sym' Hnp; inv Hnp; auto.
+Qed.
+  
+Lemma reachableNts_nullable_path :
+  forall g sym word tr rem,
+    (@sym_derives_prefix g) sym word tr rem
+    -> forall x,
+      NtSet.In x (reachableNts tr)
+      -> sym = NT x
+         \/ nullable_path g (peek (word ++ rem)) sym (NT x).
+Proof.
+  intros g sym word tr rem Hd.
+  induction Hd using sdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+              forall x : NtSet.elt,
+                NtSet.In x (reachableNts tr) ->
+                sym = NT x \/
+                nullable_path g (peek (word ++ rem)) sym (NT x))
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               forall x,
+                 NtSet.In x (reachableNtsF f)
+                 -> exists pre sym suf,
+                   gamma = pre ++ sym :: suf
+                   /\ nullable_gamma g pre
+                   /\ (sym = NT x
+                       \/ nullable_path g (peek (word ++ rem)) sym (NT x))).
+
+  - intros x Hi; simpl in *.
+    inv Hi.
+
+  - intros x' Hi; simpl in *.
+    destruct (NtSetFacts.eq_dec x x'); subst; auto.
+    fold reachableNtsF in Hi.
+    apply NtSetFacts.add_3 in Hi; auto.
+    apply IHHd in Hi; clear IHHd.
+    destruct Hi as [pre [sym [suf [He [Hng [He' | Hnp]]]]]]; subst.
+    + right.
+      eapply DirectPath; eauto.
+    + destruct sym as [y | x''].
+      * apply nullable_path_isNT in Hnp.
+        destruct Hnp as [Hcontra _]; inv Hcontra.
+      * right; eapply IndirectPath; eauto.
+
+  - intros x Hi; simpl in *.
+    inv Hi.
+
+  - intros x Hi; simpl in *.
+    destruct (nullTree hdTree) eqn:Hn.
+    + pose proof Hn as Hn'.
+      eapply nullTree_nullable_sym in Hn; eauto.
+      eapply nullTree_word_eq_nil in Hn'; eauto; subst; simpl in *.
+      apply NtSetFacts.union_1 in Hi.
+      destruct Hi as [Hhd | Htl].
+      * apply IHHd in Hhd.
+        exists []; exists hdRoot; exists tlRoots; simpl.
+        repeat split; auto.
+      * apply IHHd0 in Htl.
+        destruct Htl as [pre [sym [suf [Heq [Hng [Heq' | Hnp]]]]]]; subst.
+        -- exists (hdRoot :: pre); exists (NT x); exists suf; simpl.
+           repeat split; auto.
+        -- exists (hdRoot :: pre); exists sym; exists suf; simpl.
+           repeat split; auto.
+    + apply IHHd in Hi.
+      exists []; exists hdRoot; exists tlRoots; simpl.
+      repeat split; auto.
+      rewrite <- app_assoc; auto.
+Qed.    
+               
 
 Lemma der_func :
   forall g tbl (H : parse_table_for tbl g) sym word tr rem,
