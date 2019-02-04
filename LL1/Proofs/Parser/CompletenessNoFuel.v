@@ -720,6 +720,39 @@ Proof.
     apply IHHd0 in Htl.
     subst; auto.
 Qed.
+
+Lemma nullTree_word_neq_nil :
+  forall g sym word tr rem,
+    (@sym_derives_prefix g) sym word tr rem
+    -> nullTree tr = false
+    -> word <> [].
+Proof.
+  intros g sym word tr rem Hd.
+  induction Hd using sdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+              nullTree tr = false
+              -> word <> [])
+
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               nullForest f = false
+               -> word <> []).
+
+  - intros Hn; unfold not; intros He.
+    inv He.
+
+  - intros Hn; unfold not; intros He; subst; simpl in *.
+    apply IHHd in Hn; tc.
+
+  - intros Hn; inv Hn.
+
+  - intros Hn; unfold not; intros He; simpl in *.
+    apply app_eq_nil in He.
+    destruct He as [Hpre Hsuf]; subst.
+    apply Bool.andb_false_iff in Hn.
+    destruct Hn as [Hhd | Htl].
+    + apply IHHd in Hhd; tc.
+    + apply IHHd0 in Htl; tc.
+Qed.
     
 Fixpoint reachableNts (tr : tree) : NtSet.t :=
   match tr with
@@ -816,71 +849,176 @@ Proof.
       exists []; exists hdRoot; exists tlRoots; simpl.
       repeat split; auto.
       rewrite <- app_assoc; auto.
-Qed.    
-               
+Qed.
 
-Lemma der_func :
-  forall g tbl (H : parse_table_for tbl g) sym word tr rem,
-    (@sym_derives_prefix g) sym word tr rem
-    -> exists vis,
-    forall a,
-      p2 tbl sym (word ++ rem) vis a = inr (tr, rem).
+Lemma reachableNtsF_nullable_path :
+  forall g gamma word f rem,
+    (@gamma_derives_prefix g) gamma word f rem
+    -> forall x,
+      NtSet.In x (reachableNtsF f)
+      -> exists pre sym suf,
+        gamma = pre ++ sym :: suf
+        /\ nullable_gamma g pre
+        /\ (sym = NT x
+            \/ nullable_path g (peek (word ++ rem)) sym (NT x)).
 Proof.
-  intros g tbl Ht sym word tr rem H.
-  induction H using sdp_mutual_ind with
-      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) => exists vis : list nonterminal,
-                forall a,
-                  p2 tbl sym (word ++ rem) vis a = inr (tr, rem))
-      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) => exists vis : list nonterminal,
-                forall a,
-                  pf2 tbl gamma (word ++ rem) vis a = inr (f, rem)).
-  - eexists; intros; destruct a; simpl.
-    step; tc.
+  intros g gamma word f rem Hd.
+  induction Hd using gdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+              forall x : NtSet.elt,
+                NtSet.In x (reachableNts tr) ->
+                sym = NT x \/
+                nullable_path g (peek (word ++ rem)) sym (NT x))
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               forall x,
+                 NtSet.In x (reachableNtsF f)
+                 -> exists pre sym suf,
+                   gamma = pre ++ sym :: suf
+                   /\ nullable_gamma g pre
+                   /\ (sym = NT x
+                       \/ nullable_path g (peek (word ++ rem)) sym (NT x))).
 
-  - eexists; intros; destruct a; simpl.
-    step; tc.
-    + apply Ht in l; auto.
-      admit.
-    + step.
-      step; tc.
-      * 
-      
-      (P0 := fun gamma input f rem (H : gamma_derives_prefix gamma input f rem) => exists vis : list nonterminal,
-                 nlr_forest_derivation g gamma input vis f rem).
-  
-Lemma der_der' :
-  forall g sym input tr rem,
-    (@sym_derives_prefix g) sym input tr rem
-    -> exists vis,
-      nlr_tree_derivation g sym input vis tr rem.
+  - intros x Hi; simpl in *.
+    inv Hi.
+
+  - intros x' Hi; simpl in *.
+    destruct (NtSetFacts.eq_dec x x'); subst; auto.
+    fold reachableNtsF in Hi.
+    apply NtSetFacts.add_3 in Hi; auto.
+    apply IHHd in Hi; clear IHHd.
+    destruct Hi as [pre [sym [suf [He [Hng [He' | Hnp]]]]]]; subst.
+    + right.
+      eapply DirectPath; eauto.
+    + destruct sym as [y | x''].
+      * apply nullable_path_isNT in Hnp.
+        destruct Hnp as [Hcontra _]; inv Hcontra.
+      * right; eapply IndirectPath; eauto.
+
+  - intros x Hi; simpl in *.
+    inv Hi.
+
+  - intros x Hi; simpl in *.
+    destruct (nullTree hdTree) eqn:Hn.
+    + pose proof Hn as Hn'.
+      eapply nullTree_nullable_sym in Hn; eauto.
+      eapply nullTree_word_eq_nil in Hn'; eauto; subst; simpl in *.
+      apply NtSetFacts.union_1 in Hi.
+      destruct Hi as [Hhd | Htl].
+      * apply IHHd in Hhd.
+        exists []; exists hdRoot; exists tlRoots; simpl.
+        repeat split; auto.
+      * apply IHHd0 in Htl.
+        destruct Htl as [pre [sym [suf [Heq [Hng [Heq' | Hnp]]]]]]; subst.
+        -- exists (hdRoot :: pre); exists (NT x); exists suf; simpl.
+           repeat split; auto.
+        -- exists (hdRoot :: pre); exists sym; exists suf; simpl.
+           repeat split; auto.
+    + apply IHHd in Hi.
+      exists []; exists hdRoot; exists tlRoots; simpl.
+      repeat split; auto.
+      rewrite <- app_assoc; auto.
+Qed.    
+
+Lemma nullable_path_from_root_to_subtree_reachableNts :
+  forall g sym word x x' sts rem,
+    (@sym_derives_prefix g) sym word (Node x sts) rem
+    -> NtSet.In x' (reachableNtsF sts)
+    -> nullable_path g (peek (word ++ rem)) sym (NT x').
+Proof.
+  intros g sym word x x' sts rem Hd Hi.
+  inversion Hd as [g' y rem' | x'' gamma word' rem' sts' Hi' Hl Hg]; subst; clear Hd.
+  eapply reachableNtsF_nullable_path in Hg; eauto.
+  destruct Hg as [pre [sym [suf [He [Hng [He' | Hnp]]]]]]; subst.
+  + eapply DirectPath; eauto.
+  + destruct sym as [y | x''].
+    * eapply nullable_path_isNT in Hnp.
+      destruct Hnp as [Hcontra _]; inv Hcontra.
+    * eapply IndirectPath; eauto.
+Qed.
+
+Lemma LL1_tree_root_not_in_subtree_reachableNts :
+  forall g t sym word x sts rem,
+    parse_table_for t g
+    -> (@sym_derives_prefix g) sym word (Node x sts) rem
+    -> ~ NtSet.In x (reachableNtsF sts).
+Proof.
+  intros g t sym word x sts rem Ht Hd; unfold not; intros Hi.
+  pose proof Hd as Hd'.
+  inv Hd.
+  eapply LL1_parse_table_impl_no_left_recursion; eauto.
+  red.
+  eapply nullable_path_from_root_to_subtree_reachableNts; eauto.
+Qed.
+
+Lemma empty_inter_add :
+  forall (x : nonterminal) (a b : NtSet.t),
+    NtSet.Empty (NtSet.inter a (NtSet.add x b))
+    -> ~ NtSet.In x b
+    -> NtSet.Empty (NtSet.inter (NtSet.add x a) b).
 Proof.
   intros.
-  induction H using sdp_mutual_ind with
-      (P := fun sym input tr rem (H : sym_derives_prefix sym input tr rem) => exists vis : list nonterminal,
-                nlr_tree_derivation g sym input vis tr rem)
+  ND.fsetdec.
+Qed.
 
-      (P0 := fun gamma input f rem (H : gamma_derives_prefix gamma input f rem) => exists vis : list nonterminal,
-                nlr_forest_derivation g gamma input vis f rem).
-  - eexists; constructor.
-  - destruct IHsym_derives_prefix as [vis Hn].
-    eexists; econstructor; eauto.
-Admitted.
+Lemma derives_derives' :
+  forall g t sym input tr rem,
+    parse_table_for t g
+    -> (@sym_derives_prefix g) sym input tr rem
+    -> forall vis,
+      NtSet.Empty (NtSet.inter vis (reachableNts tr))
+      -> nlr_tree_der g sym input vis tr rem.
+Proof.
+  intros g t sym input tr rem Ht Hd.
+  induction Hd using sdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) => forall vis,
+                NtSet.Empty (NtSet.inter vis (reachableNts tr))
+                -> nlr_tree_der g sym word vis tr rem)
 
-Lemma der'_func :
-  forall g tbl sym word rem vis a tr,
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               forall vis,
+                 NtSet.Empty (NtSet.inter vis (reachableNtsF f))
+                 -> nlr_forest_der g gamma word vis f rem).
+
+  - intros vis He; simpl in *.
+    constructor.
+
+  - intros vis He; simpl in *.
+    fold reachableNtsF in He.
+    econstructor; eauto.
+    + ND.fsetdec.
+    + apply IHHd; clear IHHd.
+      apply empty_inter_add; auto.
+      eapply LL1_tree_root_not_in_subtree_reachableNts; eauto.
+      econstructor; eauto.
+
+  - intros vis He; simpl in *.
+    constructor.
+
+  - intros vis He; simpl in *.
+    destruct (nullTree hdTree) eqn:Hn.
+    + pose proof Hn as Hn'.
+      eapply nullTree_word_eq_nil in Hn; eauto; subst; simpl in *.
+      apply ConsNull_nlr.
+      * apply IHHd.
+        ND.fsetdec.
+      * apply IHHd0.
+        ND.fsetdec.
+    + eapply nullTree_word_neq_nil in Hn; eauto.
+      apply ConsNonNull_nlr; auto.
+Qed.
+
+Definition parse_wrapper tbl sym input a :=
+  parse_nf tbl sym input NtSet.empty a.
+
+Theorem parse_nf_complete :
+  forall g tbl sym word tr rem a,
     parse_table_for tbl g
-    -> nlr_tree_derivation g sym word vis tr rem
-    -> p2 tbl sym (word ++ rem) vis a = inr (tr, rem).
-Admitted.
+    -> (@sym_derives_prefix g) sym word tr rem
+    -> parse_wrapper tbl sym (word ++ rem) a = inr (tr, rem).
+Proof.
+  intros.
+  unfold parse_wrapper.
+  eapply parse_complete_wrt_nlr; eauto.
+  eapply derives_derives'; eauto.
+Qed.
 
-Definition sublist A (xs ys : list A) : Prop :=
-  forall x, In x xs -> In x ys.
-
-Lemma func_nil :
-  forall tbl sym input rem vis vis' tr a a',
-    p2 tbl sym input vis' a = inr (tr, rem)
-    -> sublist nonterminal vis vis'
-    -> p2 tbl sym input vis a' = inr (tr, rem).
-Admitted.
-
- *)
