@@ -493,8 +493,6 @@ Proof.
     omega.
 Qed.
 
-Print Assumptions LL1_parse_table_impl_no_left_recursion.
-
 Inductive nlr_tree_der (g : grammar) :
   symbol -> list string -> NtSet.t -> tree -> list string -> Prop :=
 | T_nlr :

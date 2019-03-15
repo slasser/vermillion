@@ -299,7 +299,7 @@ Proof.
   - eapply H; clear H; eauto.
     apply nullablePass_neq_candidates_lt; auto.
 Qed.
-    
+
 Theorem mkNullableSet_complete :
   forall g,
     nullable_set_complete (mkNullableSet g) g.
