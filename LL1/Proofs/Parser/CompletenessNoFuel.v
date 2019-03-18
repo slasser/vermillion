@@ -1005,14 +1005,14 @@ Proof.
       apply ConsNonNull_nlr; auto.
 Qed.
 
-Definition parse_wrapper tbl sym input a :=
-  parse_nf tbl sym input NtSet.empty a.
+Definition parse_wrapper tbl sym input :=
+  parse_nf tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
 
 Theorem parse_nf_complete :
-  forall g tbl sym word tr rem a,
+  forall g tbl sym word tr rem,
     parse_table_for tbl g
     -> (@sym_derives_prefix g) sym word tr rem
-    -> parse_wrapper tbl sym (word ++ rem) a = inr (tr, rem).
+    -> parse_wrapper tbl sym (word ++ rem) = inr (tr, rem).
 Proof.
   intros.
   unfold parse_wrapper.

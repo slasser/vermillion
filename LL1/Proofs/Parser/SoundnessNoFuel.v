@@ -108,7 +108,7 @@ Lemma input_length_invariant :
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
       parse_nf tbl sym input vis a = inr (tr, rem)
       -> List.length rem < List.length input
-         \/ rem = input.
+         \/ (nullable_sym g sym /\ rem = input).
 Proof.
   intros g tbl Htbl tr.
   induction tr as [ s
@@ -124,7 +124,7 @@ Proof.
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
                 parseForest_nf tbl gamma input vis a = inr (f, rem)
                 -> List.length rem < List.length input
-                   \/ rem = input); intros; destruct a.
+                   \/ (nullable_gamma g gamma /\ rem = input)); intros; destruct a.
 
   - destruct sym as [y | x].
     + cr; tc.
@@ -139,7 +139,12 @@ Proof.
       step_eq Hpf; tc.
       step.
       inv H.
-      apply IHpf in Hpf; auto.
+      apply IHpf in Hpf.
+      destruct Hpf; auto.
+      destruct H; subst.
+      right; split; auto.
+      apply Htbl in e; destruct e.
+      econstructor; eauto.
 
   - cr; tc.
     inv H; auto.
@@ -155,11 +160,17 @@ Proof.
       apply IHpf in Hpf; clear IHpf.
       destruct Hpf.
       * left; omega.
-      * subst; auto.
+      * destruct H; subst; auto. 
     + step_eq Hpf; tc.
       step.
       inv H.
-      apply IHpf in Hpf; clear IHpf; auto.
+      apply IHp in Hp; clear IHp.
+      destruct Hp.
+      * contradiction.
+      * destruct H; subst.
+        apply IHpf in Hpf; clear IHpf.
+        destruct Hpf; auto.
+        destruct H0; subst; auto.
 Qed.
 
 Lemma parse_sound' :
@@ -242,7 +253,7 @@ Proof.
     + pose proof Hp as Hp'.
       eapply input_length_invariant in Hp'; eauto.
       destruct Hp'; try contradiction.
-      subst.
+      destruct H0; subst.
       step_eq Hpf; tc.
       step.
       inv H.
