@@ -34,8 +34,7 @@ Lemma leftrec_conditions :
           -> (NtSet.In x vis
               /\ (sym = NT x
                   \/ nullable_path g (peek input) sym (NT x)))
-             \/ (*(~ NtSet.In x vis *)
-                 exists la, (left_recursive g (NT x) la)
+             \/ exists la, (left_recursive g (NT x) la)
       | G_arg gamma =>
         forall a x vis' input',
           parseForest_nf tbl gamma input vis a = inl (LeftRec x vis' input')
@@ -45,8 +44,7 @@ Lemma leftrec_conditions :
                  /\ NtSet.In x vis
                  /\ (sym = NT x
                      \/ nullable_path g (peek input) sym (NT x)))
-             \/ (*(~ NtSet.In x vis *)
-                 exists la, (left_recursive g (NT x) la)
+             \/ exists la, (left_recursive g (NT x) la)
       end.
 Proof.
   intros g tbl Ht input.
@@ -181,3 +179,4 @@ Proof.
   - destruct H as [la Hlr].
     eapply LL1_parse_table_impl_no_left_recursion; eauto.
 Qed.
+
