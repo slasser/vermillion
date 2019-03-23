@@ -4,115 +4,11 @@ Require Import Lib.ParseTree.
 Require Import Lib.Utils.
 Require Import Lib.Tactics.
 Require Import LL1.Derivation.
+Require Import LL1.Proofs.Lemmas.
 Require Import LL1.ParseTable. 
 Require Import LL1.ParseTableGen. (* for fromNtList *)
 Import ListNotations.
 Open Scope string_scope.
-
-(* fuel-based parser *)
-
-Fixpoint parse (tbl : parse_table)
-         (sym : symbol)
-         (input : list string)
-         (fuel : nat) : (option tree * list string) :=
-  match fuel with
-  | O => (None, input)
-  | S n => 
-    match (sym, input) with
-    | (T y, nil) => (None, input)
-    | (T y, token :: input') =>
-      match beqString y token with
-      | false => (None, input)
-      | true => (Some (Leaf y), input')
-      end
-    | (NT x, _) =>
-      match pt_lookup x (peek input) tbl with
-      | None => (None, input)
-      | Some gamma =>
-        match parseForest tbl gamma input n with
-        | (None, _) => (None, input)
-        | (Some sts, input') =>
-          (Some (Node x sts), input')
-        end
-      end
-    end
-  end
-with parseForest (tbl : parse_table) 
-                 (gamma : list symbol)
-                 (input : list string)
-                 (fuel : nat) :
-       (option (list tree) * list string) :=
-       match fuel with
-       | O => (None, input)
-       | S n =>
-         match gamma with
-         | nil => (Some nil, input)
-         | sym :: gamma' =>
-           match parse tbl sym input n with
-           | (None, _) => (None, input)
-           | (Some lSib, input') =>
-             match parseForest tbl gamma' input' n with
-             | (None, _) => (None, input)
-             | (Some rSibs, input'') =>
-               (Some (lSib :: rSibs), input'')
-             end
-           end
-         end
-       end.
-
-(* fuel-less implementation *)
-
-Lemma in_A_not_in_B_in_diff :
-  forall elt a b,
-    NtSet.In elt a
-    -> ~ NtSet.In elt b
-    -> NtSet.In elt (NtSet.diff a b).
-Proof.
-  ND.fsetdec.
-Defined.
-
-Lemma in_list_iff_in_fromNtList :
-  forall x l, In x l <-> NtSet.In x (fromNtList l).
-Proof.
-  split; intros; induction l; simpl in *.
-  - inv H.
-  - destruct H; subst; auto.
-    + ND.fsetdec.
-    + apply IHl in H; ND.fsetdec.
-  - ND.fsetdec.
-  - destruct (NtSetFacts.eq_dec x a); subst; auto.
-    right. apply IHl. ND.fsetdec.
-Defined.
-
-Lemma pt_lookup_elements' :
-  forall (k : ParseTable.key) (gamma : list symbol) (l : list (ParseTable.key * list symbol)),
-    findA (ParseTableFacts.eqb k) l = Some gamma
-    -> In (k, gamma) l.
-Proof.
-  intros.
-  induction l.
-  - inv H.
-  - simpl in *.
-    destruct a as (k', gamma').
-    destruct (ParseTableFacts.eqb k k') eqn:Heq.
-    + inv H.
-      unfold ParseTableFacts.eqb in *.
-      destruct (ParseTableFacts.eq_dec k k').
-      * subst; auto.
-      * inv Heq.
-    + right; auto.
-Defined.
-      
-Lemma pt_lookup_elements :
-  forall x la tbl gamma,
-    pt_lookup x la tbl = Some gamma
-    -> In ((x, la), gamma) (ParseTable.elements tbl).
-Proof.
-  intros.
-  unfold pt_lookup in *.
-  rewrite ParseTableFacts.elements_o in H.
-  apply pt_lookup_elements'; auto.
-Defined.
 
 Section TripleLT.
 
@@ -430,22 +326,8 @@ with parseForest_nf (tbl : parse_table)
                             end
        end eq_refl.
 
-Definition parse_wrapper tbl sym input vis :=
-  parse_nf tbl sym input vis (triple_lt_wf (meas tbl input vis (F_arg sym))).
-
-(*
-Eval compute in match parseTableOf yy_grammar with
-                | None => None
-                | Some tbl => Some (parse_wrapper tbl (NT X) ["a"] [])
-                end.
-
-Eval compute in match parseTableOf a_generator with
-                | None => None
-                | Some tbl => Some (parse_wrapper tbl (NT X) ["a"; "a"; "a"] [])
-                end.
-
-Eval compute in parse_wrapper lr_table (NT X) ["a"] [].
-*)
+Definition parse_wrapper tbl sym input :=
+  parse_nf tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
 
 Lemma parse_nf_eq_body :
   forall tbl sym input vis a,

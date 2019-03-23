@@ -271,7 +271,7 @@ Proof.
   PD.fsetdec.
 Defined.
 
-Lemma in_A_not_in_B_in_diff :
+Lemma ps_in_A_not_in_B_in_diff :
   forall elt a b,
     PairSet.In elt a
     -> ~ PairSet.In elt b
@@ -1280,7 +1280,7 @@ Proof.
   apply PairSetEqProps.MP.subset_cardinal_lt with (x := (x, la)); try PD.fsetdec.
   - apply pairset_subset_subset_diffs.
     apply firstPass_subset.
-  - apply in_A_not_in_B_in_diff; auto.
+  - apply ps_in_A_not_in_B_in_diff; auto.
     apply in_A_in_B_in_product; auto.
 Defined.
 
@@ -2062,7 +2062,7 @@ Proof.
   apply PP.subset_cardinal_lt with (x := (x, la)).
   - apply pairset_subset_subset_diffs.
     apply followPass_subset.
-  - apply in_A_not_in_B_in_diff; auto.
+  - apply ps_in_A_not_in_B_in_diff; auto.
     apply in_A_in_B_in_product; auto.
   - PD.fsetdec.
 Defined.

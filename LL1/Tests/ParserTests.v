@@ -10,8 +10,8 @@ Require Import LL1.Tests.ExampleParseTables.
 
 Import ListNotations.
 
-Example g311_test :
+(*Example g311_test :
   parse g311ParseTable (NT X) g311Sentence1 100 =
   (Some g311ParseTree1, nil).
-Proof. auto. Qed.
+Proof. auto. Qed.*)
 

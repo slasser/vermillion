@@ -1,12 +1,12 @@
-Require Import List.
+Require Import FMaps List.
 
 Require Import Lib.Grammar.
 Require Import Lib.ParseTree.
 Require Import Lib.Tactics.
 
 Require Import LL1.Derivation.
-Require Import LL1.Parser.
 Require Import LL1.ParseTable.
+Require Import LL1.ParseTableGen.
 
 Import ListNotations.
 
@@ -207,35 +207,6 @@ Proof.
         -- eapply IHHder; eauto.
 Qed.
 
-Lemma parse_t_ret_leaf :
-  forall tbl y input fuel tree suffix,
-    parse tbl (T y) input fuel = (Some tree, suffix) ->
-    isLeaf tree = true.
-Proof.
-  intros. destruct fuel.
-  - inv H.
-  - simpl in H. destruct input.
-    + inv H.
-    + destruct (Utils.beqString y s).
-      * inv H. reflexivity.
-      * inv H.
-Qed.
-
-Lemma parse_nt_ret_node :
-  forall tbl x input fuel tree suffix,
-    parse tbl (NT x) input fuel = (Some tree, suffix)
-    -> isNode tree = true.
-Proof.
-  intros. destruct fuel.
-  - simpl in H. inv H.
-  - simpl in H. destruct (pt_lookup x (peek input) tbl).
-    + destruct (parseForest tbl l input fuel). 
-      destruct o. 
-      * inv H. trivial.
-      * inv H.
-    + inv H. 
-Qed.
-
 Lemma tbl_entry_is_lookahead :
   forall tbl g x la gamma,
     parse_table_for tbl g
@@ -259,3 +230,54 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma in_A_not_in_B_in_diff :
+  forall elt a b,
+    NtSet.In elt a
+    -> ~ NtSet.In elt b
+    -> NtSet.In elt (NtSet.diff a b).
+Proof.
+  ND.fsetdec.
+Defined.
+
+Lemma in_list_iff_in_fromNtList :
+  forall x l, In x l <-> NtSet.In x (fromNtList l).
+Proof.
+  split; intros; induction l; simpl in *.
+  - inv H.
+  - destruct H; subst; auto.
+    + ND.fsetdec.
+    + apply IHl in H; ND.fsetdec.
+  - ND.fsetdec.
+  - destruct (NtSetFacts.eq_dec x a); subst; auto.
+    right. apply IHl. ND.fsetdec.
+Defined.
+
+Lemma pt_lookup_elements' :
+  forall (k : ParseTable.key) (gamma : list symbol) (l : list (ParseTable.key * list symbol)),
+    findA (ParseTableFacts.eqb k) l = Some gamma
+    -> In (k, gamma) l.
+Proof.
+  intros.
+  induction l.
+  - inv H.
+  - simpl in *.
+    destruct a as (k', gamma').
+    destruct (ParseTableFacts.eqb k k') eqn:Heq.
+    + inv H.
+      unfold ParseTableFacts.eqb in *.
+      destruct (ParseTableFacts.eq_dec k k').
+      * subst; auto.
+      * inv Heq.
+    + right; auto.
+Defined.
+      
+Lemma pt_lookup_elements :
+  forall x la tbl gamma,
+    pt_lookup x la tbl = Some gamma
+    -> In ((x, la), gamma) (ParseTable.elements tbl).
+Proof.
+  intros.
+  unfold pt_lookup in *.
+  rewrite ParseTableFacts.elements_o in H.
+  apply pt_lookup_elements'; auto.
+Defined.

@@ -22,9 +22,6 @@ LL1/Proofs/Lemmas.v
 
 LL1/Proofs/LL1_Grammar/Determinism.v
 
-LL1/Proofs/Parser/Completeness.v
-LL1/Proofs/Parser/Monotonicity.v
-LL1/Proofs/Parser/Soundness.v
 LL1/Proofs/Parser/SoundnessNoFuel.v
 LL1/Proofs/Parser/CompletenessNoFuel.v
 LL1/Proofs/Parser/SafetyNoFuel.v
