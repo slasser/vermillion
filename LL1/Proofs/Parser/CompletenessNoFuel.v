@@ -569,6 +569,7 @@ Proof.
     exists e; auto.
 Qed.
 
+
 Lemma non_nil_list_length :
   forall A (xs : list A),
     xs <> [] -> List.length xs > 0.
@@ -591,20 +592,102 @@ Lemma parse_complete_wrt_nlr :
   forall g tbl sym word rem vis a tr,
     parse_table_for tbl g
     -> nlr_tree_der g sym word vis tr rem
-    -> parse_nf tbl sym (word ++ rem) vis a = inr (tr, rem).
+    ->
+        exists Hle,
+          parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
 Proof.
   intros g tbl sym word rem vis a tr Ht Hd.
   induction Hd using nlr_tree_mutual_ind with
       (P := fun sym word vis tr rem (H : nlr_tree_der g sym word vis tr rem) =>
               forall a,
-                parse_nf tbl sym (word ++ rem) vis a = inr (tr, rem))
+                exists Hle,
+                parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle))
 
       (P0 := fun gamma word vis f rem (H : nlr_forest_der g gamma word vis f rem) =>
                forall a,
-                 parseForest_nf tbl gamma (word ++ rem) vis a = inr (f, rem)).
+                 exists Hle,
+                   parseForest_nf tbl gamma (word ++ rem) vis a = inr (f, existT _ rem Hle)).
 
   - destruct a; simpl.
     step; tc.
+    exists (length_lt_eq_cons _ (y :: rem) y rem eq_refl).
+    eauto.
+
+  - assert (Hacc : Acc triple_lt
+                 (meas tbl (word ++ rem) 
+                       (NtSet.add x vis) (G_arg gamma))).
+    { apply triple_lt_wf. }
+    destruct a.
+    step.
+    + apply Ht in l; auto.
+      exfalso; eapply lookups_neq_contra; eauto.
+    + destruct s as [gamma' Hlk].
+      step; tc.
+      assert (gamma = gamma').
+      { apply Ht in l; auto.
+        eapply lookups_eq; eauto. }
+      subst.
+      step_eq Hpf.
+      * edestruct IHHd as [Hle Hpf']; clear IHHd.
+        erewrite Hpf in Hpf'.
+        congruence.
+      * edestruct IHHd as [Hle Hpf']; clear IHHd.
+        erewrite Hpf in Hpf'.
+        inv Hpf'.
+        eauto.
+
+  - destruct a; simpl; eauto.
+
+  - destruct a.
+    simpl.
+    edestruct IHHd as [Hle Hp].
+    rewrite Hp.
+    clear IHHd; clear Hp.
+    destruct Hle.
+    + simpl in l.
+      omega.
+    + edestruct IHHd0 as [Hle Hpf].
+      rewrite Hpf.
+      eexists; eauto.
+
+  - destruct a; simpl.
+    rewrite app_assoc in IHHd.
+    edestruct IHHd as [Hle Hp].
+    rewrite Hp; clear IHHd; clear Hp.
+    step.
+    + edestruct IHHd0 as [Hle Hpf].
+      rewrite Hpf; clear IHHd0; clear Hpf.
+      eauto.
+    + exfalso.
+      rewrite <- app_assoc in e.
+      symmetry in e.
+      apply l_ident_eq_nil in e.
+      congruence.
+Qed.
+
+(*Lemma parse_complete_wrt_nlr :
+  forall g tbl sym word rem vis a tr,
+    parse_table_for tbl g
+    -> nlr_tree_der g sym word vis tr rem
+    -> exists Hle,
+        parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
+Proof.
+  intros g tbl sym word rem vis a tr Ht Hd.
+  induction Hd using nlr_tree_mutual_ind with
+      (P := fun sym word vis tr rem (H : nlr_tree_der g sym word vis tr rem) =>
+              forall a,
+                exists Hle,
+                parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem _))
+
+      (P0 := fun gamma word vis f rem (H : nlr_forest_der g gamma word vis f rem) =>
+               forall a,
+                 exists Hle,
+                   parseForest_nf tbl gamma (word ++ rem) vis a = inr (f, existT _ rem _)).
+
+  - destruct a; simpl.
+    step; tc.
+    exists (length_le_dec_cons _ (y :: rem) y rem eq_refl).
+    eauto.
 
   - destruct a; simpl.
     step.
@@ -637,6 +720,7 @@ Proof.
       rewrite <- app_assoc.
       apply app_length_lt; auto.
 Qed.
+ *)
 
 Fixpoint nullTree (tr : tree) : bool :=
   match tr with
@@ -1012,7 +1096,8 @@ Theorem parse_nf_complete :
   forall g tbl sym word tr rem,
     parse_table_for tbl g
     -> (@sym_derives_prefix g) sym word tr rem
-    -> parse_wrapper tbl sym (word ++ rem) = inr (tr, rem).
+    -> exists Hle,
+        parse_wrapper tbl sym (word ++ rem) = inr (tr, existT _ rem Hle).
 Proof.
   intros.
   unfold parse_wrapper.

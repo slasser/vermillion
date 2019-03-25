@@ -45,6 +45,38 @@ Section TripleLT.
 
 End TripleLT.
 
+Section PairLT.
+
+  Variables (A B : Type) (ltA : relation A) (ltB : relation B).
+
+  Inductive pair_lex : A * B  -> A * B  -> Prop :=
+  | pr_fst : forall x x' y y', ltA x x' -> pair_lex (x, y) (x', y')
+  | pr_snd : forall x y y', ltB y y' -> pair_lex (x, y) (x, y').
+
+  Hint Constructors pair_lex.
+
+  Theorem pair_lex_trans :
+    transitive _ ltA -> transitive _ ltB -> transitive _ pair_lex.
+  Proof.
+    intros tA tB [x1 y1] [x2 y2] [x3 y3] H12 H23.
+    inv H12; inv H23; eauto.
+  Defined.
+
+  Theorem pair_lex_wf :
+    well_founded ltA -> well_founded ltB -> well_founded pair_lex.
+  Proof.
+    intros wfA wfB [x y].
+    revert y.
+    induction (wfA x) as [x _ IHx].
+    intros y.
+    induction (wfB y) as [y _ IHy].
+    constructor.
+    intros [x' y'] H.
+    inv H; eauto.
+  Defined.
+
+End PairLT.
+
 Inductive sym_arg : Set :=
 | F_arg : symbol -> sym_arg
 | G_arg : list symbol -> sym_arg.
@@ -266,95 +298,105 @@ Definition mem_dec (x : nonterminal) (s : NtSet.t) : {NtSet.In x s} + {~ NtSet.I
     apply NtSet.mem_spec in H.
     congruence.
 Defined.
-  
-Fixpoint parse_nf (tbl : parse_table)
-                  (sym : symbol)
-                  (input : list string)
-                  (vis : NtSet.t)
-                  (a : Acc triple_lt (meas tbl input vis (F_arg sym)))
-            {struct a}
-            : sum parse_failure (tree * list string) :=
-  match (sym, input) with
-  | (T _, nil) => inl (Reject "input exhausted" input)
-  | (T y, token :: input') =>
-    if string_dec y token then
-      inr (Leaf y, input')
-    else
-      inl (Reject "token mismatch" input)
-  | (NT x, _) =>
+
+Definition length_lt_eq A (xs ys : list A) :=
+  {List.length xs < List.length ys} + {xs = ys}.
+
+Lemma length_lt_eq_cons : forall A xs (x : A) xs',
+    xs = x :: xs'
+    -> length_lt_eq A xs' xs.
+Proof.
+  intros; simpl; red; subst; auto.
+Defined.
+
+Lemma length_lt_eq_refl : forall A (xs : list A),
+    length_lt_eq A xs xs.
+Proof.
+  intros; simpl; red; auto.
+Defined.
+
+Lemma length_lt_eq_trans :
+  forall A (xs ys zs : list A),
+    length_lt_eq A xs ys
+    -> length_lt_eq A ys zs
+    -> length_lt_eq A xs zs.
+Proof.
+  intros A xs ys zs H H'; unfold length_lt_eq in *;
+    destruct H; destruct H'; subst; auto.
+  left; omega.
+Defined.
+
+Fixpoint parse_nf
+         (tbl : parse_table)
+         (sym : symbol)
+         (input : list string)
+         (vis : NtSet.t)
+         (a : Acc triple_lt (meas tbl input vis (F_arg sym)))
+         {struct a}
+  : sum parse_failure (tree * {input' & length_lt_eq _ input' input}) :=
+  match sym with
+  | T a =>
+    match input as i return input = i -> _ with
+    | nil =>
+      fun _ => inl (Reject "input exhausted" input)
+    | token :: input' => 
+      fun Hin => 
+        if string_dec a token then
+          inr (Leaf a, existT _ input' (length_lt_eq_cons _ _ _ _ Hin))
+        else
+          inl (Reject "token mismatch" input)
+    end eq_refl
+  | NT x =>
     match ptlk_dec x (peek input) tbl with
     | inl _ => inl (Reject "lookup failure" input)
     | inr (exist _ gamma Hlk) =>
       match mem_dec x vis with
       | left _ => inl (LeftRec x vis input)
-      | right Hnin => 
-        match parseForest_nf tbl gamma input (NtSet.add x vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
+      | right Hnin =>
+        match parseForest_nf tbl gamma input (NtSet.add x vis) (hole1 _ _ _ _ _ _ _ a Hlk Hnin) with
         | inl pfail => inl pfail
-        | inr (sts, input') =>
-          inr (Node x sts, input')
+        | inr (sts, existT _ input' Hle) =>
+          inr (Node x sts, existT _ input' Hle)
         end
       end
     end
   end
 with parseForest_nf (tbl : parse_table)
-                    (gamma : list symbol)
-                    (input : list string)
-                    (vis : NtSet.t)
-                    (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
-         {struct a}
-         : sum parse_failure (list tree * list string) :=
-       match gamma as g return gamma = g -> _  with
-       | nil => fun _ => inr (nil, input)
-       | sym :: gamma' => fun Hg => 
-                            match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
-                            | inl pfail => inl pfail
-                            | inr (lSib, input') =>
-                              match Compare_dec.lt_dec (List.length input') (List.length input) with
-                              | left Hlt =>
-                                match parseForest_nf tbl gamma' input' NtSet.empty (hole3 _ _ _ _ _ _ _ a Hlt) with
-                                | inl pfail => inl pfail
-                                | inr (rSibs, input'') =>
-                                  inr (lSib :: rSibs, input'')
-                                end
-                              | right Hnlt =>
-                                match parseForest_nf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
-                                | inl pfail => inl pfail
-                                | inr (rSibs, input'') =>
-                                  inr (lSib :: rSibs, input'')
-                                end
-                              end
-                            end
-       end eq_refl.
+     (gamma : list symbol)
+     (input : list string)
+     (vis : NtSet.t)
+     (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
+     {struct a}
+     : sum parse_failure (list tree * {input' & length_lt_eq _ input' input}) :=
+    match gamma as g return gamma = g -> _  with
+    | nil => fun _ => inr (nil, existT (fun input' => length_lt_eq string input' input) input
+                                       (length_lt_eq_refl _ _))
+    | sym :: gamma' => fun Hg => 
+                         match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
+                         | inl pfail => inl pfail
+                         | inr (lSib, existT _ input' Hle) =>
+                           match Hle with
+                           | left Hlt =>
+                             match parseForest_nf tbl gamma' input' NtSet.empty (hole3 _ _ _ _ _ _ _ a Hlt) with
+                             | inl pfail => inl pfail
+                             | inr (rSibs, existT _ input'' Hle'') =>
+                               inr (lSib :: rSibs, existT _ input'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
+                             end
+                           | right Heq =>
+                             match parseForest_nf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
+                             | inl pfail => inl pfail
+                             | inr (rSibs, existT _ input'' Hle'') =>
+                               inr (lSib :: rSibs, existT _ input'' Hle'')
+                             end
+                           end
+                         end
+    end eq_refl.
+
+Definition sa_size (sa : sym_arg) : nat :=
+  match sa with
+  | F_arg _ => 0
+  | G_arg gamma => 1 + List.length gamma
+  end.
 
 Definition parse_wrapper tbl sym input :=
   parse_nf tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
-
-Lemma parse_nf_eq_body :
-  forall tbl sym input vis a,
-    parse_nf tbl sym input vis a = 
-  match (sym, input) with
-  | (T _, nil) => inl (Reject "input exhausted" input)
-  | (T y, token :: input') =>
-    if string_dec y token then
-      inr (Leaf y, input')
-    else
-      inl (Reject "token mismatch" input)
-  | (NT x, _) =>
-    match ptlk_dec x (peek input) tbl with
-    | inl _ => inl (Reject "lookup failure" input)
-    | inr (exist _ gamma Hlk) =>
-      match mem_dec x vis with
-      | left _ => inl (LeftRec x vis input)
-      | right Hnin => 
-        match parseForest_nf tbl gamma input (NtSet.add x vis) (hole1 _ _ _ _  _ _ _ a Hlk Hnin) with
-        | inl pfail => inl pfail
-        | inr (sts, input') =>
-          inr (Node x sts, input')
-        end
-      end
-    end
-  end.
-Proof.
-  intros; simpl; destruct a; cr.
-Qed.
-

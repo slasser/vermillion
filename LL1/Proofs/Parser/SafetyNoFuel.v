@@ -126,7 +126,8 @@ Proof.
               apply in_A_not_in_B_in_diff; auto.
               apply in_list_iff_in_fromNtList.
               eapply pt_lookup_in_nt_keys; eauto.
-        -- step; tc.
+        -- step.
+           step; tc.
 
   - intros a x vis' input' Hpf; destruct a.
     step; tc.
@@ -141,6 +142,7 @@ Proof.
     + (* calling parse on s succeeds, calling parseForest on l returns LeftRec *)
       step.
       step.
+      step.
       * (* parse consumed some input *)
         step_eq Hpf.
         -- inv Hpf.
@@ -148,24 +150,25 @@ Proof.
            destruct Hpf1.
            ++ destruct H as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]].
               ND.fsetdec.
-           ++ right; auto.
-        -- step; tc.
-      * (* parse returned a null tree *)
+           ++ right; auto. 
+        -- step.
+           step; tc.
+      * (* parse consumed no input *)
+        subst.
         step_eq Hpf.
-        -- inv Hpf.
-           pose proof Hpf0 as Hpf0'.
+        inv Hpf.
+        eapply IHsz with (sa := G_arg l) in Hpf1; eauto.
+        destruct Hpf1.
+        -- destruct H as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]]; subst.
+           left.
+           exists (s :: pre); exists sym; exists suf.
+           repeat split; auto.
            eapply input_length_invariant in Hpf0; eauto.
-           destruct Hpf0.
-           ++ contradiction.
-           ++ destruct H; subst.
-              eapply IHsz with (sa := G_arg l) in Hpf1; eauto.
-              destruct Hpf1.
-              ** destruct H0 as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]]; subst.
-                 left.
-                 exists (s :: pre); exists sym; exists suf.
-                 repeat split; auto.
-              ** right; auto.
-        -- step; tc.
+           destruct Hpf0; try omega.
+           econstructor; eauto.
+        -- right; auto.
+        -- step.
+           step; tc.
 Qed.
 
 Theorem parse_nf_safe :
