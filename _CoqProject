@@ -22,9 +22,9 @@ LL1/Proofs/Lemmas.v
 
 LL1/Proofs/LL1_Grammar/Determinism.v
 
-LL1/Proofs/Parser/SoundnessNoFuel.v
-LL1/Proofs/Parser/CompletenessNoFuel.v
-LL1/Proofs/Parser/SafetyNoFuel.v
+LL1/Proofs/Parser/Soundness.v
+LL1/Proofs/Parser/Completeness.v
+LL1/Proofs/Parser/Safety.v
 
 LL1/Proofs/ParseTableGen/mkNullableSet_Correctness.v
 LL1/Proofs/ParseTableGen/mkFirstMap_Correctness.v

@@ -11,8 +11,8 @@ Require Import LL1.ParseTable.
 Require Import LL1.ParseTableGen.
 Require Import LL1.Parser.
 Require Import LL1.Derivation.
-Require Import CompletenessNoFuel.
-Require Import SoundnessNoFuel.
+Require Import Completeness.
+Require Import Soundness.
 Import ListNotations.
 Open Scope list_scope.
 
