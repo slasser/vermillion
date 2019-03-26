@@ -1,14 +1,14 @@
 Require Import List.
 Require Import Omega.
 Require Import String.
-Require Import Lib.Grammar.
-Require Import Lib.ParseTree.
-Require Import Lib.Tactics.
-Require Import Lib.Utils.
-Require Import LL1.Derivation.
-Require Import LL1.Parser.
-Require Import LL1.ParseTable.
-Require Import LL1.ParseTableGen.
+Require Import Grammar.
+Require Import ParseTree.
+Require Import Tactics.
+Require Import Utils.
+Require Import Derivation.
+Require Import Parser.
+Require Import ParseTable.
+Require Import ParseTableGen.
 Import ListNotations.
 
 Lemma parse_nf_eq_body :

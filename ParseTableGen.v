@@ -2,11 +2,11 @@ Require Import List.
 Require Import MSets.
 Require Import Program.Wf.
 
-Require Import Lib.Grammar.
-Require Import Lib.Tactics.
-Require Import Lib.Utils.
+Require Import Grammar.
+Require Import Tactics.
+Require Import Utils.
 
-Require Import LL1.ParseTable.
+Require Import ParseTable.
 
 Import ListNotations.
 Import MSetDecide.

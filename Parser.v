@@ -1,12 +1,12 @@
 Require Import FMaps List MSets Omega String Program.Wf Arith.Wf_nat.
-Require Import Lib.Grammar.
-Require Import Lib.ParseTree.
-Require Import Lib.Utils.
-Require Import Lib.Tactics.
-Require Import LL1.Derivation.
-Require Import LL1.Proofs.Lemmas.
-Require Import LL1.ParseTable. 
-Require Import LL1.ParseTableGen. (* for fromNtList *)
+Require Import Grammar.
+Require Import ParseTree.
+Require Import Utils.
+Require Import Tactics.
+Require Import Derivation.
+Require Import Proofs.Lemmas.
+Require Import ParseTable. 
+Require Import ParseTableGen. (* for fromNtList *)
 Import ListNotations.
 Open Scope string_scope.
 

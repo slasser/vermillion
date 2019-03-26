@@ -1,13 +1,13 @@
-Require Import Lib.Grammar.
+Require Import Grammar.
 
-Require Import LL1.ParseTableGen.
-Require Import LL1.ParseTable.
+Require Import ParseTableGen.
+Require Import ParseTable.
 
-Require Import LL1.Proofs.ParseTableGen.mkNullableSet_Correctness.
-Require Import LL1.Proofs.ParseTableGen.mkFirstMap_Correctness.
-Require Import LL1.Proofs.ParseTableGen.mkFollowMap_Correctness.
-Require Import LL1.Proofs.ParseTableGen.mkEntries_Correctness.
-Require Import LL1.Proofs.ParseTableGen.mkParseTable_Correctness.
+Require Import Proofs.ParseTableGen.mkNullableSet_Correctness.
+Require Import Proofs.ParseTableGen.mkFirstMap_Correctness.
+Require Import Proofs.ParseTableGen.mkFollowMap_Correctness.
+Require Import Proofs.ParseTableGen.mkEntries_Correctness.
+Require Import Proofs.ParseTableGen.mkParseTable_Correctness.
 
 (* Combining all of the steps into a single function *)
 

@@ -1,5 +1,5 @@
 Require Import Bool List Omega String.
-Require Import Grammar Lib.Tactics Lib.Utils.
+Require Import Grammar Tactics Utils.
 
 Lemma find_In : forall k vT (v : vT) m,
     NtMap.find k m = Some v ->

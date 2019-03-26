@@ -1,15 +1,15 @@
 Require Import List.
 
-Require Import Lib.Grammar.
-Require Import Lib.Lemmas.
-Require Import Lib.Tactics.
+Require Import Grammar.
+Require Import Lemmas.
+Require Import Tactics.
 
-Require Import LL1.ParseTable.
-Require Import LL1.ParseTableGen.
+Require Import ParseTable.
+Require Import ParseTableGen.
 
-Require Import LL1.Proofs.Lemmas.
+Require Import Proofs.Lemmas.
 
-Require Import LL1.Proofs.ParseTableGen.mkEntries_Correctness.
+Require Import Proofs.ParseTableGen.mkEntries_Correctness.
 
 Import ListNotations.
 

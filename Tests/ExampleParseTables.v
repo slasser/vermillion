@@ -1,9 +1,9 @@
 Require Import List.
 
-Require Import Lib.ExampleGrammars.
-Require Import Lib.Grammar.
+Require Import ExampleGrammars.
+Require Import Grammar.
 
-Require Import LL1.ParseTable.
+Require Import ParseTable.
 
 Import ListNotations.
 

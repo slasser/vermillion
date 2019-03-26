@@ -2,8 +2,8 @@ Require Import FMaps.
 Require Import List.
 Require Import MSets.
 
-Require Import Lib.Grammar.
-Require Import Lib.Utils.
+Require Import Grammar.
+Require Import Utils.
 
 Import ListNotations.
 Open Scope list_scope.

@@ -1,6 +1,7 @@
 Require Import List.
-Require Import Grammar ParseTree ParseTable
-        Lib.Tactics.
+Require Import Vermillion.Grammar.
+Require Import Vermillion.ParseTree.
+Require Import Vermillion.ParseTable.
 Import ListNotations.
 Open Scope list_scope.
 

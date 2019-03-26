@@ -1,12 +1,12 @@
 Require Import FMaps List.
 
-Require Import Lib.Grammar.
-Require Import Lib.ParseTree.
-Require Import Lib.Tactics.
+Require Import Grammar.
+Require Import ParseTree.
+Require Import Tactics.
 
-Require Import LL1.Derivation.
-Require Import LL1.ParseTable.
-Require Import LL1.ParseTableGen.
+Require Import Derivation.
+Require Import ParseTable.
+Require Import ParseTableGen.
 
 Import ListNotations.
 

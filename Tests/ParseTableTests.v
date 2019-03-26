@@ -2,15 +2,15 @@ Require Import List.
 Require Import MSets.
 Require Import String.
 
-Require Import Lib.ExampleGrammars.
-Require Import Lib.Grammar.
-Require Import Lib.Lemmas.
-Require Import Lib.Tactics.
-Require Import Lib.Utils.
+Require Import ExampleGrammars.
+Require Import Grammar.
+Require Import Lemmas.
+Require Import Tactics.
+Require Import Utils.
 
-Require Import LL1.ParseTable.
-Require Import LL1.Proofs.Lemmas.
-Require Import LL1.Tests.ExampleParseTables.
+Require Import ParseTable.
+Require Import Proofs.Lemmas.
+Require Import Tests.ExampleParseTables.
 
 Import ListNotations.
 

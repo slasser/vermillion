@@ -1,35 +1,33 @@
 -R . Vermillion
 
-Lib/Derivation.v
-Lib/DerivationTests.v
-Lib/ExampleGrammars.v
-Lib/Grammar.v
-Lib/Lemmas.v
-Lib/ParseTree.v
-Lib/Tactics.v
-Lib/Utils.v
+Derivation.v
+ExampleGrammars.v
+Grammar.v
+Lemmas.v
+ParseTree.v
+Tactics.v
+Utils.v
 
-LL1/Derivation.v
-LL1/Parser.v
-LL1/ParseTable.v
-LL1/ParseTableGen.v
+Parser.v
+ParseTable.v
+ParseTableGen.v
 
-LL1/Tests/ExampleParseTables.v
-LL1/Tests/ParserTests.v
-LL1/Tests/ParseTableTests.v
+Tests/ExampleParseTables.v
+Tests/ParserTests.v
+Tests/ParseTableTests.v
 
-LL1/Proofs/Lemmas.v
+Proofs/Lemmas.v
 
-LL1/Proofs/LL1_Grammar/Determinism.v
+Proofs/LL1_Grammar/Determinism.v
 
-LL1/Proofs/Parser/Soundness.v
-LL1/Proofs/Parser/Completeness.v
-LL1/Proofs/Parser/Safety.v
+Proofs/Parser/Soundness.v
+Proofs/Parser/Completeness.v
+Proofs/Parser/Safety.v
 
-LL1/Proofs/ParseTableGen/mkNullableSet_Correctness.v
-LL1/Proofs/ParseTableGen/mkFirstMap_Correctness.v
-LL1/Proofs/ParseTableGen/mkFollowMap_Correctness.v
-LL1/Proofs/ParseTableGen/mkEntries_Correctness.v
-LL1/Proofs/ParseTableGen/mkParseTable_Correctness.v
-LL1/Proofs/ParseTableGen/EndToEnd.v
+Proofs/ParseTableGen/mkNullableSet_Correctness.v
+Proofs/ParseTableGen/mkFirstMap_Correctness.v
+Proofs/ParseTableGen/mkFollowMap_Correctness.v
+Proofs/ParseTableGen/mkEntries_Correctness.v
+Proofs/ParseTableGen/mkParseTable_Correctness.v
+Proofs/ParseTableGen/EndToEnd.v
 
