@@ -3,10 +3,9 @@ Require Import List.
 Require Import ExampleGrammars.
 Require Import Grammar.
 
-Require Import ParseTable.
-
 Import ListNotations.
 
+(*
 Definition fromPairs (ps : list (ParseTable.key * list symbol)) : parse_table :=
   fold_right (fun p tbl =>
                 match p with
@@ -35,3 +34,4 @@ Definition xy_grammar_pairs :=
 
 Definition xy_parse_table := fromPairs xy_grammar_pairs.
 
+*)

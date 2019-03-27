@@ -60,6 +60,15 @@ Module DefsFn (Export Init : INIT).
     Inductive tree :=
     | Leaf : terminal -> tree
     | Node : nonterminal -> list tree -> tree.
+    
+    Definition isNode (tr : tree) : bool :=
+      match tr with
+      | Node _ _ => true
+      | Leaf _   => false
+      end.
+    
+    Definition isLeaf (tr : tree) : bool :=
+      negb (isNode tr).
   
     (* Induction principles for trees and lists of trees *)
     Section tree_nested_ind.
@@ -216,6 +225,8 @@ Module DefsFn (Export Init : INIT).
     
     Module Export LaSetFacts := WFactsOn Lookahead_as_DT LaSet.
     Module Export LaSetEqProps := EqProperties LaSet.
+
+    Module Export ParseTableFacts := WFacts_fun PtKey_as_DT ParseTable.
     
     Module Export NP := MSetProperties.Properties NtSet.
     Module Export ND := WDecideOn NT_as_DT NtSet.
@@ -409,5 +420,7 @@ Module D : DefsT I := DefsFn I.
 Module G : T.
   Module Init := I.
   Module Defs := D.
+  Export Init.
+  Export Defs.
 End G.
 

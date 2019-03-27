@@ -1,19 +1,20 @@
 Require Import List.
 
 Require Import Grammar.
+Require Import Lemmas.
 Require Import Tactics.
-
-Require Import ParseTable.
-Require Import ParseTableGen.
-
-Require Import Proofs.Lemmas.
-
+Require Import mkFollowMap_correct.
 Import ListNotations.
+
+Module EntryProofsFn (Import G : Grammar.T).
+
+  Module Import L := LemmasFn G.
+  Module Export FollowProofs := FollowProofsFn G.
 
 Definition entries_correct es g :=
   forall x la gamma,
     In (x, la, gamma) es
-    <-> In (x, gamma) g.(productions)
+    <-> In (x, gamma) g.(prods)
         /\ lookahead_for la x gamma g.
 
 (* invariant relating a list of entries to a list of productions *)
@@ -23,7 +24,7 @@ Definition entries_correct_wrt_productions es ps g :=
 
 Lemma invariant_iff_entries_correct :
   forall g es,
-    entries_correct_wrt_productions es (productions g) g 
+    entries_correct_wrt_productions es g.(prods) g 
     <-> entries_correct es g.
 Proof.
   split; intros; auto.
@@ -455,7 +456,7 @@ Qed.
   
 Theorem mkEntries_correct :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
          (fo : follow_map) 
          (es : list table_entry),
@@ -470,4 +471,5 @@ Proof.
   unfold mkEntries in Hmk.
   eapply mkEntries'_correct; eauto.
 Qed.
-  
+
+End EntryProofsFn.

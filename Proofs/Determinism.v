@@ -2,14 +2,11 @@ Require Import List.
 Require Import String.
 
 Require Import Grammar.
-Require Import ParseTree.
 Require Import Tactics.
-Require Import Utils.
 
-Require Import Derivation.
 Require Import Parser.
 Require Import ParseTable.
-Require Import Proofs.Lemmas.
+Require Import Lemmas.
 
 Lemma LL1_derivation_deterministic :
   forall (tbl : parse_table)

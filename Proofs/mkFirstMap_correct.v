@@ -3,11 +3,13 @@ Require Import Wf_nat.
 
 Require Import Grammar.
 Require Import Tactics.
-
-Require Import ParseTable.
-Require Import ParseTableGen.
+Require Import mkNullableSet_correct.
 
 Import ListNotations.
+
+Module FirstProofsFn (G : Grammar.T).
+
+  Module Export NullableProofs := NullableProofsFn G.
 
 Lemma mkFirstMap'_eq_body :
   forall ps nu fi pf,
@@ -89,7 +91,7 @@ Lemma firstGamma_first_sym' :
     nullable_set_for nu g
     -> first_map_sound fi g
     -> forall gsuf gpre,
-        In (x, gpre ++ gsuf) (productions g)
+        In (x, gpre ++ gsuf) g.(prods)
         -> nullable_gamma g gpre
         -> LaSet.In la (firstGamma gsuf nu fi)
         -> first_sym g la (NT x).
@@ -114,7 +116,7 @@ Lemma firstGamma_first_sym :
   forall g nu fi la x gamma,
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> In (x, gamma) (productions g)
+    -> In (x, gamma) g.(prods)
     -> LaSet.In la (firstGamma gamma nu fi)
     -> first_sym g la (NT x).
 Proof.
@@ -125,12 +127,12 @@ Qed.
 
 Lemma firstPass_preserves_soundness' :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map),
     nullable_set_for nu g
     -> first_map_sound fi g
     -> forall suf pre : list production,
-      pre ++ suf = (productions g)
+      pre ++ suf = g.(prods)
       -> first_map_sound (firstPass suf nu fi) g.
 Proof. 
   intros g nu fi Hnf Hfm.
@@ -160,11 +162,11 @@ Qed.
     
 Lemma firstPass_preserves_soundness :
   forall (g : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map),
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> first_map_sound (firstPass (productions g) nu fi) g.
+    -> first_map_sound (firstPass g.(prods) nu fi) g.
 Proof.
   intros g nu fi Hns Hfm.
   apply firstPass_preserves_soundness' with (pre := []); eauto.
@@ -172,15 +174,15 @@ Qed.
 
 Lemma mkFirstMap'_preserves_soundness :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
-         (pf : all_pairs_are_candidates fi (productions g)),
+         (pf : all_pairs_are_candidates fi g.(prods)),
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> first_map_sound (mkFirstMap' (productions g) nu fi pf) g.
+    -> first_map_sound (mkFirstMap' g.(prods) nu fi pf) g.
 Proof.
   intros g nu fi pf Hns Hfm.
-  remember (numFirstCandidates (productions g) fi) as card.
+  remember (numFirstCandidates g.(prods) fi) as card.
   generalize dependent fi.
   induction card using lt_wf_ind.
   intros fi pf Hfm Hc; subst.
@@ -209,7 +211,7 @@ Qed.
 
 Theorem mkFirstMap_sound :
   forall (g : grammar)
-         (nu : nullable_set),
+         (nu : NtSet.t),
     nullable_set_for nu g
     -> first_map_sound (mkFirstMap g nu) g.
 Proof.
@@ -244,7 +246,7 @@ Qed.
 
 (* to do : make this an iff *)
 Lemma nullable_sym_nullableSym :
-  forall (g : grammar) (nu : nullable_set) (sym : symbol),
+  forall (g : grammar) (nu : NtSet.t) (sym : symbol),
     nullable_set_for nu g
     -> nullable_sym g sym
     -> nullableSym sym nu = true.
@@ -418,7 +420,7 @@ Lemma firstPass_equiv_right_t' :
     -> nullable_gamma g gpre
     -> NtMap.Equiv LaSet.Equal fi (firstPass psuf nu fi)
     -> forall ppre, 
-        g.(productions) = ppre ++ psuf
+        g.(prods) = ppre ++ psuf
         -> exists lxFirst : LaSet.t,
             NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
             LaSet.In (LA y) lxFirst.
@@ -452,10 +454,10 @@ Qed.
 
 Lemma firstPass_equiv_right_t :
   forall g nu lx y gpre gsuf fi,
-    In (lx, gpre ++ T y :: gsuf) (productions g)
+    In (lx, gpre ++ T y :: gsuf) g.(prods)
     -> nullable_set_for nu g
     -> nullable_gamma g gpre
-    -> NtMap.Equiv LaSet.Equal fi (firstPass (productions g) nu fi)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
     -> exists lxFirst : LaSet.t,
         NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
         LaSet.In (LA y) lxFirst.
@@ -506,7 +508,7 @@ Lemma firstPass_equiv_right_nt' :
     -> NtMap.find rx fi = Some rxFirst
     -> LaSet.In la rxFirst
     -> forall ppre, 
-        g.(productions) = ppre ++ psuf
+        g.(prods) = ppre ++ psuf
         -> exists lxFirst : LaSet.t,
             NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
             LaSet.In la lxFirst.
@@ -562,8 +564,8 @@ Qed.
 Lemma firstPass_equiv_right_nt :
   forall g nu fi lx rx gpre gsuf rxFirst la,
     nullable_set_for nu g
-    -> NtMap.Equiv LaSet.Equal fi (firstPass (productions g) nu fi)
-    -> In (lx, gpre ++ NT rx :: gsuf) (productions g)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
+    -> In (lx, gpre ++ NT rx :: gsuf) g.(prods)
     -> nullable_gamma g gpre
     -> NtMap.find rx fi = Some rxFirst
     -> LaSet.In la rxFirst
@@ -579,7 +581,7 @@ Qed.
 Lemma firstPass_equiv_complete :
   forall g nu fi,
     nullable_set_for nu g
-    -> NtMap.Equiv LaSet.Equal fi (firstPass (productions g) nu fi)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
     -> first_map_complete fi g.
 Proof.
   intros g nu fi Hns Hequiv.
@@ -598,14 +600,14 @@ Qed.
 
 Lemma mkFirstMap'_complete :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
-         (pf : all_pairs_are_candidates fi (productions g)),
+         (pf : all_pairs_are_candidates fi g.(prods)),
     nullable_set_for nu g
-    -> first_map_complete (mkFirstMap' (productions g) nu fi pf) g.
+    -> first_map_complete (mkFirstMap' g.(prods) nu fi pf) g.
 Proof.
   intros g nu fi pf Hns.
-  remember (numFirstCandidates (productions g) fi) as card.
+  remember (numFirstCandidates g.(prods) fi) as card.
   generalize dependent fi.
   induction card using lt_wf_ind.
   intros fi pf Hc; subst.
@@ -621,7 +623,7 @@ Qed.
 
 Theorem mkFirstMap_complete :
   forall (g : grammar)
-         (nu : nullable_set),
+         (nu : NtSet.t),
     nullable_set_for nu g
     -> first_map_complete (mkFirstMap g nu) g.
 Proof.
@@ -634,7 +636,7 @@ Qed.
 
 Theorem mkFirstMap_correct :
   forall (g  : grammar)
-         (nu : nullable_set),
+         (nu : NtSet.t),
     nullable_set_for nu g
     -> first_map_for (mkFirstMap g nu) g.
 Proof.
@@ -644,3 +646,4 @@ Proof.
   - apply mkFirstMap_complete; auto.
 Qed.
 
+End FirstProofsFn.

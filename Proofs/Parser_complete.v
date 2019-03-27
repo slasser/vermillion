@@ -2,14 +2,10 @@ Require Import List.
 Require Import Omega.
 Require Import String.
 Require Import Grammar.
-Require Import ParseTree.
 Require Import Tactics.
-Require Import Utils.
-Require Import Derivation.
 Require Import Parser.
-Require Import ParseTable.
-Require Import ParseTableGen.
-Require Import Proofs.Lemmas.
+Require Import Generator.
+Require Import Lemmas.
 Import ListNotations.
 
 Inductive nullable_path g (la : lookahead) :

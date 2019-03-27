@@ -1,13 +1,5 @@
 Require Import Grammar.
-
 Require Import ParseTableGen.
-Require Import ParseTable.
-
-Require Import Proofs.ParseTableGen.mkNullableSet_Correctness.
-Require Import Proofs.ParseTableGen.mkFirstMap_Correctness.
-Require Import Proofs.ParseTableGen.mkFollowMap_Correctness.
-Require Import Proofs.ParseTableGen.mkEntries_Correctness.
-Require Import Proofs.ParseTableGen.mkParseTable_Correctness.
 
 (* Combining all of the steps into a single function *)
 

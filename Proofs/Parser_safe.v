@@ -3,16 +3,12 @@ Require Import Omega.
 Require Import String.
 Require Import Wf_nat.
 Require Import Grammar.
-Require Import ParseTree.
 Require Import Tactics.
-Require Import Proofs.Lemmas.
+Require Import Lemmas.
+Require Import Generator.
 Require Import Parser.
-Require Import ParseTable.
-Require Import ParseTableGen.
-Require Import Parser.
-Require Import Derivation.
-Require Import Completeness.
-Require Import Soundness.
+Require Import Parser_complete.
+Require Import Parser_sound.
 Import ListNotations.
 Open Scope list_scope.
 

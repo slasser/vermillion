@@ -4,17 +4,18 @@ Require Import Wf_nat.
 Require Import Grammar.
 Require Import Tactics.
 
-Require Import ParseTable.
-Require Import ParseTableGen.
-
-Require Import Proofs.ParseTableGen.mkFirstMap_Correctness.
+Require Import mkFirstMap_correct.
 
 Import ListNotations.
+
+Module FollowProofsFn (G : Grammar.T).
+
+  Module Export FirstProofs := FirstProofsFn G.
 
 Lemma mkFollowMap'_eq_body :
   forall g nu fi fi_pf fo fo_pf,
   mkFollowMap' g nu fi fi_pf fo fo_pf =
-  let fo' := followPass (productions g) nu fi fo in
+  let fo' := followPass g.(prods) nu fi fo in
   if follow_map_equiv_dec fo fo' then
     fo
   else
@@ -36,7 +37,7 @@ Qed.
 Lemma nullableGamma_nullable_gamma :
   forall g nu x gsuf gpre,
     nullable_set_for nu g
-    -> In (x, gpre ++ gsuf) (productions g)
+    -> In (x, gpre ++ gsuf) g.(prods)
     -> nullableGamma gsuf nu = true
     -> nullable_gamma g gsuf.
 Proof.
@@ -153,7 +154,7 @@ Lemma updateFo_preserves_soundness' :
     -> first_map_for fi g
     -> follow_map_sound fo g
     -> forall gsuf gpre,
-        In (lx, gpre ++ gsuf) (productions g)
+        In (lx, gpre ++ gsuf) g.(prods)
     -> follow_map_sound (updateFo' nu fi lx gsuf fo) g.
 Proof.
   intros g nu fi lx fo Hnu Hfi Hfo gsuf.
@@ -225,7 +226,7 @@ Lemma updateFo_preserves_soundness :
   forall g nu fi lx gamma fo,
     nullable_set_for nu g
     -> first_map_for fi g
-    -> In (lx, gamma) (productions g)
+    -> In (lx, gamma) g.(prods)
     -> follow_map_sound fo g
     -> follow_map_sound (updateFo' nu fi lx gamma fo) g.
 Proof.
@@ -236,14 +237,14 @@ Qed.
 
 Lemma followPass_preserves_soundness' :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
          (fo : follow_map),
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_sound fo g
     -> forall suf pre : list production,
-        pre ++ suf = (productions g)
+        pre ++ suf = g.(prods)
         -> follow_map_sound (followPass suf nu fi fo) g.
 Proof. 
   intros g nu fi fo Hnu Hfi Hfo suf.
@@ -262,7 +263,7 @@ Lemma followPass_preserves_soundness :
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_sound fo g
-    ->  follow_map_sound (followPass (productions g) nu fi fo) g.
+    ->  follow_map_sound (followPass g.(prods) nu fi fo) g.
 Proof.
   intros.
   eapply followPass_preserves_soundness'; eauto.
@@ -271,7 +272,7 @@ Qed.
 
 Lemma mkFollowMap'_preserves_soundness :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (nu_pf : nullable_set_for nu g)
          (fi : first_map)
          (fi_pf : first_map_for fi g)
@@ -313,7 +314,7 @@ Qed.
 
 Theorem mkFollowMap_sound :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
          (nu_pf : nullable_set_for nu g)
          (fi_pf : first_map_for fi g),
@@ -677,7 +678,7 @@ Qed.
       
 Lemma followPass_equiv_right :
     forall (g         : grammar)
-           (nu        : nullable_set)
+           (nu        : NtSet.t)
            (Hnu       : nullable_set_for nu g)
            (fi        : first_map)
            (Hfi       : first_map_for fi g)
@@ -685,15 +686,15 @@ Lemma followPass_equiv_right :
            (lx rx     : nonterminal)
            (gpre gsuf : list symbol)
            (la        : lookahead),
-      NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
-      -> In (lx, gpre ++ NT rx :: gsuf) (productions g)
+      NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
+      -> In (lx, gpre ++ NT rx :: gsuf) g.(prods)
       -> first_gamma g la gsuf
       -> exists rxFollow : LaSet.t,
           NtMap.find (elt:=LaSet.t) rx fo = Some rxFollow /\
           LaSet.In la rxFollow.
 Proof.
   intros g nu Hnu fi Hfi fo lx rx gpre gsuf la Heq Hin Hfg.
-  induction (productions g) as [| (lx', gamma) ps]; simpl in *.
+  induction g.(prods) as [| (lx', gamma) ps]; simpl in *.
   - inv Hin.
   - destruct Hin; subst.
     + clear IHps.
@@ -834,7 +835,7 @@ Qed.
 (* to do : clean this up *)
 Lemma followPass_equiv_left :
       forall (g : grammar)
-             (nu : nullable_set)
+             (nu : NtSet.t)
              (Hnu : nullable_set_for nu g)
              (fi : first_map)
              (Hfi : first_map_for fi g)
@@ -843,8 +844,8 @@ Lemma followPass_equiv_left :
              (gpre gsuf : list symbol)
              (la : lookahead)
              (lxFollow : LaSet.t),
-        NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
-        -> In (lx, gpre ++ NT rx :: gsuf) (productions g)
+        NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
+        -> In (lx, gpre ++ NT rx :: gsuf) g.(prods)
         -> nullable_gamma g gsuf
         -> NtMap.find (elt:=LaSet.t) lx fo = Some lxFollow
         -> LaSet.In la lxFollow
@@ -853,7 +854,7 @@ Lemma followPass_equiv_left :
             /\ LaSet.In la rxFollow.
 Proof.
   intros g nu Hnu fi Hfi fo lx rx gpre gsuf la lxFollow Heq Hin Hng Hf_l Hin_l.
-  induction (productions g) as [| (lx', gamma) ps]; simpl in *.
+  induction g.(prods) as [| (lx', gamma) ps]; simpl in *.
   - inv Hin.
   - destruct Hin as [Hhd | Htl].
     + clear IHps.
@@ -911,13 +912,13 @@ Qed.
 
 Lemma followPass_equiv_complete :
   forall (g : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (Hnu : nullable_set_for nu g)
          (fi : first_map)
          (Hfi : first_map_for fi g)
          (fo : follow_map),
     PairSet.In (start g, EOF) (pairsOf fo)
-    -> NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+    -> NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
     -> follow_map_complete fo g.
 Proof.
   intros g nu Hnu fi Hfi fo Hstart Heq.
@@ -935,7 +936,7 @@ Qed.
     
 Lemma mkFollowMap'_complete :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (nu_pf : nullable_set_for nu g)
          (fi : first_map)
          (fi_pf : first_map_for fi g)
@@ -972,7 +973,7 @@ Qed.
 
 Theorem mkFollowMap_complete :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
          (nu_pf : nullable_set_for nu g)
          (fi_pf : first_map_for fi g),
@@ -986,7 +987,7 @@ Qed.
 
 Theorem mkFollowMap_correct :
   forall (g  : grammar)
-         (nu : nullable_set)
+         (nu : NtSet.t)
          (fi : first_map)
          (nu_pf : nullable_set_for nu g)
          (fi_pf : first_map_for fi g),
@@ -997,4 +998,5 @@ Proof.
   - apply mkFollowMap_sound; auto.
   - apply mkFollowMap_complete; auto.
 Qed.
-  
+
+End FollowProofsFn.

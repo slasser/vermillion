@@ -2,45 +2,49 @@ Require Import List.
 Require Import Omega.
 Require Import String.
 Require Import Grammar.
-Require Import ParseTree.
+Require Import Lemmas.
 Require Import Tactics.
-Require Import Utils.
-Require Import Derivation.
 Require Import Parser.
-Require Import ParseTable.
-Require Import ParseTableGen.
+Require Import Generator.
 Import ListNotations.
+
+Module ParserSoundnessFn (Import G : Grammar.T).
+
+  Module Export ParserDefs := ParserFn G.
+  Module Import L := LemmasFn G.
 
 Lemma parse_nf_eq_body :
   forall tbl sym input vis a,
     parse_nf tbl sym input vis a =
-      match sym with
-  | T a =>
-    match input as i return input = i -> _ with
-    | nil =>
-      fun _ => inl (Reject "input exhausted" input)
-    | token :: input' => 
-      fun Hin => 
-        if string_dec a token then
-          inr (Leaf a, existT _ input' (length_lt_eq_cons _ _ _ _ Hin))
-        else
-          inl (Reject "token mismatch" input)
-    end eq_refl
-  | NT x =>
-    match ptlk_dec x (peek input) tbl with
-    | inl _ => inl (Reject "lookup failure" input)
-    | inr (exist _ gamma Hlk) =>
-      match mem_dec x vis with
-      | left _ => inl (LeftRec x vis input)
-      | right Hnin =>
-        match parseForest_nf tbl gamma input (NtSet.add x vis) (hole1 _ _ _ _ _ _ _ a Hlk Hnin) with
-        | inl pfail => inl pfail
-        | inr (sts, existT _ input' Hle) =>
-          inr (Node x sts, existT _ input' Hle)
+    match sym with
+    | T a =>
+      match input as i return input = i -> _ with
+      | nil =>
+        fun _ => inl (Reject "input exhausted" input)
+      | token :: input' => 
+        fun Hin => 
+          if t_eq_dec a token then
+            inr (Leaf a, existT _ input' (length_lt_eq_cons _ _ _ _ Hin))
+          else
+            inl (Reject "token mismatch" input)
+      end eq_refl
+    | NT x =>
+      match ptlk_dec x (peek input) tbl with
+      | inl _ => inl (Reject "lookup failure" input)
+      | inr (exist _ gamma Hlk) =>
+        match mem_dec x vis with
+        | left _ => inl (LeftRec x vis input)
+        | right Hnin =>
+          match parseForest_nf tbl gamma input (NtSet.add x vis)
+                               (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
+          with
+          | inl pfail => inl pfail
+          | inr (sts, existT _ input' Hle) =>
+            inr (Node x sts, existT _ input' Hle)
+          end
         end
       end
-    end
-  end.
+    end.
 Proof.
   intros; simpl; destruct a; cr.
 Qed.
@@ -48,8 +52,9 @@ Qed.
 Lemma parseForest_nf_eq_body :
   forall tbl gamma input vis a,
     parseForest_nf tbl gamma input vis a =
-        match gamma as g return gamma = g -> _  with
-    | nil => fun _ => inr (nil, existT (fun input' => length_lt_eq string input' input) input
+    match gamma as g return gamma = g -> _  with
+    | nil => fun _ => inr (nil, existT (fun input' => length_lt_eq terminal input' input)
+                                       input
                                        (length_lt_eq_refl _ _))
     | sym :: gamma' => fun Hg => 
                          match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
@@ -57,13 +62,17 @@ Lemma parseForest_nf_eq_body :
                          | inr (lSib, existT _ input' Hle) =>
                            match Hle with
                            | left Hlt =>
-                             match parseForest_nf tbl gamma' input' NtSet.empty (hole3 _ _ _ _ _ _ _ a Hlt) with
+                             match parseForest_nf tbl gamma' input' NtSet.empty
+                                                  (hole3 _ _ _ _ _ _ _ a Hlt)
+                             with
                              | inl pfail => inl pfail
                              | inr (rSibs, existT _ input'' Hle'') =>
                                inr (lSib :: rSibs, existT _ input'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
                              end
                            | right Heq =>
-                             match parseForest_nf tbl gamma' input vis (hole4 _ _ _ _ _ _ a Hg) with
+                             match parseForest_nf tbl gamma' input vis
+                                                  (hole4 _ _ _ _ _ _ a Hg)
+                             with
                              | inl pfail => inl pfail
                              | inr (rSibs, existT _ input'' Hle'') =>
                                inr (lSib :: rSibs, existT _ input'' Hle'')
@@ -115,7 +124,7 @@ Qed.
 Lemma input_length_invariant :
   forall (g   : grammar)
          (tbl : parse_table),
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> forall (tr        : tree)
               (sym       : symbol)
               (input rem : list terminal)
@@ -135,7 +144,7 @@ Proof.
       
       (Q := fun f =>
               forall (gamma : list symbol)
-                     (input rem : list string)
+                     (input rem : list terminal)
                      Hle
                      (vis : NtSet.t)
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
@@ -190,7 +199,7 @@ Qed.
 Lemma parse_sound' :
   forall (g   : grammar)
          (tbl : parse_table),
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> forall (tr        : tree)
               (sym       : symbol)
               (input rem : list terminal)
@@ -211,7 +220,7 @@ Proof.
 
       (Q := fun f =>
               forall (gamma : list symbol)
-                     (input rem : list string)
+                     (input rem : list terminal)
                      Hle
                      (vis : NtSet.t)
                      (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
@@ -250,7 +259,6 @@ Proof.
     cr; tc.
     inv H.
     exists nil; split; auto.
-    constructor.
 
   - rewrite parseForest_nf_eq_body in H.
     step; tc.
@@ -281,13 +289,12 @@ Proof.
       apply l_ident_eq_nil in Happ; subst.
       destruct Hpf as [wsuf [Happ Hg]]; subst.
       exists ([] ++ wsuf); split; auto.
-      constructor; auto.
 Qed.
 
 Lemma parse_sound :
   forall (g   : grammar)
          (tbl : parse_table),
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> forall (tr        : tree)
               (sym       : symbol)
               (word rem  : list terminal)
@@ -304,4 +311,6 @@ Proof.
   apply app_inv_tail in Happ.
   subst; auto.
 Qed.
+
+End ParserSoundnessFn.
 

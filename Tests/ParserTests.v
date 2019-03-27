@@ -1,11 +1,8 @@
 Require Import List.
 
-Require Import ExampleGrammars.
 Require Import Grammar.
-Require Import ParseTree.
-
+Require Import ExampleGrammars.
 Require Import Parser.
-Require Import ParseTable.
 Require Import Tests.ExampleParseTables.
 
 Import ListNotations.

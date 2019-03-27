@@ -6,15 +6,12 @@ Require Import ExampleGrammars.
 Require Import Grammar.
 Require Import Lemmas.
 Require Import Tactics.
-Require Import Utils.
 
-Require Import ParseTable.
-Require Import Proofs.Lemmas.
 Require Import Tests.ExampleParseTables.
 
 Import ListNotations.
 
-Ltac crush' :=
+(*Ltac crush' :=
   repeat match goal with
          (* inversions *)
          | H : _ \/ _ |- _ => inv H
@@ -496,3 +493,4 @@ Proof with crush.
     + crush... 
 Qed.
 
+*)

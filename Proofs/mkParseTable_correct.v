@@ -3,25 +3,23 @@ Require Import List.
 Require Import Grammar.
 Require Import Lemmas.
 Require Import Tactics.
-
-Require Import ParseTable.
-Require Import ParseTableGen.
-
-Require Import Proofs.Lemmas.
-
-Require Import Proofs.ParseTableGen.mkEntries_Correctness.
+Require Import mkEntries_correct.
 
 Import ListNotations.
+
+Module GeneratorProofsFn (Import G : Grammar.T).
+
+  Module Export EntryProofs := EntryProofsFn G.
 
 Definition table_correct_wrt_entries (tbl : parse_table) (es : list table_entry) :=
   forall x gamma la,
     pt_lookup x la tbl = Some gamma <-> In (x, la, gamma) es.
 
-Lemma invariant_iff_parse_table_for :
+Lemma invariant_iff_parse_table_correct :
   forall (g : grammar) (es : list table_entry) (tbl : parse_table),
     entries_correct es g
     -> table_correct_wrt_entries tbl es
-       <-> parse_table_for tbl g.
+       <-> parse_table_correct tbl g.
 Proof.
   intros g es tbl Hwf.
   split.
@@ -187,10 +185,10 @@ Lemma mkParseTable_sound :
          (tbl : parse_table),
     entries_correct es g
     -> mkParseTable es = Some tbl
-    -> parse_table_for tbl g.
+    -> parse_table_correct tbl g.
 Proof.
   intros es g tbl Hwf Hmk.
-  eapply invariant_iff_parse_table_for; eauto.
+  eapply invariant_iff_parse_table_correct; eauto.
   apply mkParseTable_sound_wrt_invariant; auto.
 Qed.
 
@@ -483,13 +481,14 @@ Lemma mkParseTable_complete :
          (g   : grammar)
          (tbl : parse_table),
     entries_correct es g
-    -> parse_table_for tbl g
+    -> parse_table_correct tbl g
     -> exists tbl',
         ParseTable.Equal tbl tbl'
         /\ mkParseTable es = Some tbl'.
 Proof.
   intros es g tbl Hwf Hpt.
   eapply mkParseTable_complete_wrt_invariant.
-  eapply invariant_iff_parse_table_for; eauto.
+  eapply invariant_iff_parse_table_correct; eauto.
 Qed.
   
+End GeneratorProofsFn.
