@@ -1,11 +1,8 @@
 Require Import FMaps List.
 
 Require Import Grammar.
-Require Import ParseTree.
 Require Import Tactics.
 
-Require Import Derivation.
-Require Import ParseTable.
 Require Import ParseTableGen.
 
 Import ListNotations.

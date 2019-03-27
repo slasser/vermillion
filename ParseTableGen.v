@@ -4,23 +4,12 @@ Require Import Program.Wf.
 
 Require Import Grammar.
 Require Import Tactics.
-Require Import Utils.
-
-Require Import ParseTable.
 
 Import ListNotations.
-Import MSetDecide.
 
-Module NP := MSetProperties.Properties NtSet.
-Module ND := WDecideOn NT_as_DT NtSet.
-
-Module LP := MSetProperties.Properties LaSet.
-Module LD := WDecideOn Lookahead_as_DT LaSet.
+Module GeneratorFn (Import G : Grammar.T).
 
 (* Step 1: compute the NULLABLE set for a grammar *)
-
-Definition fromNtList (ls : list nonterminal) : NtSet.t :=
-  fold_right NtSet.add NtSet.empty ls.
 
 Definition lhSet (ps : list production) : NtSet.t :=
   fromNtList (map fst ps).
@@ -138,7 +127,7 @@ Next Obligation.
 Defined.
 
 Definition mkNullableSet (g : grammar) : NtSet.t :=
-  mkNullableSet' g.(productions) NtSet.empty.
+  mkNullableSet' g.(prods) NtSet.empty.
 
 (* Step 2 : compute the FIRST map for the grammar using the (correct) NULLABLE set. *)
 
@@ -162,7 +151,7 @@ Definition firstSym (sym : symbol) (fi : first_map) : LaSet.t :=
 
 (* Compute the set of lookahead tokens for gamma using correct NULLABLE set nu
    and possibly incomplete FIRST map fi *)
-Fixpoint firstGamma (gamma : list symbol) (nu : nullable_set) (fi : first_map) :=
+Fixpoint firstGamma (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :=
   match gamma with
   | [] => LaSet.empty
   | sym :: gamma' =>
@@ -171,7 +160,7 @@ Fixpoint firstGamma (gamma : list symbol) (nu : nullable_set) (fi : first_map) :
     else firstSym sym fi
     end.
 
-Definition updateFi (nu : nullable_set) (p : production) (fi : first_map) : first_map :=
+Definition updateFi (nu : NtSet.t) (p : production) (fi : first_map) : first_map :=
   let (x, gamma) := p in
   let fg := firstGamma gamma nu fi in
   let xFirst := findOrEmpty x fi in
@@ -181,7 +170,7 @@ Definition updateFi (nu : nullable_set) (p : production) (fi : first_map) : firs
   else
     NtMap.add x xFirst' fi.
 
-Definition firstPass (ps : list production) (nu : nullable_set) (fi : first_map) : first_map :=
+Definition firstPass (ps : list production) (nu : NtSet.t) (fi : first_map) : first_map :=
   fold_right (updateFi nu) fi ps.
 
 Definition first_map_equiv_dec :
@@ -1286,7 +1275,7 @@ Defined.
 
 Program Fixpoint mkFirstMap'
         (ps : list production)
-        (nu : nullable_set) 
+        (nu : NtSet.t) 
         (fi : first_map)
         (pf : all_pairs_are_candidates fi ps)
         {measure (numFirstCandidates ps fi) } :=
@@ -1311,14 +1300,14 @@ Proof.
   inv Hin.
 Defined.
 
-Definition mkFirstMap (g : grammar) (nu : nullable_set) :=
-  let ps := g.(productions) in
+Definition mkFirstMap (g : grammar) (nu : NtSet.t) :=
+  let ps := g.(prods) in
   mkFirstMap' ps nu empty_fi (empty_fi_apac ps).
 
 (* Step 3 : compute the FOLLOW map for the grammar using the (correct) NULLABLE set and FIRST map. *)
 
 (* to do *)
-Fixpoint updateFo' (nu : nullable_set)
+Fixpoint updateFo' (nu : NtSet.t)
                    (fi : first_map)
                    (lx  : nonterminal)
                    (gamma : list symbol)
@@ -1351,7 +1340,7 @@ Fixpoint updateFo' (nu : nullable_set)
         end
   end.
 
-Definition updateFo (nu : nullable_set)
+Definition updateFo (nu : NtSet.t)
                     (fi : first_map)
                     (p  : production)
                     (fo : follow_map) : follow_map :=
@@ -1359,7 +1348,7 @@ Definition updateFo (nu : nullable_set)
   updateFo' nu fi x gamma fo.
 
 Definition followPass (ps : list production)
-                      (nu : nullable_set)
+                      (nu : NtSet.t)
                       (fi : first_map)
                       (fo : follow_map) : follow_map :=
   fold_right (updateFo nu fi) fo ps.
@@ -1385,7 +1374,7 @@ Definition ntsOfProd (p : production) : NtSet.t :=
 Definition ntsOf (g : grammar) : NtSet.t :=
   fold_right (fun p acc => NtSet.union (ntsOfProd p) acc)
              (NtSet.singleton (start g))
-             (productions g).
+             g.(prods).
 
 Fixpoint lookaheadsOfGamma (gamma : list symbol) : LaSet.t :=
   match gamma with
@@ -1400,7 +1389,7 @@ Definition lookaheadsOf (g : grammar) : LaSet.t :=
                 | (_, gamma) => LaSet.union (lookaheadsOfGamma gamma) acc
                 end)
              (LaSet.singleton EOF)
-             (productions g).
+             (prods g).
 
 Definition all_pairs_are_follow_candidates (fo : follow_map)
                                            (g  : grammar) : Prop :=
@@ -1416,8 +1405,8 @@ Definition numFollowCandidates (g : grammar)
 
 Lemma app_cons_apps :
   forall g x gpre sym gsuf,
-    In (x, gpre ++ sym :: gsuf) (productions g)
-    -> In (x, (gpre ++ [sym]) ++ gsuf) (productions g).
+    In (x, gpre ++ sym :: gsuf) g.(prods)
+    -> In (x, (gpre ++ [sym]) ++ gsuf) g.(prods).
 Proof.
   intros.
   rewrite <- app_assoc; auto.
@@ -1448,12 +1437,12 @@ Defined.
 
 Lemma medial_nt_in_ntsOf :
   forall g lx rx gpre gsuf,
-    In (lx, gpre ++ NT rx :: gsuf) (productions g)
+    In (lx, gpre ++ NT rx :: gsuf) g.(prods)
     -> NtSet.In rx (ntsOf g).
 Proof.
   intros g lx rx gpre gsuf Hin.
   unfold ntsOf.
-  induction (productions g) as [| (lx', gamma) ps]; simpl in *.
+  induction g.(prods) as [| (lx', gamma) ps]; simpl in *.
   - inv Hin.
   - destruct Hin as [Heq | Hin].
     + inv Heq.
@@ -1489,12 +1478,12 @@ Defined.
 
 Lemma medial_t_in_lookaheadsOf :
   forall g x gpre gsuf y,
-    In (x, gpre ++ T y :: gsuf) (productions g)
+    In (x, gpre ++ T y :: gsuf) g.(prods)
     -> LaSet.In (LA y) (lookaheadsOf g).
 Proof.
   intros g x gpre gsuf y Hin.
   unfold lookaheadsOf.
-  induction (productions g) as [| (x', gamma) ps]; simpl in *.
+  induction g.(prods) as [| (x', gamma) ps]; simpl in *.
   - inv Hin.
   - destruct Hin as [Heq | Hin].
     + inv Heq.
@@ -1536,7 +1525,7 @@ Defined.
 Lemma in_firstGamma_in_lookaheadsOf :
   forall g nu fi x gsuf gpre la,
     first_map_for fi g
-    -> In (x, gpre ++ gsuf) (productions g)
+    -> In (x, gpre ++ gsuf) g.(prods)
     -> LaSet.In la (firstGamma gsuf nu fi)
     -> LaSet.In la (lookaheadsOf g).
 Proof.
@@ -1566,7 +1555,7 @@ Defined.
 Lemma updateFo_preserves_apac :
   forall g nu fi lx gsuf gpre fo,
     first_map_for fi g
-    -> In (lx, gpre ++ gsuf) (productions g)
+    -> In (lx, gpre ++ gsuf) g.(prods)
     -> all_pairs_are_follow_candidates fo g
     -> all_pairs_are_follow_candidates (updateFo' nu fi lx gsuf fo) g.
 Proof.
@@ -1643,7 +1632,7 @@ Defined.
 Lemma followPass_preserves_apac' :
   forall g nu fi suf pre fo,
     first_map_for fi g
-    -> pre ++ suf = g.(productions)
+    -> pre ++ suf = g.(prods)
     -> all_pairs_are_follow_candidates fo g
     -> all_pairs_are_follow_candidates (followPass suf nu fi fo) g.
 Proof.
@@ -1662,7 +1651,7 @@ Lemma followPass_preserves_apac :
   forall g nu fi fo,
     first_map_for fi g
     -> all_pairs_are_follow_candidates fo g
-    -> all_pairs_are_follow_candidates (followPass (productions g) nu fi fo) g.
+    -> all_pairs_are_follow_candidates (followPass g.(prods) nu fi fo) g.
 Proof.
   intros.
   eapply followPass_preserves_apac'; eauto.
@@ -1767,7 +1756,7 @@ Defined.
 Lemma updateFo_equiv_or_exists' :
   forall g nu fi lx gsuf gpre fo,
     first_map_for fi g
-    -> In (lx, gpre ++ gsuf) (productions g)
+    -> In (lx, gpre ++ gsuf) g.(prods)
     -> all_pairs_are_follow_candidates fo g
     -> NtMap.Equiv LaSet.Equal fo (updateFo' nu fi lx gsuf fo)
        \/ exists (x' : NtSet.elt) (la : LaSet.elt),
@@ -1856,7 +1845,7 @@ Defined.
 Lemma updateFo_equiv_or_exists :
   forall g nu fi x gamma fo,
     first_map_for fi g
-    -> In (x, gamma) (productions g)
+    -> In (x, gamma) g.(prods)
     -> all_pairs_are_follow_candidates fo g
     -> NtMap.Equiv LaSet.Equal fo (updateFo' nu fi x gamma fo)
        \/ exists (x' : NtSet.elt) (la : LaSet.elt),
@@ -1920,7 +1909,7 @@ Lemma followPass_equiv_or_exists' :
   forall g nu fi suf pre fo,
     first_map_for fi g
     -> all_pairs_are_follow_candidates fo g
-    -> pre ++ suf = (productions g)
+    -> pre ++ suf = g.(prods)
     -> NtMap.Equiv LaSet.Equal fo (followPass suf nu fi fo)
        \/ exists x la,
         NtSet.In x (ntsOf g)
@@ -1969,12 +1958,12 @@ Lemma followPass_equiv_or_exists :
   forall g nu fi fo,
     first_map_for fi g
     -> all_pairs_are_follow_candidates fo g
-    -> NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+    -> NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
        \/ exists x la,
         NtSet.In x (ntsOf g)
         /\ LaSet.In la (lookaheadsOf g)
         /\ ~ PairSet.In (x, la) (pairsOf fo)
-        /\ PairSet.In (x, la) (pairsOf (followPass (productions g) nu fi fo)).
+        /\ PairSet.In (x, la) (pairsOf (followPass g.(prods) nu fi fo)).
 Proof.
   intros.
   eapply followPass_equiv_or_exists'; eauto.
@@ -1985,12 +1974,12 @@ Lemma followPass_not_equiv_exists :
   forall g nu fi fo,
     first_map_for fi g
     -> all_pairs_are_follow_candidates fo g
-    -> ~ NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
+    -> ~ NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
     -> exists x la,
       NtSet.In x (ntsOf g)
       /\ LaSet.In la (lookaheadsOf g)
       /\ ~ PairSet.In (x, la) (pairsOf fo)
-      /\ PairSet.In (x, la) (pairsOf (followPass (productions g) nu fi fo)).
+      /\ PairSet.In (x, la) (pairsOf (followPass g.(prods) nu fi fo)).
 Proof.
   intros g nu fi fo Hap Hneq.
   destruct (followPass_equiv_or_exists g nu fi fo); auto; try congruence.
@@ -2053,8 +2042,8 @@ Lemma followPass_not_equiv_candidates_lt :
   forall g nu fi fo,
     first_map_for fi g
     -> all_pairs_are_follow_candidates fo g
-    -> ~ NtMap.Equiv LaSet.Equal fo (followPass (productions g) nu fi fo)
-    -> numFollowCandidates g (followPass (productions g) nu fi fo) < numFollowCandidates g fo.
+    -> ~ NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
+    -> numFollowCandidates g (followPass g.(prods) nu fi fo) < numFollowCandidates g fo.
 Proof.
   intros g nu fi fo Hfm Hap Hneq.
   apply followPass_not_equiv_exists in Hneq; auto.
@@ -2069,13 +2058,13 @@ Defined.
 
 Program Fixpoint mkFollowMap'
         (g  : grammar)
-        (nu : nullable_set) 
+        (nu : NtSet.t) 
         (fi : first_map)
         (fi_pf : first_map_for fi g)
         (fo : follow_map)
         (apac_pf : all_pairs_are_follow_candidates fo g)
         {measure (numFollowCandidates g fo) } :=
-  let fo' := followPass (productions g) nu fi fo in
+  let fo' := followPass g.(prods) nu fi fo in
   if follow_map_equiv_dec fo fo' then
     fo
   else
@@ -2093,7 +2082,7 @@ Lemma start_in_ntsOf :
 Proof.
   intros g.
   unfold ntsOf.
-  induction (productions g) as [| (x, gamma) ps]; simpl in *; ND.fsetdec.
+  induction g.(prods) as [| (x, gamma) ps]; simpl in *; ND.fsetdec.
 Defined.
 
 Lemma EOF_in_lookaheadsOf :
@@ -2102,7 +2091,7 @@ Lemma EOF_in_lookaheadsOf :
 Proof.
   intros g.
   unfold lookaheadsOf.
-  induction (productions g) as [| (x, gamma) ps]; simpl in *; LD.fsetdec.
+  induction g.(prods) as [| (x, gamma) ps]; simpl in *; LD.fsetdec.
 Defined.
 
 Lemma initial_fo_apac :
@@ -2124,7 +2113,7 @@ Proof.
 Defined.
 
 Definition mkFollowMap (g : grammar)
-                       (nu : nullable_set)
+                       (nu : NtSet.t)
                        (fi : first_map)
                        (fi_pf : first_map_for fi g) : follow_map :=
   mkFollowMap' g nu fi fi_pf (initial_fo g) (initial_fo_apac g).
@@ -2180,7 +2169,7 @@ Definition mkEntries' nu fi fo ps :=
   flat_map (entriesForProd nu fi fo) ps.
 
 Definition mkEntries nu fi fo g :=
-  mkEntries' nu fi fo g.(productions).
+  mkEntries' nu fi fo g.(prods).
 
 (* Step 5 : build a parse table from a (correct) list of parse table entries *)
 
@@ -2195,7 +2184,10 @@ Definition addEntry (p : table_entry) (o : option parse_table) :=
       match pt_lookup x la tbl with
       | None => Some (pt_add x la gamma tbl)
       | Some gamma' =>
-        if list_eq_dec symbol_eq_dec gamma gamma' then Some tbl else None (* make separate function *)
+        if list_eq_dec symbol_eq_dec gamma gamma' then
+          Some tbl
+        else
+          None
       end
     end
   end.
@@ -2203,3 +2195,4 @@ Definition addEntry (p : table_entry) (o : option parse_table) :=
 Definition mkParseTable (ps : list table_entry) : option parse_table :=
   fold_right addEntry (Some empty_table) ps.
 
+End GeneratorFn.

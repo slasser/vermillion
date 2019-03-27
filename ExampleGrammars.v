@@ -1,8 +1,8 @@
 Require Import List String.
-Require Import Grammar ParseTable ParseTree.
+Require Import Grammar.
 Import ListNotations.
 Open Scope string_scope.
-
+(*
 (* Named nonterminal constants for convenience. *)
 Definition X := 0.
 Definition L := 1.
@@ -60,3 +60,4 @@ Definition xy_grammar :=
   [(NT X, [NT Y]);
    (NT Y, [])].
 
+*)

@@ -1,9 +1,6 @@
 Require Import FMaps List MSets Omega String Program.Wf Arith.Wf_nat.
 Require Import Grammar.
-Require Import ParseTree.
-Require Import Utils.
 Require Import Tactics.
-Require Import Derivation.
 Require Import Proofs.Lemmas.
 Require Import ParseTable. 
 Require Import ParseTableGen. (* for fromNtList *)

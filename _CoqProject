@@ -1,15 +1,12 @@
 -R . Vermillion
 
-Derivation.v
-ExampleGrammars.v
 Grammar.v
 Lemmas.v
-ParseTree.v
 Tactics.v
-Utils.v
+
+ExampleGrammars.v
 
 Parser.v
-ParseTable.v
 ParseTableGen.v
 
 Tests/ExampleParseTables.v
