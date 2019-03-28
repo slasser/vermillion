@@ -30,30 +30,24 @@ Module SymbolFn (Import SymTy : SYMBOL_TYPES).
 
   Definition token := (terminal * literal)%type.
 
+  (* We represent a grammar as a record so that functions 
+     can consume the start symbol and productions easily. *)
+  Record grammar := mkGrammar {start : nonterminal ;
+                               prods : list production }.
+
 End SymbolFn.
 
+(*
 Module Type SYMBOL (SymTy : SYMBOL_TYPES).
   Include SymbolFn SymTy.
 End SYMBOL.
-
-(* Grammar representation that the user should provide to the tool. *)
-Module Type INIT.
-  Declare Module SymTy : SYMBOL_TYPES.
-  Declare Module Sym   : SYMBOL SymTy.
-  Export SymTy.
-  Export Sym.
-  Parameter startSymbol : nonterminal.
-  Parameter productions : list Sym.production.
-End INIT.
+ *)
 
 (* Accompanying definitions for a grammar. *)
-Module DefsFn (Export Init : INIT).
+Module DefsFn (Export SymTy : SYMBOL_TYPES).
 
-  (* We represent a grammar as a record so that functions 
-     can consume the start symbol and productions easily. *)
-  Record grammar := {start : nonterminal ;
-                     prods : list production }.
-    
+  Module Export Sym := SymbolFn SymTy.
+  
   (* Derivation trees *)
   Module Export Tree.
     
@@ -177,7 +171,7 @@ Module DefsFn (Export Init : INIT).
 
     Module MDT_NT.
       Definition t := nonterminal.
-      Definition eq_dec := Init.SymTy.nt_eq_dec.
+      Definition eq_dec := SymTy.nt_eq_dec.
     End MDT_NT.
     Module NT_as_DT := Make_UDT(MDT_NT).
     Module NtSet := MSetWeakList.Make NT_as_DT.
@@ -384,43 +378,39 @@ Module DefsFn (Export Init : INIT).
 
 End DefsFn.
 
-Module Type DefsT (Init : INIT).
-  Include DefsFn Init.
+Module Type DefsT (SymTy : SYMBOL_TYPES).
+  Include DefsFn SymTy.
 End DefsT.
 
 Module Type T.
-  Declare Module Init : INIT.
-  Declare Module Defs : DefsT Init.
-  Export Init.
-  Export Defs.
+  Declare Module SymTy : SYMBOL_TYPES.
+  Declare Module Defs  : DefsT SymTy.
 End T.
 
 (* Simple example of how to build a concrete grammar. *)
-(* First, we provide the symbol types, start symbol, and productions *)
-Open Scope string_scope.
-Module I : INIT.
-  Module SymTy.
+
+(* First, we provide the types of grammar symbols 
+   and their decidable equalities. *)
+Module NatStringTypes <: SYMBOL_TYPES.
     Definition terminal := string.
     Definition nonterminal := nat.
     Definition literal := string.
     Definition t_eq_dec := string_dec.
     Definition nt_eq_dec := Nat.eq_dec.
-  End SymTy.
-  Module Sym := SymbolFn SymTy.
+End NatStringTypes.
+
+(* Next, we generate grammar definitions for those types. *)
+Module Export NatStringGrammar <: T.
+  Module SymTy := NatStringTypes.
+  Module Defs  := DefsFn SymTy.
   Export SymTy.
-  Export Sym.
-  Definition startSymbol := 0.
-  Definition productions := [(0, [T "hello"; NT 0])].
-End I.
-
-(* Next, we generate the accompanying definitions for the grammar *)
-Module D : DefsT I := DefsFn I.
-
-(* Now we can package the initial portion and related definitions. *)
-Module G : T.
-  Module Init := I.
-  Module Defs := D.
-  Export Init.
   Export Defs.
-End G.
+End NatStringGrammar.
+
+(* Now we can define a grammar as a record containing a start symbol
+   and a list of productions. *)
+Open Scope string_scope.
+Definition g : grammar := {| start := 0;
+                             prods := [(0, [T "hello"; NT 0])]
+                          |}.
 
