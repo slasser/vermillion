@@ -632,14 +632,6 @@ Module GeneratorFn (Export G : Grammar.T).
       auto.
   Defined.
   
-  Lemma in_app_cons :
-    forall A (x : A) (pre suf : list A),
-      In x (pre ++ x :: suf).
-  Proof.
-    intros A x pre suf.
-    induction pre; simpl; auto.
-  Defined.
-  
   Lemma ntmap_find_in : forall k vT (v : vT) m,
       NtMap.find k m = Some v
       -> NtMap.In k m.

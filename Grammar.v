@@ -13,8 +13,8 @@ Module Type SYMBOL_TYPES.
       {x = x'} + {x <> x'}.
 End SYMBOL_TYPES.
 
-(* Functor that builds symbol definitions for the given symbol types *)
-Module SymbolFn (Import SymTy : SYMBOL_TYPES).
+(* Accompanying definitions for a grammar. *)
+Module DefsFn (Import SymTy : SYMBOL_TYPES).
   
   Inductive symbol :=
   | T  : terminal -> symbol
@@ -34,19 +34,6 @@ Module SymbolFn (Import SymTy : SYMBOL_TYPES).
      can consume the start symbol and productions easily. *)
   Record grammar := mkGrammar {start : nonterminal ;
                                prods : list production }.
-
-End SymbolFn.
-
-(*
-Module Type SYMBOL (SymTy : SYMBOL_TYPES).
-  Include SymbolFn SymTy.
-End SYMBOL.
- *)
-
-(* Accompanying definitions for a grammar. *)
-Module DefsFn (Export SymTy : SYMBOL_TYPES).
-
-  Module Export Sym := SymbolFn SymTy.
   
   (* Derivation trees *)
   Module Export Tree.
@@ -385,6 +372,8 @@ End DefsT.
 Module Type T.
   Declare Module SymTy : SYMBOL_TYPES.
   Declare Module Defs  : DefsT SymTy.
+  Export SymTy.
+  Export Defs.
 End T.
 
 (* Simple example of how to build a concrete grammar. *)

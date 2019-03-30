@@ -3,21 +3,26 @@ Require Import Omega.
 Require Import String.
 Require Import Grammar.
 Require Import Tactics.
-Require Import Parser.
+Require Import Parser_sound.
 Require Import Generator.
 Require Import Lemmas.
 Import ListNotations.
 
+Module ParserCompletenessFn (Import G : Grammar.T).
+
+  Module Export ParserSoundness := ParserSoundnessFn G.
+  Module Import L := LemmasFn G.
+
 Inductive nullable_path g (la : lookahead) :
   symbol -> symbol -> Prop :=
 | DirectPath : forall x z gamma pre suf,
-    In (x, gamma) (productions g)
+    In (x, gamma) g.(prods)
     -> gamma = pre ++ NT z :: suf
     -> nullable_gamma g pre
     -> lookahead_for la x gamma g
     -> nullable_path g la (NT x) (NT z)
 | IndirectPath : forall x y z gamma pre suf,
-    In (x, gamma) (productions g)
+    In (x, gamma) g.(prods)
     -> gamma = pre ++ NT y :: suf
     -> nullable_gamma g pre
     -> lookahead_for la x gamma g
@@ -105,7 +110,7 @@ Qed.
 
 Lemma follow_pre :
   forall g x la sym suf pre,
-    In (x, pre ++ suf) (productions g)
+    In (x, pre ++ suf) g.(prods)
     -> In sym pre
     -> nullable_gamma g pre
     -> first_gamma g la suf
@@ -117,10 +122,10 @@ Proof.
   subst.
   destruct sym.
   - exfalso.
-    eapply Lemmas.gamma_with_terminal_not_nullable; eauto. 
+    eapply gamma_with_terminal_not_nullable; eauto. 
   - replace ((l1 ++ NT n :: l2) ++ suf) with (l1 ++ NT n :: (l2 ++ suf)) in H.
     + eapply FollowRight; eauto.
-      apply Lemmas.nullable_split in H1.
+      apply nullable_split in H1.
       inv H1.
       apply first_gamma_split; auto.
     + rewrite cons_app_singleton.
@@ -136,7 +141,7 @@ Inductive first_sym_i (g : grammar) : lookahead -> symbol -> nat -> Prop :=
 | FirstNT_i : forall (x : nonterminal) (gpre : list symbol)
                    (s : symbol) (gsuf : list symbol)
                 (la : lookahead) (n : nat),
-              In (x, gpre ++ s :: gsuf) (productions g) ->
+              In (x, gpre ++ s :: gsuf) g.(prods) ->
               nullable_gamma g gpre ->
               first_sym_i g la s n -> first_sym_i g la (NT x) (S n).
 
@@ -165,10 +170,10 @@ Qed.
 
 Lemma first_sym_rhs_eqs :
   forall g t,
-    parse_table_for t g
+    parse_table_correct t g
     -> forall x pre pre' sym sym' suf suf' la,
-      In (x, pre ++ sym :: suf) (productions g)
-      -> In (x, pre' ++ sym' :: suf') (productions g)
+      In (x, pre ++ sym :: suf) g.(prods)
+      -> In (x, pre' ++ sym' :: suf') g.(prods)
       -> nullable_gamma g pre
       -> nullable_gamma g pre'
       -> first_sym g la sym
@@ -197,7 +202,7 @@ Qed.
 
 Lemma first_sym_i_det :
   forall g t la sym n,
-    parse_table_for t g
+    parse_table_correct t g
     -> first_sym_i g la sym n
     -> forall n',
         first_sym_i g la sym n'
@@ -239,7 +244,7 @@ Inductive sized_nullable_sym (g : grammar) : symbol -> nat -> Prop :=
     SzNullableSym : forall (x : nonterminal)
                            (ys : list symbol)
                            (n : nat),
-    In (x, ys) (productions g) ->
+    In (x, ys) g.(prods) ->
     sized_nullable_gamma g ys n ->
     sized_nullable_sym g (NT x) (S n)
   with sized_nullable_gamma (g : grammar) : list symbol -> nat -> Prop :=
@@ -281,7 +286,7 @@ Qed.
   
 Lemma sized_nullable_sym_det :
   forall g t la sym n,
-    parse_table_for t g
+    parse_table_correct t g
     -> sized_nullable_sym g sym n
     -> follow_sym g la sym
     -> forall n', sized_nullable_sym g sym n' -> n = n'.
@@ -293,7 +298,7 @@ Proof.
               -> forall n', sized_nullable_sym g sym n' -> n = n')
       (P0 := fun gsuf n (H : sized_nullable_gamma g gsuf n) =>
                forall x gpre n',
-                 In (x, gpre ++ gsuf) (productions g)
+                 In (x, gpre ++ gsuf) g.(prods)
                  -> follow_sym g la (NT x)
                  -> sized_nullable_gamma g gsuf n' -> n = n').
 
@@ -398,7 +403,7 @@ Qed.
 
 Lemma sized_ns_np :
   forall g x y pre suf,
-    In (x, pre ++ NT y :: suf) (productions g)
+    In (x, pre ++ NT y :: suf) g.(prods)
     -> nullable_gamma g (pre ++ NT y :: suf)
     -> nullable_sym g (NT y)
     -> exists nx ny,
@@ -419,7 +424,7 @@ Qed.
 
 Lemma exist_decreasing_nullable_sym_sizes_in_null_path :
   forall g t la x y,
-    parse_table_for t g
+    parse_table_correct t g
     -> nullable_sym g x 
     -> follow_sym g la x
     -> nullable_path g la x y
@@ -459,7 +464,7 @@ Qed.
 Lemma nullable_path_exists_production :
     forall g la x y,
       nullable_path g la (NT x) y
-      -> exists gamma, In (x, gamma) (productions g)
+      -> exists gamma, In (x, gamma) g.(prods)
                        /\ lookahead_for la x gamma g.
 Proof.
   intros g la x y Hn; inv Hn; eauto.
@@ -467,12 +472,12 @@ Qed.
 
 Lemma LL1_parse_table_impl_no_left_recursion :
   forall g t la x,
-    parse_table_for t g
+    parse_table_correct t g
     -> ~ left_recursive g (NT x) la.
 Proof.
   intros g t la x Ht; unfold not; intros Hlr; red in Hlr.
   assert (Hex : exists gamma,
-             In (x, gamma) (productions g)
+             In (x, gamma) g.(prods)
              /\ lookahead_for la x gamma g).
   { apply nullable_path_exists_production in Hlr; auto. }
   destruct Hex as [gamma [Hi Hl]].
@@ -490,9 +495,9 @@ Proof.
 Qed.
 
 Inductive nlr_tree_der (g : grammar) :
-  symbol -> list string -> NtSet.t -> tree -> list string -> Prop :=
+  symbol -> list terminal -> NtSet.t -> tree -> list terminal -> Prop :=
 | T_nlr :
-    forall (y : terminal) (vis : NtSet.t) (rem : list string),
+    forall (y : terminal) (vis : NtSet.t) (rem : list terminal),
       nlr_tree_der g (T y) [y] vis (Leaf y) rem
 | NT_nlr :
     forall (x : nonterminal) 
@@ -500,13 +505,13 @@ Inductive nlr_tree_der (g : grammar) :
            (word rem : list terminal)
            (vis : NtSet.t)
            (subtrees : list tree),
-      In (x, gamma) g.(productions)
+      In (x, gamma) g.(prods)
       -> lookahead_for (peek (word ++ rem)) x gamma g
       -> ~ NtSet.In x vis
       -> nlr_forest_der g gamma word (NtSet.add x vis) subtrees rem
       -> nlr_tree_der g (NT x) word vis (Node x subtrees) rem
 with nlr_forest_der (g : grammar) :
-       list symbol -> list string -> NtSet.t -> list tree -> list string -> Prop :=
+       list symbol -> list terminal -> NtSet.t -> list tree -> list terminal -> Prop :=
      | Nil_nlr : forall vis rem,
          nlr_forest_der g [] [] vis [] rem
      | ConsNull_nlr : forall hdSym tlSyms wsuf rem vis hdTree tlTrees,
@@ -550,8 +555,8 @@ Qed.
 
 Lemma lookahead_for_ptlk_dec :
   forall g t x gamma la,
-    parse_table_for t g
-    -> In (x, gamma) (productions g)
+    parse_table_correct t g
+    -> In (x, gamma) g.(prods)
     -> lookahead_for la x gamma g
     -> exists (pf : pt_lookup x la t = Some gamma),
         ptlk_dec x la t = inr (exist _ gamma pf).
@@ -586,7 +591,7 @@ Qed.
 
 Lemma parse_complete_wrt_nlr :
   forall g tbl sym word rem vis a tr,
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> nlr_tree_der g sym word vis tr rem
     ->
         exists Hle,
@@ -663,7 +668,7 @@ Qed.
 
 (*Lemma parse_complete_wrt_nlr :
   forall g tbl sym word rem vis a tr,
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> nlr_tree_der g sym word vis tr rem
     -> exists Hle,
         parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
@@ -1016,7 +1021,7 @@ Qed.
 
 Lemma LL1_tree_root_not_in_subtree_reachableNts :
   forall g t sym word x sts rem,
-    parse_table_for t g
+    parse_table_correct t g
     -> (@sym_derives_prefix g) sym word (Node x sts) rem
     -> ~ NtSet.In x (reachableNtsF sts).
 Proof.
@@ -1040,7 +1045,7 @@ Qed.
 
 Lemma derives_derives' :
   forall g t sym input tr rem,
-    parse_table_for t g
+    parse_table_correct t g
     -> (@sym_derives_prefix g) sym input tr rem
     -> forall vis,
       NtSet.Empty (NtSet.inter vis (reachableNts tr))
@@ -1067,7 +1072,6 @@ Proof.
     + apply IHHd; clear IHHd.
       apply empty_inter_add; auto.
       eapply LL1_tree_root_not_in_subtree_reachableNts; eauto.
-      econstructor; eauto.
 
   - intros vis He; simpl in *.
     constructor.
@@ -1090,7 +1094,7 @@ Definition parse_wrapper tbl sym input :=
 
 Theorem parse_nf_complete :
   forall g tbl sym word tr rem,
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> (@sym_derives_prefix g) sym word tr rem
     -> exists Hle,
         parse_wrapper tbl sym (word ++ rem) = inr (tr, existT _ rem Hle).
@@ -1100,3 +1104,6 @@ Proof.
   eapply parse_complete_wrt_nlr; eauto.
   eapply derives_derives'; eauto.
 Qed.
+
+End ParserCompletenessFn.
+

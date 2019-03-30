@@ -8,8 +8,8 @@ Open Scope string_scope.
 Module ParserFn (Import G : Grammar.T).
   Module Import L := LemmasFn G.
   
-  Definition t_eq_dec  := G.Init.SymTy.t_eq_dec.
-  Definition nt_eq_dec := G.Init.SymTy.nt_eq_dec.
+  Definition t_eq_dec  := G.SymTy.t_eq_dec.
+  Definition nt_eq_dec := G.SymTy.nt_eq_dec.
   
   Section TripleLT.
     

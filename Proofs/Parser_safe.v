@@ -12,6 +12,12 @@ Require Import Parser_sound.
 Import ListNotations.
 Open Scope list_scope.
 
+Module ParserSafetyFn (Import G : Grammar.T).
+
+  Module Import ParserSoundness := ParserSoundnessFn G.
+  Module Import ParserCompleteness := ParserCompletenessFn G.
+  Module Import L := LemmasFn G.
+
 Definition sa_size (sa : sym_arg) : nat :=
   match sa with
   | F_arg _ => 0
@@ -20,8 +26,8 @@ Definition sa_size (sa : sym_arg) : nat :=
 
 Lemma leftrec_conditions :
   forall g tbl,
-    parse_table_for tbl g
-    -> forall (input : list string)
+    parse_table_correct tbl g
+    -> forall (input : list terminal)
               (vis : NtSet.t)
               (sa : sym_arg),
       match sa with
@@ -169,7 +175,7 @@ Qed.
 
 Theorem parse_nf_safe :
   forall g tbl sym input x vis' input',
-    parse_table_for tbl g
+    parse_table_correct tbl g
     -> ~ parse_wrapper tbl sym input = inl (LeftRec x vis' input').
 Proof.
   intros g tbl sym input s vis' input' Htbl; unfold not; unfold parse_wrapper; intros Hp.
@@ -180,3 +186,99 @@ Proof.
     eapply LL1_parse_table_impl_no_left_recursion; eauto.
 Qed.
 
+Theorem parse_nf_complete_or_leftrec :
+  forall g tbl sym word tr rem,
+    parse_table_correct tbl g
+    -> (@sym_derives_prefix g) sym word tr rem
+    -> forall vis a,
+        (exists x vis' input',
+            parse_nf tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
+        \/ (exists Hle,
+               parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)).
+Proof.
+  intros g tbl sym word tr rem Htbl Hd.
+  induction Hd using sdp_mutual_ind with
+      (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+              forall vis a,
+                (exists x vis' input',
+                    parse_nf tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
+                \/ (exists Hle,
+                       parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)))
+      
+      (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+               forall vis a,
+                 (exists x vis' input',
+                     parseForest_nf tbl gamma (word ++ rem) vis a = inl (LeftRec x vis' input'))
+                 \/ (exists Hle,
+                        parseForest_nf tbl gamma (word ++ rem) vis a = inr (f, existT _ rem Hle))); intros vis a.
+
+  - right.
+    eexists.
+    destruct a.
+    step; tc.
+
+  - destruct a; step.
+    + exfalso.
+      apply Htbl in l; tc.
+    + destruct s as [gamma' Hlk].
+      assert (gamma' = gamma).
+      { apply Htbl in l; auto.
+        eapply lookups_eq; eauto. }
+      subst.
+      step; eauto.
+      edestruct IHHd with (vis := NtSet.add x vis).
+      * destruct H as [x' [vis' [input' Hpf]]].
+        rewrite Hpf.
+        left; eauto.
+      * destruct H as [Hle Hpf].
+        rewrite Hpf.
+        right; eauto.
+
+  - simpl in *.
+    right.
+    destruct a; simpl.
+    eauto.
+
+  - destruct a; simpl.
+    rewrite app_assoc in IHHd.
+    edestruct IHHd with (vis := vis).
+    + destruct H as [x' [vis' [input' Hp]]].
+      rewrite Hp; eauto.
+    + destruct H as [Hp_le Hp].
+      rewrite Hp.
+      clear IHHd.
+      step.
+      * (* length lt case *)
+        edestruct IHHd0.
+        -- destruct H as [x [vis' [input' Hpf]]].
+           rewrite Hpf; eauto.
+        -- destruct H as [Hpf_le Hpf].
+           rewrite Hpf; eauto.
+      * assert (wpre = nil).
+        { eapply l_ident_eq_nil with
+              (xs := wpre) (ys := wsuf ++ rem).
+          rewrite app_assoc; auto. }
+        subst; simpl in *.
+        edestruct IHHd0.
+        -- destruct H as [x [vis' [input' Hpf]]].
+           rewrite Hpf; eauto.
+        -- destruct H as [Hpf_le Hpf].
+           rewrite Hpf; eauto.
+Qed.
+
+Theorem parse_nf_complete' :
+  forall g tbl sym word tr rem,
+    parse_table_correct tbl g
+    -> (@sym_derives_prefix g) sym word tr rem
+    -> exists Hle,
+        parse_wrapper tbl sym (word ++ rem) = inr (tr, existT _ rem Hle).
+Proof.
+  intros.
+  eapply parse_nf_complete_or_leftrec in H0; eauto.
+  destruct H0; eauto.
+  exfalso.
+  destruct H0 as [x [vis' [input' Hp]]].
+  eapply parse_nf_safe; eauto.
+Qed.
+
+End ParserSafetyFn.

@@ -1,5 +1,6 @@
 Require Import Bool FMaps List Omega String MSets.
 Require Import Grammar Tactics.
+Open Scope list_scope.
 
 Module LemmasFn (Import G : Grammar.T).
   
@@ -360,6 +361,14 @@ Defined.
       x :: ys = [x] ++ ys.
   Proof.
     auto.
+  Defined.
+
+  Lemma in_app_cons :
+    forall A (x : A) (pre suf : list A),
+      In x (pre ++ x :: suf).
+  Proof.
+    intros A x pre suf.
+    induction pre; simpl; auto.
   Defined.
   
 End LemmasFn.
