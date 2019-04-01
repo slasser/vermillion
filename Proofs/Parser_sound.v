@@ -15,7 +15,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
 
 Lemma parse_nf_eq_body :
   forall tbl sym input vis a,
-    parse_nf tbl sym input vis a =
+    parseTree tbl sym input vis a =
     match sym with
     | T a =>
       match input as i return input = i -> _ with
@@ -57,7 +57,7 @@ Lemma parseForest_nf_eq_body :
                                        input
                                        (length_lt_eq_refl _ _))
     | sym :: gamma' => fun Hg => 
-                         match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
+                         match parseTree tbl sym input vis (hole2 _ _ _ _ _ a) with
                          | inl pfail => inl pfail
                          | inr (lSib, existT _ input' Hle) =>
                            match Hle with
@@ -91,7 +91,7 @@ Lemma parse_t_ret_leaf :
          y
          (a : Acc triple_lt (meas tbl input vis (F_arg (T y))))
          tr,
-    parse_nf tbl (T y) input vis a = inr (tr, rem)
+    parseTree tbl (T y) input vis a = inr (tr, rem)
     -> isLeaf tr = true.
 Proof.
   intros; destruct a; cr; tc.
@@ -105,7 +105,7 @@ Lemma parse_nt_ret_node :
          x
          (a : Acc triple_lt (meas tbl input vis (F_arg (NT x))))
          tr,
-    parse_nf tbl (NT x) input vis a = inr (tr, rem)
+    parseTree tbl (NT x) input vis a = inr (tr, rem)
     -> isNode tr = true.
 Proof.
   intros; destruct a; cr; tc.
@@ -131,7 +131,7 @@ Lemma input_length_invariant :
               Hle
               (vis       : NtSet.t)
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      parse_nf tbl sym input vis a = inr (tr, existT _ rem Hle)
+      parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
       -> List.length rem < List.length input
          \/ nullable_sym g sym.
 Proof.
@@ -196,7 +196,7 @@ Proof.
       destruct Hpf; auto.
 Qed.
 
-Lemma parse_sound' :
+Lemma parseTree_sound' :
   forall (g   : grammar)
          (tbl : parse_table),
     parse_table_correct tbl g
@@ -206,7 +206,7 @@ Lemma parse_sound' :
               Hle
               (vis       : NtSet.t)
               (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      parse_nf tbl sym input vis a = inr (tr, existT _ rem Hle)
+      parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
       -> exists word,
         word ++ rem = input
         /\ (@sym_derives_prefix g) sym word tr rem.
@@ -301,12 +301,12 @@ Lemma parse_sound :
               Hle
               (vis       : NtSet.t)
               (a : Acc triple_lt (meas tbl (word ++ rem) vis (F_arg sym))),
-      parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)
+      parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)
       -> (@sym_derives_prefix g) sym word tr rem.
 Proof.
   intros g tbl Htbl tr sym word rem Hle vis a Hp.
   pose proof Hp as Hp'.
-  eapply parse_sound' in Hp; eauto.
+  eapply parseTree_sound' in Hp; eauto.
   destruct Hp as [word' [Happ Hder]].
   apply app_inv_tail in Happ.
   subst; auto.

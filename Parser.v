@@ -271,7 +271,7 @@ Module ParserFn (Import G : Grammar.T).
     left; omega.
   Defined.
   
-  Fixpoint parse_nf
+  Fixpoint parseTree
            (tbl : parse_table)
            (sym : symbol)
            (input : list terminal)
@@ -320,7 +320,7 @@ Module ParserFn (Import G : Grammar.T).
                                             input
                                             (length_lt_eq_refl _ _))
          | sym :: gamma' => fun Hg => 
-                              match parse_nf tbl sym input vis (hole2 _ _ _ _ _ a) with
+                              match parseTree tbl sym input vis (hole2 _ _ _ _ _ a) with
                               | inl pfail => inl pfail
                               | inr (lSib, existT _ input' Hle) =>
                                 match Hle with
@@ -351,7 +351,7 @@ Module ParserFn (Import G : Grammar.T).
     end.
   
   Definition parse_wrapper tbl sym input :=
-    parse_nf tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
+    parseTree tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
   
 End ParserFn.
 

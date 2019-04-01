@@ -5,11 +5,6 @@ Tactics.v
 Lemmas.v
 Generator.v
 Parser.v
-ExampleGrammars.v
-
-Tests/ExampleParseTables.v
-Tests/ParserTests.v
-Tests/ParseTableTests.v
 
 Proofs/mkNullableSet_correct.v
 Proofs/mkFirstMap_correct.v

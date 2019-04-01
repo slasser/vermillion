@@ -598,14 +598,14 @@ Lemma parse_complete_wrt_nlr :
     -> nlr_tree_der g sym word vis tr rem
     ->
         exists Hle,
-          parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
+          parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
 Proof.
   intros g tbl sym word rem vis a tr Ht Hd.
   induction Hd using nlr_tree_mutual_ind with
       (P := fun sym word vis tr rem (H : nlr_tree_der g sym word vis tr rem) =>
               forall a,
                 exists Hle,
-                parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle))
+                parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle))
 
       (P0 := fun gamma word vis f rem (H : nlr_forest_der g gamma word vis f rem) =>
                forall a,
@@ -674,14 +674,14 @@ Qed.
     parse_table_correct tbl g
     -> nlr_tree_der g sym word vis tr rem
     -> exists Hle,
-        parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
+        parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle).
 Proof.
   intros g tbl sym word rem vis a tr Ht Hd.
   induction Hd using nlr_tree_mutual_ind with
       (P := fun sym word vis tr rem (H : nlr_tree_der g sym word vis tr rem) =>
               forall a,
                 exists Hle,
-                parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem _))
+                parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem _))
 
       (P0 := fun gamma word vis f rem (H : nlr_forest_der g gamma word vis f rem) =>
                forall a,
@@ -1093,9 +1093,9 @@ Proof.
 Qed.
 
 Definition parse_wrapper tbl sym input :=
-  parse_nf tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
+  parseTree tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
 
-Theorem parse_nf_complete :
+Theorem parseTree_complete :
   forall g tbl sym word tr rem,
     parse_table_correct tbl g
     -> (@sym_derives_prefix g) sym word tr rem
@@ -1123,7 +1123,7 @@ Lemma leftrec_conditions :
       match sa with
       | F_arg sym =>
         forall a x vis' input',
-          parse_nf tbl sym input vis a = inl (LeftRec x vis' input')
+          parseTree tbl sym input vis a = inl (LeftRec x vis' input')
           -> (NtSet.In x vis
               /\ (sym = NT x
                   \/ nullable_path g (peek input) sym (NT x)))
@@ -1263,7 +1263,7 @@ Proof.
            step; tc.
 Qed.
 
-Theorem parse_nf_safe :
+Theorem parseTree_safe :
   forall g tbl sym input x vis' input',
     parse_table_correct tbl g
     -> ~ parse_wrapper tbl sym input = inl (LeftRec x vis' input').

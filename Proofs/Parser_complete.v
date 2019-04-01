@@ -13,24 +13,24 @@ Module ParserProofsFn (Import G : Grammar.T).
   Module Export ParserSafety := ParserSafetyFn G.
   Module Import L := LemmasFn G.
 
-  Theorem parse_nf_complete_or_leftrec :
+  Theorem parseTree_complete_or_leftrec :
   forall g tbl sym word tr rem,
     parse_table_correct tbl g
     -> (@sym_derives_prefix g) sym word tr rem
     -> forall vis a,
         (exists x vis' input',
-            parse_nf tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
+            parseTree tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
         \/ (exists Hle,
-               parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)).
+               parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)).
 Proof.
   intros g tbl sym word tr rem Htbl Hd.
   induction Hd using sdp_mutual_ind with
       (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
               forall vis a,
                 (exists x vis' input',
-                    parse_nf tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
+                    parseTree tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
                 \/ (exists Hle,
-                       parse_nf tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)))
+                       parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)))
       
       (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
                forall vis a,
@@ -93,7 +93,7 @@ Proof.
            rewrite Hpf; eauto.
 Qed.
 
-Theorem parse_nf_complete' :
+Theorem parseTree_complete' :
   forall g tbl sym word tr rem,
     parse_table_correct tbl g
     -> (@sym_derives_prefix g) sym word tr rem
@@ -101,11 +101,11 @@ Theorem parse_nf_complete' :
         parse_wrapper tbl sym (word ++ rem) = inr (tr, existT _ rem Hle).
 Proof.
   intros.
-  eapply parse_nf_complete_or_leftrec in H0; eauto.
+  eapply parseTree_complete_or_leftrec in H0; eauto.
   destruct H0; eauto.
   exfalso.
   destruct H0 as [x [vis' [input' Hp]]].
-  eapply parse_nf_safe; eauto.
+  eapply parseTree_safe; eauto.
 Qed.
 
 End ParserProofsFn.

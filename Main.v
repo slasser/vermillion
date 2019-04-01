@@ -51,7 +51,7 @@ Module Main (Import G : Grammar.T).
                    (sym : symbol)
                    (input : list terminal) :
     Datatypes.sum parse_failure (tree * list terminal) :=
-    match parse_nf tbl sym input NtSet.empty (triple_lt_wf _) with
+    match parseTree tbl sym input NtSet.empty (triple_lt_wf _) with
     | inl failure => inl failure
     | inr (tr, existT _ input' _) => inr (tr, input')
     end.
@@ -110,7 +110,7 @@ Module Main (Import G : Grammar.T).
       -> parse tbl sym (word ++ rem) = inr (tr, rem).
   Proof.
     intros.
-    eapply parse_nf_complete_or_leftrec in H0; eauto.
+    eapply parseTree_complete_or_leftrec in H0; eauto.
     destruct H0.
     - exfalso.
       destruct H0 as [x [vis [input' Hp]]].

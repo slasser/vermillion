@@ -29,9 +29,9 @@ Module DetFn (Import G : Grammar.T).
 Proof.
   intros tbl g Htbl sym word  rem  tr  Hder
          word' rem' tr' Hder' Heq.
-  eapply parse_nf_complete in Hder;  eauto.
+  eapply parseTree_complete in Hder;  eauto.
   rewrite Heq in Hder.
-  eapply parse_nf_complete in Hder'; eauto.
+  eapply parseTree_complete in Hder'; eauto.
   destruct Hder as [Hle Hp].
   destruct Hder' as [Hle' Hp'].
   rewrite Hp in Hp'.
