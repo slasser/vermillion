@@ -1,68 +1,24 @@
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-"""
-0.001263 0.000311 0.001329 0.001640
-0.001333 0.000683 0.002244 0.002927
-0.001094 0.000868 0.003271 0.004139
-0.001151 0.001179 0.004287 0.005465
-0.001508 0.001461 0.005495 0.006956
-0.001817 0.001925 0.006731 0.008656
-0.002335 0.002684 0.006622 0.009307
-0.002931 0.003209 0.008761 0.011970
-0.003567 0.004633 0.010306 0.014939
-0.004086 0.005969 0.012481 0.018450
-"""
+with open("benchmark_results.json", "r") as fh:
+    d = json.load(fh)
+    fileSizes = [int(s)/1000.0 for s in d["file_sizes"]]
+    menhirParserTimes = [float(s) for s in d["menhir_parser_times"]]
+    menhirTokenizerTimes = [float(s) for s in d["ll1_lexer_times"]]
+    ll1ParserTimes = [float(s) for s in d["ll1_parser_times"]]
 
-fileSizes = (26,
-             43,
-             64,
-             84,
-             104,
-             131,
-             164,
-             205,
-             243,
-             284)
+print fileSizes
+print menhirParserTimes
+print menhirTokenizerTimes
+print ll1ParserTimes
 
-
-menhirParserTimes = (0.001263,
-                     0.001333, 
-                     0.001094,
-                     0.001151, 
-                     0.001508, 
-                     0.001817, 
-                     0.002335, 
-                     0.002931, 
-                     0.003567, 
-                     0.004086)
-
-menhirTokenizerTimes = (0.000311, 
-                        0.000683,
-                        0.000868, 
-                        0.001179,
-                        0.001461,
-                        0.001925,
-                        0.002684,
-                        0.003209,
-                        0.004633,
-                        0.005969)
-
-ll1ParserTimes = (0.001329,
-                  0.002244,
-                  0.003271,
-                  0.004287,
-                  0.005495,
-                  0.006731,
-                  0.006622,
-                  0.008761,
-                  0.010306,
-                  0.012481)
-
-N = 10
+N = len(fileSizes)
 
 ind = np.arange(N)    # the x locations for the groups
 width = 5       # the width of the bars: can also be len(x) sequence
+
 
 p1 = plt.bar(fileSizes, menhirParserTimes, width)
 p2 = plt.bar([fs + width for fs in fileSizes], menhirTokenizerTimes, width)
