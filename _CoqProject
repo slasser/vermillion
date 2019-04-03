@@ -19,3 +19,4 @@ Proofs/Parser_complete.v
 Proofs/Determinism.v
 
 Main.v
+Example.v
