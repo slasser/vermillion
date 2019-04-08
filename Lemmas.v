@@ -370,6 +370,111 @@ Defined.
     intros A x pre suf.
     induction pre; simpl; auto.
   Defined.
+
+  (* alternative FirstGamma definition that simplifies
+     reasoning in some cases *)
+  Inductive first_gamma' (g : grammar) (la : lookahead) :
+    list symbol -> Prop :=
+  | FG_hd : forall h t,
+      first_sym g la h
+      -> first_gamma' g la (h :: t)
+  | FG_tl : forall h t,
+      nullable_sym g h
+      -> first_gamma' g la t
+      -> first_gamma' g la (h :: t).
+
+  Lemma first_gamma_iff_first_gamma' :
+    forall g la gamma,
+      first_gamma g la gamma <-> first_gamma' g la gamma.
+  Proof.
+    intros g la gamma; split; intros H.
+    - inv H.
+      revert H0.
+      revert H1.
+      revert s gsuf.
+      induction gpre; intros; simpl in *.
+      + constructor; auto.
+      + inv H0.
+        apply FG_tl; auto.
+    - induction H.
+      + rewrite <- app_nil_l.
+        constructor; auto.
+      + inv IHfirst_gamma'.
+        apply FirstGamma with (gpre := h :: gpre)
+                              (s := s)
+                              (gsuf := gsuf); auto.
+  Qed.
+
+  Lemma medial :
+    forall A pre pre' (sym sym' : A) suf suf',
+      pre ++ sym :: suf = pre' ++ sym' :: suf'
+      -> In sym pre' \/ In sym' pre \/ pre = pre' /\ sym = sym' /\ suf = suf'.
+  Proof.
+    induction pre; intros; simpl in *.
+    - destruct pre' eqn:Hp; simpl in *.
+      + inv H; auto.
+      + inv H; auto.
+    - destruct pre' eqn:Hp; subst; simpl in *.
+      + inv H; auto.
+      + inv H.
+        apply IHpre in H2.
+        destruct H2; auto.
+        repeat destruct H; auto.
+  Qed.
+
+  Lemma nullable_sym_in :
+    forall g sym gamma,
+      nullable_gamma g gamma
+      -> In sym gamma
+      -> nullable_sym g sym.
+  Proof.
+    intros.
+    induction gamma.
+    - inv H0.
+    - inv H.
+      inv H0; auto.
+  Qed.
+
+  Lemma first_gamma_split :
+    forall g la xs ys,
+      first_gamma g la ys
+      -> nullable_gamma g xs
+      -> first_gamma g la (xs ++ ys).
+  Proof.
+    induction xs; intros; simpl in *; auto.
+    inv H0.
+    apply first_gamma_iff_first_gamma'.
+    apply FG_tl; auto.
+    apply first_gamma_iff_first_gamma'; auto.
+  Qed.
+
+  Lemma follow_pre :
+    forall g x la sym suf pre,
+      In (x, pre ++ suf) g.(prods)
+      -> In sym pre
+      -> nullable_gamma g pre
+      -> first_gamma g la suf
+      -> follow_sym g la sym.
+  Proof.
+    intros.
+    apply in_split in H0.
+    destruct H0 as [l1 [l2 Heq]].
+    subst.
+    destruct sym.
+    - exfalso.
+      eapply gamma_with_terminal_not_nullable; eauto. 
+    - replace ((l1 ++ NT n :: l2) ++ suf) with (l1 ++ NT n :: (l2 ++ suf)) in H.
+      + eapply FollowRight; eauto.
+        apply nullable_split in H1.
+        inv H1.
+        apply first_gamma_split; auto.
+      + rewrite cons_app_singleton.
+        rewrite app_assoc.
+        rewrite app_assoc.
+        replace (((l1 ++ [NT n]) ++ l2)) with (l1 ++ NT n :: l2).
+        * auto.
+        * rewrite <- app_assoc; simpl; auto.
+  Qed.
   
 End LemmasFn.
 
