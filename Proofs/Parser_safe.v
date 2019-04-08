@@ -32,22 +32,27 @@ Module ParserSafetyFn (Import G : Grammar.T).
       -> nullable_path g la (NT y) (NT z)
       -> nullable_path g la (NT x) (NT z).
 
+  Hint Constructors nullable_path.
+
   Definition left_recursive g sym la :=
     nullable_path g la sym sym.
 
-  Inductive first_sym_i (g : grammar) : lookahead -> symbol -> nat -> Prop :=
-  | FirstT_i : forall y : terminal, first_sym_i g (LA y) (T y) 0
-  | FirstNT_i : forall (x : nonterminal) (gpre : list symbol)
+  Inductive sized_first_sym (g : grammar) : lookahead -> symbol -> nat -> Prop :=
+  | SzFirstT  : forall y : terminal, sized_first_sym g (LA y) (T y) 0
+  | SzFirstNT : forall (x : nonterminal) (gpre : list symbol)
                        (s : symbol) (gsuf : list symbol)
                        (la : lookahead) (n : nat),
-      In (x, gpre ++ s :: gsuf) g.(prods) ->
-      nullable_gamma g gpre ->
-      first_sym_i g la s n -> first_sym_i g la (NT x) (S n).
+      In (x, gpre ++ s :: gsuf) g.(prods)
+      -> nullable_gamma g gpre
+      -> sized_first_sym g la s n
+      -> sized_first_sym g la (NT x) (S n).
+
+  Hint Constructors sized_first_sym.
 
   Lemma first_sym_exists_size :
     forall g la sym,
       first_sym g la sym
-      -> exists n, first_sym_i g la sym n.
+      -> exists n, sized_first_sym g la sym n.
   Proof.
     intros.
     induction H.
@@ -60,51 +65,19 @@ Module ParserSafetyFn (Import G : Grammar.T).
 
   Lemma sized_fs_fs :
     forall g la sym n,
-      first_sym_i g la sym n
+      sized_first_sym g la sym n
       -> first_sym g la sym.
   Proof.
     intros g la sym n Hf; induction Hf; auto.
     econstructor; eauto.
   Qed.
 
-  Lemma first_sym_rhs_eqs :
-    forall g t,
-      parse_table_correct t g
-      -> forall x pre pre' sym sym' suf suf' la,
-        In (x, pre ++ sym :: suf) g.(prods)
-        -> In (x, pre' ++ sym' :: suf') g.(prods)
-        -> nullable_gamma g pre
-        -> nullable_gamma g pre'
-        -> first_sym g la sym
-        -> first_sym g la sym'
-        -> pre = pre' /\ sym = sym' /\ suf = suf'.
-  Proof.
-    intros g t Ht x pre pre' sym sym' suf suf' la Hi Hi' Hn Hn' Hf Hf'.
-    assert (Heq: pre ++ sym :: suf = pre' ++ sym' :: suf').
-    { assert (Hl : lookahead_for la x (pre ++ sym :: suf) g).
-      { left; eauto. }
-      assert (Hl' : lookahead_for la x (pre' ++ sym' :: suf') g).
-      { left; eauto. }
-      apply Ht in Hl; apply Ht in Hl'; auto.
-      rewrite Hl in Hl'; inv Hl'; auto. }
-    apply medial in Heq.
-    destruct Heq as [Hin | [Hin' | Heq]]; auto.
-    - exfalso; eapply no_first_follow_conflicts with (sym := sym); eauto.
-      + eapply nullable_sym_in; eauto.
-      + eapply follow_pre; eauto.
-        apply FirstGamma with (gpre := []); eauto.
-    - exfalso; eapply no_first_follow_conflicts with (sym := sym'); eauto.
-      + eapply nullable_sym_in with (gamma := pre); eauto.
-      + eapply follow_pre with (pre := pre); eauto.
-        apply FirstGamma with (gpre := []); auto.
-  Qed.
-
-  Lemma first_sym_i_det :
+  Lemma sized_first_sym_det :
     forall g t la sym n,
       parse_table_correct t g
-      -> first_sym_i g la sym n
+      -> sized_first_sym g la sym n
       -> forall n',
-          first_sym_i g la sym n'
+          sized_first_sym g la sym n'
           -> n = n'.
   Proof.
     intros g t la sym n Ht Hf.
@@ -116,49 +89,52 @@ Module ParserSafetyFn (Import G : Grammar.T).
     erewrite IH; eauto.
   Qed.
 
-  Lemma first_sym_i_np :
+  Lemma sized_first_sym_np :
     forall g la x y,
       nullable_path g la x y
       -> first_sym g la y
       -> exists nx ny,
-          first_sym_i g la x nx
-          /\ first_sym_i g la y ny
+          sized_first_sym g la x nx
+          /\ sized_first_sym g la y ny
           /\ ny < nx.
   Proof.
     intros g la x y Hn.
     induction Hn; intros; subst.
     - apply first_sym_exists_size in H3.
       destruct H3.
-      assert (first_sym_i g la (NT x) (S x0)).
+      assert (sized_first_sym g la (NT x) (S x0)).
       { econstructor; eauto. }
       exists (S x0); exists x0; split; auto.
     - apply IHHn in H3.
       destruct H3 as [nx [ny [Hf [Hf' Hlt]]]].
-      assert (first_sym_i g la (NT x) (S nx)).
+      assert (sized_first_sym g la (NT x) (S nx)).
       { econstructor; eauto. }
       exists (S nx); exists ny; split; auto.
   Qed.
 
   Inductive sized_nullable_sym (g : grammar) : symbol -> nat -> Prop :=
-    SzNullableSym : forall (x : nonterminal)
+  | SzNullableSym : forall (x : nonterminal)
                            (ys : list symbol)
                            (n : nat),
-      In (x, ys) g.(prods) ->
-      sized_nullable_gamma g ys n ->
-      sized_nullable_sym g (NT x) (S n)
+      In (x, ys) g.(prods)
+      -> sized_nullable_gamma g ys n
+      -> sized_nullable_sym g (NT x) (S n)
   with sized_nullable_gamma (g : grammar) : list symbol -> nat -> Prop :=
-         SzNullableNil : sized_nullable_gamma g [] 0
+       | SzNullableNil : sized_nullable_gamma g [] 0
        | SzNullableCons : forall (hd : symbol) (tl : list symbol)(n n' : nat),
-           sized_nullable_sym g hd n ->
-           sized_nullable_gamma g tl n' ->
-           sized_nullable_gamma g (hd :: tl) (n + n').
+           sized_nullable_sym g hd n
+           -> sized_nullable_gamma g tl n'
+           -> sized_nullable_gamma g (hd :: tl) (n + n').
+
+  Hint Constructors sized_nullable_sym sized_nullable_gamma.
 
   Scheme sized_nullable_sym_mutual_ind := Induction for sized_nullable_sym Sort Prop
     with sized_nullable_gamma_mutual_ind := Induction for sized_nullable_gamma Sort Prop.
 
   Lemma sized_ns_ns :
     forall g sym n,
-      sized_nullable_sym g sym n -> nullable_sym g sym.
+      sized_nullable_sym g sym n
+      -> nullable_sym g sym.
   Proof.
     intros.
     induction H using sized_nullable_sym_mutual_ind with
@@ -173,7 +149,8 @@ Module ParserSafetyFn (Import G : Grammar.T).
 
   Lemma sized_ng_ng :
     forall g gamma n,
-      sized_nullable_gamma g gamma n -> nullable_gamma g gamma.
+      sized_nullable_gamma g gamma n
+      -> nullable_gamma g gamma.
   Proof.
     intros.
     induction H using sized_nullable_gamma_mutual_ind with
@@ -188,7 +165,9 @@ Module ParserSafetyFn (Import G : Grammar.T).
       parse_table_correct t g
       -> sized_nullable_sym g sym n
       -> follow_sym g la sym
-      -> forall n', sized_nullable_sym g sym n' -> n = n'.
+      -> forall n',
+          sized_nullable_sym g sym n'
+          -> n = n'.
   Proof.
     intros g t la sym n Ht Hs.
     induction Hs using sized_nullable_sym_mutual_ind with
@@ -287,8 +266,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
         apply sized_ng_ex in H4.
         destruct H4.
         exists x; exists (x + x0); repeat split; auto.
-        * constructor; auto.
-        * omega.
+        omega.
       + apply IHgamma in H; auto.
         destruct H as [n [n' [Hs [Hs' Hle]]]].
         apply sized_ns_ex in H3.
@@ -296,8 +274,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
         exists n.
         exists (x + n').
         repeat split; auto.
-        * constructor; auto.
-        * omega.
+        omega.
   Qed.
 
   Lemma sized_ns_np :
@@ -363,8 +340,9 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Lemma nullable_path_exists_production :
     forall g la x y,
       nullable_path g la (NT x) y
-      -> exists gamma, In (x, gamma) g.(prods)
-                       /\ lookahead_for la x gamma g.
+      -> exists gamma,
+        In (x, gamma) g.(prods)
+        /\ lookahead_for la x gamma g.
   Proof.
     intros g la x y Hn; inv Hn; eauto.
   Qed.
@@ -382,389 +360,15 @@ Module ParserSafetyFn (Import G : Grammar.T).
     destruct Hex as [gamma [Hi Hl]].
     destruct Hl as [Hfg | [Hng Hfo]].
     - assert (Hf : first_sym g la (NT x)) by (inv Hfg; eauto).
-      eapply first_sym_i_np in Hf; eauto.
+      eapply sized_first_sym_np in Hf; eauto.
       destruct Hf as [n [n' [Hf [Hf' Hlt]]]].
-      eapply first_sym_i_det in Hf; eauto.
+      eapply sized_first_sym_det in Hf; eauto.
       omega.
     - assert (Hns : nullable_sym g (NT x)) by eauto.
       eapply exist_decreasing_nullable_sym_sizes_in_null_path in Hns; eauto.
       destruct Hns as [n [n' [Hs [Hs' Hlt]]]].
       eapply sized_nullable_sym_det in Hs; eauto.
       omega.
-  Qed.
-
-  Lemma lookups_neq_contra :
-    forall x la t gamma,
-      pt_lookup x la t = Some gamma
-      -> pt_lookup x la t = None
-      -> False.
-  Proof.
-    intros; congruence.
-  Qed.
-
-  Lemma lookups_eq :
-    forall x la t gamma gamma',
-      pt_lookup x la t = Some gamma
-      -> pt_lookup x la t = Some gamma'
-      -> gamma = gamma'.
-  Proof.
-    intros; tc.
-  Qed.
-
-  Lemma lookahead_for_ptlk_dec :
-    forall g t x gamma la,
-      parse_table_correct t g
-      -> In (x, gamma) g.(prods)
-      -> lookahead_for la x gamma g
-      -> exists (pf : pt_lookup x la t = Some gamma),
-          ptlk_dec x la t = inr (exist _ gamma pf).
-  Proof.
-    intros.
-    destruct (ptlk_dec x la t).
-    - apply H in H1; auto; tc.
-    - destruct s.
-      apply H in H1; auto.
-      assert (gamma = x0) by congruence; subst.
-      exists e; auto.
-  Qed.
-
-
-  Lemma non_nil_list_length :
-    forall A (xs : list A),
-      xs <> [] -> List.length xs > 0.
-  Proof.
-    intros; destruct xs; simpl in *; tc.
-    omega.
-  Qed.
-
-  Lemma app_length_lt :
-    forall A (xs ys : list A), xs <> [] -> List.length ys < List.length (xs ++ ys).
-  Proof.
-    intros.
-    apply non_nil_list_length in H.
-    destruct xs; simpl in *.
-    - omega.
-    - rewrite app_length; omega.
-  Qed.
-
-  Fixpoint nullTree (tr : tree) : bool :=
-    match tr with
-    | Leaf _ => false
-    | Node _ sts =>
-      let fix nullForest (l : list tree) : bool :=
-          match l with
-          | [] => true
-          | t :: l' => andb (nullTree t) (nullForest l')
-          end
-      in  nullForest sts
-    end.
-
-  Fixpoint nullForest (l : list tree) : bool :=
-    match l with
-    | [] => true
-    | t :: l' => andb (nullTree t) (nullForest l')
-    end.
-  
-  Lemma nullTree_nullable_sym :
-    forall g sym word tr rem,
-      (@sym_derives_prefix g) sym word tr rem
-      -> nullTree tr = true
-      -> nullable_sym g sym.
-  Proof.
-    intros g sym word tr rem Hd.
-    induction Hd using sdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
-                nullTree tr = true
-                -> nullable_sym g sym)
-
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
-                 nullForest f = true
-                 -> nullable_gamma g gamma).
-    
-    - intros Hn; inv Hn.
-      
-    - intros Hn; simpl in *.
-      fold nullForest in Hn.
-      apply IHHd in Hn.
-      econstructor; eauto.
-
-    - intros; constructor.
-
-    - intros Hn; simpl in *.
-      apply andb_prop in Hn.
-      destruct Hn as [Hhd Htl].
-      apply IHHd in Hhd.
-      apply IHHd0 in Htl.
-      econstructor; eauto.
-  Qed.
-
-  Lemma nullTree_word_eq_nil :
-    forall g sym word tr rem,
-      (@sym_derives_prefix g) sym word tr rem
-      -> nullTree tr = true
-      -> word = [].
-  Proof.
-    intros g sym word tr rem Hd.
-    induction Hd using sdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
-                nullTree tr = true
-                -> word = [])
-
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
-                 nullForest f = true
-                 -> word = []).
-
-    - intros Hn; inv Hn.
-
-    - intros Hn; simpl in *.
-      apply IHHd in Hn; auto.
-
-    - intros; auto.
-
-    - intros Hn; simpl in *.
-      apply andb_prop in Hn; destruct Hn as [Hhd Htl].
-      apply IHHd in Hhd.
-      apply IHHd0 in Htl.
-      subst; auto.
-  Qed.
-
-  Lemma nullTree_word_neq_nil :
-    forall g sym word tr rem,
-      (@sym_derives_prefix g) sym word tr rem
-      -> nullTree tr = false
-      -> word <> [].
-  Proof.
-    intros g sym word tr rem Hd.
-    induction Hd using sdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
-                nullTree tr = false
-                -> word <> [])
-
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
-                 nullForest f = false
-                 -> word <> []).
-
-    - intros Hn; unfold not; intros He.
-      inv He.
-
-    - intros Hn; unfold not; intros He; subst; simpl in *.
-      apply IHHd in Hn; tc.
-
-    - intros Hn; inv Hn.
-
-    - intros Hn; unfold not; intros He; simpl in *.
-      apply app_eq_nil in He.
-      destruct He as [Hpre Hsuf]; subst.
-      apply Bool.andb_false_iff in Hn.
-      destruct Hn as [Hhd | Htl].
-      + apply IHHd in Hhd; tc.
-      + apply IHHd0 in Htl; tc.
-  Qed.
-  
-  Fixpoint reachableNts (tr : tree) : NtSet.t :=
-    match tr with
-    | Leaf _ => NtSet.empty
-    | Node x sts =>
-      let fix reachableNtsF (l : list tree) : NtSet.t :=
-          match l with
-          | [] => NtSet.empty
-          | t :: l' => if nullTree t then
-                         NtSet.union (reachableNts t) (reachableNtsF l')
-                       else
-                         reachableNts t
-          end
-      in  NtSet.add x (reachableNtsF sts)
-    end.
-
-  Fixpoint reachableNtsF (l : list tree) : NtSet.t :=
-    match l with
-    | [] => NtSet.empty
-    | t :: l' => if nullTree t then
-                   NtSet.union (reachableNts t) (reachableNtsF l')
-                 else
-                   reachableNts t
-    end.
-
-  Lemma nullable_path_isNT :
-    forall g la sym sym',
-      nullable_path g la sym sym'
-      -> isNT sym = true /\ isNT sym' = true.
-  Proof.
-    intros g la sym sym' Hnp; inv Hnp; auto.
-  Qed.
-  
-  Lemma reachableNts_nullable_path :
-    forall g sym word tr rem,
-      (@sym_derives_prefix g) sym word tr rem
-      -> forall x,
-        NtSet.In x (reachableNts tr)
-        -> sym = NT x
-           \/ nullable_path g (peek (word ++ rem)) sym (NT x).
-  Proof.
-    intros g sym word tr rem Hd.
-    induction Hd using sdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
-                forall x : NtSet.elt,
-                  NtSet.In x (reachableNts tr) ->
-                  sym = NT x \/
-                  nullable_path g (peek (word ++ rem)) sym (NT x))
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
-                 forall x,
-                   NtSet.In x (reachableNtsF f)
-                   -> exists pre sym suf,
-                     gamma = pre ++ sym :: suf
-                     /\ nullable_gamma g pre
-                     /\ (sym = NT x
-                         \/ nullable_path g (peek (word ++ rem)) sym (NT x))).
-
-    - intros x Hi; simpl in *.
-      inv Hi.
-
-    - intros x' Hi; simpl in *.
-      destruct (NtSetFacts.eq_dec x x'); subst; auto.
-      fold reachableNtsF in Hi.
-      apply NtSetFacts.add_3 in Hi; auto.
-      apply IHHd in Hi; clear IHHd.
-      destruct Hi as [pre [sym [suf [He [Hng [He' | Hnp]]]]]]; subst.
-      + right.
-        eapply DirectPath; eauto.
-      + destruct sym as [y | x''].
-        * apply nullable_path_isNT in Hnp.
-          destruct Hnp as [Hcontra _]; inv Hcontra.
-        * right; eapply IndirectPath; eauto.
-
-    - intros x Hi; simpl in *.
-      inv Hi.
-
-    - intros x Hi; simpl in *.
-      destruct (nullTree hdTree) eqn:Hn.
-      + pose proof Hn as Hn'.
-        eapply nullTree_nullable_sym in Hn; eauto.
-        eapply nullTree_word_eq_nil in Hn'; eauto; subst; simpl in *.
-        apply NtSetFacts.union_1 in Hi.
-        destruct Hi as [Hhd | Htl].
-        * apply IHHd in Hhd.
-          exists []; exists hdRoot; exists tlRoots; simpl.
-          repeat split; auto.
-        * apply IHHd0 in Htl.
-          destruct Htl as [pre [sym [suf [Heq [Hng [Heq' | Hnp]]]]]]; subst.
-          -- exists (hdRoot :: pre); exists (NT x); exists suf; simpl.
-             repeat split; auto.
-          -- exists (hdRoot :: pre); exists sym; exists suf; simpl.
-             repeat split; auto.
-      + apply IHHd in Hi.
-        exists []; exists hdRoot; exists tlRoots; simpl.
-        repeat split; auto.
-        rewrite <- app_assoc; auto.
-  Qed.
-
-  Lemma reachableNtsF_nullable_path :
-    forall g gamma word f rem,
-      (@gamma_derives_prefix g) gamma word f rem
-      -> forall x,
-        NtSet.In x (reachableNtsF f)
-        -> exists pre sym suf,
-          gamma = pre ++ sym :: suf
-          /\ nullable_gamma g pre
-          /\ (sym = NT x
-              \/ nullable_path g (peek (word ++ rem)) sym (NT x)).
-  Proof.
-    intros g gamma word f rem Hd.
-    induction Hd using gdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
-                forall x : NtSet.elt,
-                  NtSet.In x (reachableNts tr) ->
-                  sym = NT x \/
-                  nullable_path g (peek (word ++ rem)) sym (NT x))
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
-                 forall x,
-                   NtSet.In x (reachableNtsF f)
-                   -> exists pre sym suf,
-                     gamma = pre ++ sym :: suf
-                     /\ nullable_gamma g pre
-                     /\ (sym = NT x
-                         \/ nullable_path g (peek (word ++ rem)) sym (NT x))).
-
-    - intros x Hi; simpl in *.
-      inv Hi.
-
-    - intros x' Hi; simpl in *.
-      destruct (NtSetFacts.eq_dec x x'); subst; auto.
-      fold reachableNtsF in Hi.
-      apply NtSetFacts.add_3 in Hi; auto.
-      apply IHHd in Hi; clear IHHd.
-      destruct Hi as [pre [sym [suf [He [Hng [He' | Hnp]]]]]]; subst.
-      + right.
-        eapply DirectPath; eauto.
-      + destruct sym as [y | x''].
-        * apply nullable_path_isNT in Hnp.
-          destruct Hnp as [Hcontra _]; inv Hcontra.
-        * right; eapply IndirectPath; eauto.
-
-    - intros x Hi; simpl in *.
-      inv Hi.
-
-    - intros x Hi; simpl in *.
-      destruct (nullTree hdTree) eqn:Hn.
-      + pose proof Hn as Hn'.
-        eapply nullTree_nullable_sym in Hn; eauto.
-        eapply nullTree_word_eq_nil in Hn'; eauto; subst; simpl in *.
-        apply NtSetFacts.union_1 in Hi.
-        destruct Hi as [Hhd | Htl].
-        * apply IHHd in Hhd.
-          exists []; exists hdRoot; exists tlRoots; simpl.
-          repeat split; auto.
-        * apply IHHd0 in Htl.
-          destruct Htl as [pre [sym [suf [Heq [Hng [Heq' | Hnp]]]]]]; subst.
-          -- exists (hdRoot :: pre); exists (NT x); exists suf; simpl.
-             repeat split; auto.
-          -- exists (hdRoot :: pre); exists sym; exists suf; simpl.
-             repeat split; auto.
-      + apply IHHd in Hi.
-        exists []; exists hdRoot; exists tlRoots; simpl.
-        repeat split; auto.
-        rewrite <- app_assoc; auto.
-  Qed.    
-
-  Lemma nullable_path_from_root_to_subtree_reachableNts :
-    forall g sym word x x' sts rem,
-      (@sym_derives_prefix g) sym word (Node x sts) rem
-      -> NtSet.In x' (reachableNtsF sts)
-      -> nullable_path g (peek (word ++ rem)) sym (NT x').
-  Proof.
-    intros g sym word x x' sts rem Hd Hi.
-    inversion Hd as [g' y rem' | x'' gamma word' rem' sts' Hi' Hl Hg]; subst; clear Hd.
-    eapply reachableNtsF_nullable_path in Hg; eauto.
-    destruct Hg as [pre [sym [suf [He [Hng [He' | Hnp]]]]]]; subst.
-    + eapply DirectPath; eauto.
-    + destruct sym as [y | x''].
-      * eapply nullable_path_isNT in Hnp.
-        destruct Hnp as [Hcontra _]; inv Hcontra.
-      * eapply IndirectPath; eauto.
-  Qed.
-
-  Lemma LL1_tree_root_not_in_subtree_reachableNts :
-    forall g t sym word x sts rem,
-      parse_table_correct t g
-      -> (@sym_derives_prefix g) sym word (Node x sts) rem
-      -> ~ NtSet.In x (reachableNtsF sts).
-  Proof.
-    intros g t sym word x sts rem Ht Hd; unfold not; intros Hi.
-    pose proof Hd as Hd'.
-    inv Hd.
-    eapply LL1_parse_table_impl_no_left_recursion; eauto.
-    red.
-    eapply nullable_path_from_root_to_subtree_reachableNts; eauto.
-  Qed.
-
-  Lemma empty_inter_add :
-    forall (x : nonterminal) (a b : NtSet.t),
-      NtSet.Empty (NtSet.inter a (NtSet.add x b))
-      -> ~ NtSet.In x b
-      -> NtSet.Empty (NtSet.inter (NtSet.add x a) b).
-  Proof.
-    intros.
-    ND.fsetdec.
   Qed.
 
   Definition sa_size (sa : sym_arg) : nat :=

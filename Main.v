@@ -1,4 +1,5 @@
 Require Import Grammar.
+Require Import Tactics.
 Require Import mkParseTable_correct.
 Require Import Parser_complete.
 

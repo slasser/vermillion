@@ -475,6 +475,47 @@ Defined.
         * auto.
         * rewrite <- app_assoc; simpl; auto.
   Qed.
+
+  Lemma first_sym_rhs_eqs :
+    forall g t,
+      parse_table_correct t g
+      -> forall x pre pre' sym sym' suf suf' la,
+        In (x, pre ++ sym :: suf) g.(prods)
+        -> In (x, pre' ++ sym' :: suf') g.(prods)
+        -> nullable_gamma g pre
+        -> nullable_gamma g pre'
+        -> first_sym g la sym
+        -> first_sym g la sym'
+        -> pre = pre' /\ sym = sym' /\ suf = suf'.
+  Proof.
+    intros g t Ht x pre pre' sym sym' suf suf' la Hi Hi' Hn Hn' Hf Hf'.
+    assert (Heq: pre ++ sym :: suf = pre' ++ sym' :: suf').
+    { assert (Hl : lookahead_for la x (pre ++ sym :: suf) g).
+      { left; eauto. }
+      assert (Hl' : lookahead_for la x (pre' ++ sym' :: suf') g).
+      { left; eauto. }
+      apply Ht in Hl; apply Ht in Hl'; auto.
+      rewrite Hl in Hl'; inv Hl'; auto. }
+    apply medial in Heq.
+    destruct Heq as [Hin | [Hin' | Heq]]; auto.
+    - exfalso; eapply no_first_follow_conflicts with (sym := sym); eauto.
+      + eapply nullable_sym_in; eauto.
+      + eapply follow_pre; eauto.
+        apply FirstGamma with (gpre := []); eauto.
+    - exfalso; eapply no_first_follow_conflicts with (sym := sym'); eauto.
+      + eapply nullable_sym_in with (gamma := pre); eauto.
+      + eapply follow_pre with (pre := pre); eauto.
+        apply FirstGamma with (gpre := []); auto.
+  Qed.
+
+  Lemma lookups_eq :
+    forall x la t gamma gamma',
+      pt_lookup x la t = Some gamma
+      -> pt_lookup x la t = Some gamma'
+      -> gamma = gamma'.
+  Proof.
+    intros; tc.
+  Qed.
   
 End LemmasFn.
 
