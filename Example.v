@@ -54,7 +54,7 @@ Module Export G <: Grammar.T.
 End G.
 
 (* Now we can represent the grammar from the textbook
-   as a record with "start" and "prods" fiels. *)
+   as a record with "start" and "prods" fields. *)
 Definition g311 : grammar :=
   {| start := S ;
      prods := [(S, [T If; NT E; T Then; NT S; T Else; NT S]);
