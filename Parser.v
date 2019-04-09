@@ -273,8 +273,8 @@ Module ParserFn (Import G : Grammar.T).
         match mem_dec x vis with
         | left _ => inl (LeftRec x vis input)
         | right Hnin =>
-          match parseForest_nf tbl gamma input (NtSet.add x vis)
-                               (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
+          match parseForest tbl gamma input (NtSet.add x vis)
+                            (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
           with
           | inl pfail => inl pfail
           | inr (sts, existT _ input' Hle) =>
@@ -283,12 +283,12 @@ Module ParserFn (Import G : Grammar.T).
         end
       end
     end
-  with parseForest_nf (tbl : parse_table)
-                      (gamma : list symbol)
-                      (input : list terminal)
-                      (vis : NtSet.t)
-                      (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
-                      {struct a}
+  with parseForest (tbl : parse_table)
+                   (gamma : list symbol)
+                   (input : list terminal)
+                   (vis : NtSet.t)
+                   (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
+                   {struct a}
        : Datatypes.sum parse_failure (list tree * {input' & length_lt_eq _ input' input}) :=
          match gamma as g return gamma = g -> _  with
          | nil => fun _ => inr (nil, existT (fun input' => length_lt_eq terminal input' input)
@@ -300,7 +300,7 @@ Module ParserFn (Import G : Grammar.T).
                               | inr (lSib, existT _ input' Hle) =>
                                 match Hle with
                                 | left Hlt =>
-                                  match parseForest_nf tbl gamma' input' NtSet.empty
+                                  match parseForest tbl gamma' input' NtSet.empty
                                                        (hole3 _ _ _ _ _ _ _ a Hlt)
                                   with
                                   | inl pfail => inl pfail
@@ -308,7 +308,7 @@ Module ParserFn (Import G : Grammar.T).
                                     inr (lSib :: rSibs, existT _ input'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
                                   end
                                 | right Heq =>
-                                  match parseForest_nf tbl gamma' input vis
+                                  match parseForest tbl gamma' input vis
                                                        (hole4 _ _ _ _ _ _ a Hg)
                                   with
                                   | inl pfail => inl pfail
