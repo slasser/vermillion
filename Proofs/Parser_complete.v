@@ -35,9 +35,9 @@ Module ParserProofsFn (Import G : Grammar.T).
         (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
                  forall vis a,
                    (exists x vis' input',
-                       parseForest_nf tbl gamma (word ++ rem) vis a = inl (LeftRec x vis' input'))
+                       parseForest tbl gamma (word ++ rem) vis a = inl (LeftRec x vis' input'))
                    \/ (exists Hle,
-                          parseForest_nf tbl gamma (word ++ rem) vis a = inr (f, existT _ rem Hle))); intros vis a.
+                          parseForest tbl gamma (word ++ rem) vis a = inr (f, existT _ rem Hle))); intros vis a.
     
     - right.
       eexists.

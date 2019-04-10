@@ -13,6 +13,27 @@ Module ParserSoundnessFn (Import G : Grammar.T).
   Module Export ParserDefs := ParserFn G.
   Module Import L := LemmasFn G.
 
+  Ltac dms :=
+    repeat (simpl in *; subst;
+            match goal with
+            | H : context[match ?X with _ => _ end] |- _ =>
+              match X with
+              | parseTree _ _ _ _ _ => idtac
+              | parseForest _ _ _ _ _ => idtac
+              | _ => dm
+              end
+            | |- context[match ?X with _ => _ end] =>
+              match X with
+              | parseTree _ _ _ _ _ => idtac
+              | parseForest _ _ _ _ _ => idtac
+              | _ => dm
+              end
+            end).
+
+  Ltac dlle := match goal with
+               | H : length_lt_eq _ _ _ |- _ => destruct H; subst
+               end.
+  
   Lemma parse_nf_eq_body :
     forall tbl sym input vis a,
       parseTree tbl sym input vis a =
@@ -121,59 +142,6 @@ Module ParserSoundnessFn (Import G : Grammar.T).
     intros; omega.
   Qed.
 
-  Ltac dm :=
-    match goal with
-    | H : context[match ?X with _ => _ end] |- _ => destruct X
-    | |- context[match ?X with _ => _ end] => destruct X
-    end.
-
-  Ltac dms :=
-    repeat (simpl in *; subst;
-            match goal with
-            | H : context[match ?X with _ => _ end] |- _ =>
-              match X with
-              | parseTree _ _ _ _ _ => idtac
-              | parseForest _ _ _ _ _ => idtac
-              | _ => dm
-              end
-            | |- context[match ?X with _ => _ end] =>
-              match X with
-              | parseTree _ _ _ _ _ => idtac
-              | parseForest _ _ _ _ _ => idtac
-              | _ => dm
-              end
-            end).
-  
-  Ltac invh :=
-    match goal with
-    | H : inr _ = inr _ |- _ => inv H
-    end.
-
-  Ltac invhs := repeat invh.
-
-  Ltac cr :=
-    repeat match goal with
-           (* safe inversions *)
-           | H : inr _ = inr _ |- _ => inv H
-           | H : length_lt_eq _ _ _ |- _ => destruct H; subst
-
-           (* we want to handle these cases manually *)                                
-           | H : context[match parseTree _ _ _ _ _ with _ => _ end = _] |- _ =>
-             idtac
-           | H : context[match parseForest _ _ _ _ _ with _ => _ end = _] |- _ =>
-             idtac
-           | |- context[match parseTree _ _ _ _ _ with _ => _ end = _] =>
-             idtac
-           | |- context[match parseForest _ _ _ _ _ with _ => _ end = _] =>
-             idtac
-               
-           | _ => simpl in *; subst; dm; tc; auto
-           end.
-
-  Ltac dlle := match goal with
-               | H : length_lt_eq _ _ _ |- _ => destruct H; subst
-               end.
-
   Lemma input_length_invariant :
     forall (g   : grammar)
            (tbl : parse_table),
@@ -234,83 +202,6 @@ Module ParserSoundnessFn (Import G : Grammar.T).
         destruct Hp; try omega.
         destruct Hpf; auto.
   Qed.
-
-  (*
-Lemma input_length_invariant :
-  forall (g   : grammar)
-         (tbl : parse_table),
-    parse_table_correct tbl g
-    -> forall (tr        : tree)
-              (sym       : symbol)
-              (input rem : list terminal)
-              Hle
-              (vis       : NtSet.t)
-              (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-      parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
-      -> List.length rem < List.length input
-         \/ nullable_sym g sym.
-Proof.
-  intros g tbl Htbl tr.
-  induction tr as [ s
-                  | s f IHpf
-                  |
-                  | tr IHp f IHpf ]
-                    using tree_nested_ind with
-      
-      (Q := fun f =>
-              forall (gamma : list symbol)
-                     (input rem : list terminal)
-                     Hle
-                     (vis : NtSet.t)
-                     (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                parseForest_nf tbl gamma input vis a = inr (f, existT _ rem Hle)
-                -> List.length rem < List.length input
-                   \/ nullable_gamma g gamma); intros; destruct a.
-
-  - destruct sym as [y | x].
-    + cr; tc.
-      inv H; auto.
-    + apply parse_nt_ret_node in H; inv H.
-
-  - destruct sym as [y | x].
-    + apply parse_t_ret_leaf in H; inv H.
-    + step; tc.
-      step.
-      step; tc.
-      step_eq Hpf; tc.
-      step.
-      step.
-      inv H.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hpf; auto.
-      right.
-      apply Htbl in e; destruct e.
-      econstructor; eauto.
-
-  - cr; tc.
-
-  - step; tc.
-    step_eq Hp; tc.
-    step.
-    step.
-    step.
-    + left.
-      step_eq Hpf; tc.
-      step.
-      step.
-      inv H.
-      destruct l1; subst; omega.
-    + subst.
-      step_eq Hpf; tc.
-      step.
-      step.
-      inv H.
-      apply IHp in Hp; clear IHp.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hp; try omega.
-      destruct Hpf; auto.
-Qed.
-   *)
 
   Lemma parseTree_sound' :
     forall (g   : grammar)

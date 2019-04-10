@@ -88,6 +88,23 @@ Module ParserFn (Import G : Grammar.T).
       + subst; auto.
       + right; auto.
   Defined.
+
+  Lemma cardinal_diff_add_lt :
+    forall x la gamma vis tbl,
+      pt_lookup x la tbl = Some gamma
+      -> ~ NtSet.In x vis
+      -> NtSet.cardinal
+           (NtSet.diff (fromNtList (nt_keys tbl))
+                       (NtSet.add x vis)) <
+         NtSet.cardinal
+           (NtSet.diff (fromNtList (nt_keys tbl)) vis).
+  Proof.
+    intros.
+    apply NP.subset_cardinal_lt with (x := x); try ND.fsetdec.
+    apply in_A_not_in_B_in_diff; auto.
+    apply in_list_iff_in_fromNtList.
+    eapply pt_lookup_in_nt_keys; eauto.
+  Defined.
   
   Definition ptlk_dec x la tbl : Datatypes.sum (pt_lookup x la tbl = None) {gamma | pt_lookup x la tbl = Some gamma}.
     destruct (pt_lookup x la tbl) eqn:Hlk.
@@ -156,10 +173,7 @@ Module ParserFn (Import G : Grammar.T).
     eapply Acc_inv; eauto.
     unfold meas.
     apply snd_lt; simpl.
-    apply NP.subset_cardinal_lt with (x := x); try ND.fsetdec.
-    apply in_A_not_in_B_in_diff; auto.
-    apply in_list_iff_in_fromNtList.
-    eapply pt_lookup_in_nt_keys; eauto.
+    eapply cardinal_diff_add_lt; eauto.
   Defined.
   
   Lemma hole2 :

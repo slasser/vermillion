@@ -310,7 +310,8 @@ Module ParserSafetyFn (Import G : Grammar.T).
           /\ ny < nx.
   Proof.
     intros g t la x y Ht Hn Hf Hnp.
-    induction Hnp as [x y gamma pre suf Hi He Hng Hl | x y z gamma pre suf Hi Heq Hng Hl Hnp IH]; intros; subst.
+    induction Hnp as [x y gamma pre suf Hi He Hng Hl |
+                      x y z gamma pre suf Hi Heq Hng Hl Hnp IH]; intros; subst.
     - inv Hn.
       destruct Hl as [Hfg | [Hng' Hfo]].
       + (* LEMMA *)
@@ -371,13 +372,41 @@ Module ParserSafetyFn (Import G : Grammar.T).
       omega.
   Qed.
 
+  Lemma nullable_path_ex_nt:
+    forall g la sym sym',
+      nullable_path g la sym sym'
+      -> exists (x y : nonterminal),
+        sym = NT x /\ sym' = NT y.
+  Proof.
+    intros. inv H; eauto.
+  Qed.
+  
   Definition sa_size (sa : sym_arg) : nat :=
     match sa with
     | F_arg _ => 0
     | G_arg gamma => 1 + List.length gamma
     end.
 
-  Lemma leftrec_conditions :
+  Ltac induct_list_length xs := 
+    remember (List.length xs) as l;
+    generalize dependent xs;
+    induction l as [l IHl] using lt_wf_ind;
+    intros input Hl; subst.
+
+  Ltac induct_card tbl vis :=
+    remember (NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl))
+                                         vis)) as card;
+    generalize dependent vis;
+    induction card as [card IHcard] using lt_wf_ind;
+    intros vis Hcard; subst.
+
+  Ltac induct_sa_size sa := 
+    remember (sa_size sa) as sz;
+    generalize dependent sa;
+    induction sz as [sz IHsz] using lt_wf_ind;
+    intros sa Hsa; subst.
+
+    Lemma leftrec_conditions :
     forall g tbl,
       parse_table_correct tbl g
       -> forall (input : list terminal)
@@ -393,7 +422,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
                \/ exists la, (left_recursive g (NT x) la)
         | G_arg gamma =>
           forall a x vis' input',
-            parseForest_nf tbl gamma input vis a = inl (LeftRec x vis' input')
+            parseForest tbl gamma input vis a = inl (LeftRec x vis' input')
             -> (exists pre sym suf,
                    gamma = pre ++ sym :: suf
                    /\ nullable_gamma g pre
@@ -404,126 +433,56 @@ Module ParserSafetyFn (Import G : Grammar.T).
         end.
   Proof.
     intros g tbl Ht input.
-
-    remember (List.length input) as l.
-    generalize dependent input.
-    induction l as [l IHl] using lt_wf_ind.
-    intros input Hl; subst.
-
-    intros vis.
-    remember (NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl)) vis)) as card.
-    generalize dependent vis.
-    induction card as [card IHcard] using lt_wf_ind.
-    intros vis Hcard; subst.
-
-    intros sa.
-    remember (sa_size sa) as sz.
-    generalize dependent sa.
-    induction sz as [sz IHsz] using lt_wf_ind.
-    intros sa Hsa; subst.
+    induct_list_length input.
+    intros vis; induct_card tbl vis.
+    intros sa; induct_sa_size sa.
     destruct sa.
-
     - (* sa = F_arg sym *)
       intros a x vis' input' Hp; destruct a.
-      step.
-      + step; tc.
-        step; tc.
-      + step; tc.
-        destruct s as [gamma Hlk].
-        step.
-        * (* x is in vis *)
-          inv Hp.
-          left; split; auto.
-        *  (* x is not in vis *)
-          step_eq Hpf.
-          -- inv Hp.
-             eapply IHcard with (sa := G_arg gamma) in Hpf; eauto.
-             clear IHl; clear IHsz; clear IHcard.
-             destruct Hpf as [Hex | Hex].
-             ++ destruct Hex as [pre [sym [suf [Hg [Hng [Hin Hrest]]]]]]; subst.
-                rename x into x'; rename n into x.
-                destruct Hrest as [Hin' | Hnin].
-                ** subst.
-                   destruct (NtSetFacts.eq_dec x x').
-                   --- subst.
-                       right.
-                       exists (peek input).
-                       red.
-                       apply Ht in Hlk.
-                       destruct Hlk.
-                       eapply DirectPath with (pre := pre); eauto.
-                   --- left.
-                       split.
-                       +++ ND.fsetdec.
-                       +++ right.
-                           apply Ht in Hlk.
-                           destruct Hlk.
-                           eapply DirectPath; eauto.
-                ** destruct (NtSetFacts.eq_dec x x').
-                   --- subst.
-                       right.
-                       exists (peek input).
-                       red.
-                       destruct sym as [y | z].
-                       +++ inv Hnin.
-                       +++ apply Ht in Hlk; destruct Hlk.
-                           eapply IndirectPath with (y := z); eauto.
-                   --- left.
-                       split.
-                       +++ ND.fsetdec.
-                       +++ right.
-                           destruct sym.
-                           *** inv Hnin.
-                           *** apply Ht in Hlk; destruct Hlk.
-                               eapply IndirectPath with (y := n1); eauto.
-             ++ right; auto.
-             ++ apply NP.subset_cardinal_lt with (x := n); try ND.fsetdec.
-                apply in_A_not_in_B_in_diff; auto.
-                apply in_list_iff_in_fromNtList.
-                eapply pt_lookup_in_nt_keys; eauto.
-          -- step.
-             step; tc.
+      dms; tc.
+      + inv Hp.
+        left; auto.
+      + step_eq Hpf; dms; tc.
+        inv Hp.
+        (* tactic *)
+        eapply IHcard with (sa := G_arg x0) in Hpf; eauto.
+        * destruct Hpf as [Hex | Hex]; auto.
+          destruct Hex as [pre [sym [suf [Hg [Hng [Hin Hrest]]]]]]; subst.
+          apply Ht in e; destruct e.
+          destruct (NtSetFacts.eq_dec x n); subst.
+          -- right; exists (peek input).
+             destruct Hrest as [Heq | Hnp]; subst.
+             ++ eapply DirectPath; eauto.
+             ++ pose proof Hnp as Hnp'.
+                apply nullable_path_ex_nt in Hnp.
+                destruct Hnp as [x [x' [Heq Heq']]]; subst.
+                eapply IndirectPath; eauto.
+          -- left; split; try ND.fsetdec.
+             destruct Hrest as [Heq | Hnp]; subst; eauto.
+             pose proof Hnp as Hnp'.
+             apply nullable_path_ex_nt in Hnp.
+             destruct Hnp as [y [y' [Heq Heq']]]; subst.
+             right; eauto.
+        * eapply cardinal_diff_add_lt; eauto.
 
     - intros a x vis' input' Hpf; destruct a.
-      step; tc.
-      step_eq Hpf.
-      + (* calling parse on s returns LeftRec *)
-        inv Hpf.
-        eapply IHsz with (sa := F_arg s) (m := sa_size (F_arg s)) in Hpf0; eauto.
-        * destruct Hpf0; auto.
-          left.
-          exists nil; exists s; exists l; split; auto. 
-        * simpl; omega.
-      + (* calling parse on s succeeds, calling parseForest on l returns LeftRec *)
-        step.
-        step.
-        step.
-        * (* parse consumed some input *)
-          step_eq Hpf.
-          -- inv Hpf.
-             eapply IHl with (sa := G_arg l) in Hpf1; eauto.
-             destruct Hpf1.
-             ++ destruct H as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]].
-                ND.fsetdec.
-             ++ right; auto. 
-          -- step.
-             step; tc.
-        * (* parse consumed no input *)
-          subst.
-          step_eq Hpf.
-          inv Hpf.
-          eapply IHsz with (sa := G_arg l) in Hpf1; eauto.
-          destruct Hpf1.
-          -- destruct H as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]]; subst.
-             left.
-             exists (s :: pre); exists sym; exists suf.
-             repeat split; auto.
-             eapply input_length_invariant in Hpf0; eauto.
-             destruct Hpf0; try omega.
-             econstructor; eauto.
-          -- right; auto.
-          -- step.
-             step; tc.
+      dms; tc.
+      step_eq Hp.
+      + invh.
+        eapply IHsz with (sa := F_arg s) (m := sa_size (F_arg s)) in Hp;
+          try (simpl; omega); eauto.
+        destruct Hp as [Hin | Hex]; auto.
+        left; exists nil; exists s; exists l; split; auto.
+      + dms; step_eq Hpf'; dms; tc; invh.
+        * eapply IHl with (sa := G_arg l) in Hpf'; eauto.
+          destruct Hpf' as [Hex | Hex]; eauto.
+          destruct Hex as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]]; ND.fsetdec.
+        * eapply IHsz with (sa := G_arg l) in Hpf'; eauto.
+          destruct Hpf'; eauto.
+          destruct H as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]]; subst.
+          left; exists (s :: pre); exists sym; exists suf; repeat split; auto.
+          eapply input_length_invariant in Hp; eauto.
+          destruct Hp; try omega; eauto.
   Qed.
 
 End ParserSafetyFn.
