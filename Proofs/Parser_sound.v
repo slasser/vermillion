@@ -215,7 +215,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
         parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
         -> exists word,
           word ++ rem = input
-          /\ (@sym_derives_prefix g) sym word tr rem.
+          /\ sym_derives_prefix g sym word tr rem.
   Proof.
     intros g tbl Htbl tr.
     induction tr as [ s
@@ -233,7 +233,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
                   parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
                   -> exists word,
                     word ++ rem = input
-                    /\ gamma_derives_prefix gamma word f rem); intros; destruct a; simpl in *.
+                    /\ gamma_derives_prefix g gamma word f rem); intros; destruct a; simpl in *.
 
     - dms; tc.
       + invh.
@@ -284,7 +284,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
                 (vis       : NtSet.t)
                 (a : Acc triple_lt (meas tbl (word ++ rem) vis (F_arg sym))),
         parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)
-        -> (@sym_derives_prefix g) sym word tr rem.
+        -> sym_derives_prefix g sym word tr rem.
   Proof.
     intros g tbl Htbl tr sym word rem Hle vis a Hp.
     pose proof Hp as Hp'.

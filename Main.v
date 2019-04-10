@@ -65,7 +65,7 @@ Module Make (Import G : Grammar.T).
            (tr : tree),
       parse_table_correct tbl g
       -> parse tbl sym (word ++ rem) = inr (tr, rem)
-      -> (@sym_derives_prefix g) sym word tr rem.
+      -> sym_derives_prefix g sym word tr rem.
   Proof.
     intros g tbl sym word rem tr Ht Hp.
     unfold parse in Hp.
@@ -94,10 +94,10 @@ Module Make (Import G : Grammar.T).
     eapply LL1_parse_table_impl_no_left_recursion; eauto.
   Qed.
 
-    Theorem parse_complete :
+  Theorem parse_complete :
     forall g tbl sym word tr rem,
       parse_table_correct tbl g
-      -> (@sym_derives_prefix g) sym word tr rem
+      -> sym_derives_prefix g sym word tr rem
       -> parse tbl sym (word ++ rem) = inr (tr, rem).
   Proof.
     intros g tbl sym word tr rem Ht Hd.

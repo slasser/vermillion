@@ -212,18 +212,18 @@ Qed.
 
 Lemma sym_derives_nil_nullable :
   forall g sym wpre f wsuf,
-    (@sym_derives_prefix g) sym wpre f wsuf
+    sym_derives_prefix g sym wpre f wsuf
     -> wpre = nil
     -> nullable_sym g sym.
 Proof.
   intros g sym wpre f wsuf Hder.
   induction Hder using sdp_mutual_ind with
       (P := fun sym wpre tr wsuf
-                (pf : sym_derives_prefix sym wpre tr wsuf) =>
+                (pf : sym_derives_prefix g sym wpre tr wsuf) =>
               wpre = nil
               -> nullable_sym g sym)
       (P0 := fun gamma wpre f wsuf
-                 (pf : gamma_derives_prefix gamma wpre f wsuf)
+                 (pf : gamma_derives_prefix g gamma wpre f wsuf)
              =>
                wpre = nil
                -> nullable_gamma g gamma); intros; subst.
@@ -239,7 +239,7 @@ Qed.
 
 Lemma gamma_derives_cons_first_gamma :
   forall g gamma word f rem,
-    (@gamma_derives_prefix g) gamma word f rem
+    gamma_derives_prefix g gamma word f rem
     -> forall tok toks,
       word = tok :: toks
       -> first_gamma g (LA tok) gamma.
@@ -247,12 +247,12 @@ Proof.
   intros g gamma word f rem Hder.
   induction Hder using gdp_mutual_ind with
       (P := fun sym word tr rem
-                (pf : sym_derives_prefix sym word tr rem) =>
+                (pf : sym_derives_prefix g sym word tr rem) =>
               forall tok toks,
                 word = tok :: toks
                 -> first_sym g (LA tok) sym)
       (P0 := fun gamma word f rem
-                 (pf : gamma_derives_prefix gamma word f rem)
+                 (pf : gamma_derives_prefix g gamma word f rem)
              =>
                forall tok toks,
                  word = tok :: toks

@@ -225,11 +225,11 @@ Module DefsFn (Import SymTy : SYMBOL_TYPES).
       | token :: _ => LA token
       end.
 
-    Inductive sym_derives_prefix {g : grammar} :
+    Inductive sym_derives_prefix (g : grammar) :
       symbol -> list terminal -> tree -> list terminal -> Prop :=
     | T_sdp : 
         forall (y : terminal) (rem : list terminal),
-          sym_derives_prefix (T y) [y] (Leaf y) rem
+          sym_derives_prefix g (T y) [y] (Leaf y) rem
     | NT_sdp :
         forall (x : nonterminal) 
                (gamma : list symbol)
@@ -237,21 +237,22 @@ Module DefsFn (Import SymTy : SYMBOL_TYPES).
                (subtrees : list tree),
           In (x, gamma) g.(prods)
           -> lookahead_for (peek (word ++ rem)) x gamma g
-          -> gamma_derives_prefix gamma word subtrees rem
-          -> sym_derives_prefix (NT x) word (Node x subtrees) rem
-    with gamma_derives_prefix {g : grammar} : 
+          -> gamma_derives_prefix g gamma word subtrees rem
+          -> sym_derives_prefix g (NT x) word (Node x subtrees) rem
+    with gamma_derives_prefix (g : grammar) : 
            list symbol -> list terminal -> list tree -> list terminal -> Prop :=
          | Nil_gdp : forall rem,
-             gamma_derives_prefix [] [] [] rem
+             gamma_derives_prefix g [] [] [] rem
          | Cons_gdp : 
              forall (hdRoot : symbol)
                     (wpre wsuf rem : list terminal)
                     (hdTree : tree)
                     (tlRoots : list symbol)
                     (tlTrees : list tree),
-               sym_derives_prefix hdRoot wpre hdTree (wsuf ++ rem)
-               -> gamma_derives_prefix tlRoots wsuf tlTrees rem
-               -> gamma_derives_prefix (hdRoot :: tlRoots) 
+               sym_derives_prefix g hdRoot wpre hdTree (wsuf ++ rem)
+               -> gamma_derives_prefix g tlRoots wsuf tlTrees rem
+               -> gamma_derives_prefix g
+                                       (hdRoot :: tlRoots) 
                                        (wpre ++ wsuf)
                                        (hdTree :: tlTrees)
                                        rem.

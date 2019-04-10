@@ -16,7 +16,7 @@ Module ParserProofsFn (Import G : Grammar.T).
   Theorem parseTree_complete_or_leftrec :
     forall g tbl sym word tr rem,
       parse_table_correct tbl g
-      -> (@sym_derives_prefix g) sym word tr rem
+      -> sym_derives_prefix g sym word tr rem
       -> forall vis a,
           (exists x vis' input',
               parseTree tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
@@ -25,14 +25,14 @@ Module ParserProofsFn (Import G : Grammar.T).
   Proof.
     intros g tbl sym word tr rem Htbl Hd.
     induction Hd using sdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix sym word tr rem) =>
+        (P := fun sym word tr rem (H : sym_derives_prefix g sym word tr rem) =>
                 forall vis a,
                   (exists x vis' input',
                       parseTree tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
                   \/ (exists Hle,
                          parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)))
         
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix gamma word f rem) =>
+        (P0 := fun gamma word f rem (H : gamma_derives_prefix g gamma word f rem) =>
                  forall vis a,
                    (exists x vis' input',
                        parseForest tbl gamma (word ++ rem) vis a = inl (LeftRec x vis' input'))
