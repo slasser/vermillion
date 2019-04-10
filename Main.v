@@ -57,7 +57,7 @@ Module Main (Import G : Grammar.T).
     | inr (tr, existT _ input' _) => inr (tr, input')
     end.
 
-  Theorem parser_sound :
+  Theorem parse_sound :
     forall (g   : grammar)
            (tbl : parse_table)
            (sym : symbol)
@@ -67,14 +67,10 @@ Module Main (Import G : Grammar.T).
       -> parse tbl sym (word ++ rem) = inr (tr, rem)
       -> (@sym_derives_prefix g) sym word tr rem.
   Proof.
-    intros.
-    unfold parse in *.
-    match goal with
-    | H : match ?X with | _ => _ end = _ |- _ => destruct X eqn:Hp
-    end; tc.
-    destruct p.
-    destruct s.
-    inversion H0; subst.
+    intros g tbl sym word rem tr Ht Hp.
+    unfold parse in Hp.
+    step_eq Hp; tc.
+    dm; dm; invh.
     eapply parse_sound; eauto.
   Qed.
     

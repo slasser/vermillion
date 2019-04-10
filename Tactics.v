@@ -27,7 +27,7 @@ Ltac step_g_eq s := let Heq := fresh s in
                     end.
 
 Ltac step := simpl in *; (first [step_h | step_g]); auto.
-Ltac step_eq s := simpl in *; (first [step_h_eq s | step_g_eq s]); auto.
+Ltac step_eq s := (first [step_h_eq s | step_g_eq s]); auto.
 Ltac cr := repeat step.
 Ltac cr_eq s := repeat (step_eq s).
 Ltac tc := try congruence.
