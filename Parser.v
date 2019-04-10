@@ -49,6 +49,12 @@ Module ParserFn (Import G : Grammar.T).
   Inductive sym_arg  :=
   | F_arg : symbol -> sym_arg
   | G_arg : list symbol -> sym_arg.
+
+  Definition sa_size (sa : sym_arg) : nat :=
+    match sa with
+    | F_arg _ => 0
+    | G_arg gamma => 1 + List.length gamma
+    end.
   
   Definition nt_keys (tbl : parse_table) : list nonterminal :=
     List.map (fun pr => match pr with 
@@ -106,7 +112,8 @@ Module ParserFn (Import G : Grammar.T).
     eapply pt_lookup_in_nt_keys; eauto.
   Defined.
   
-  Definition ptlk_dec x la tbl : Datatypes.sum (pt_lookup x la tbl = None) {gamma | pt_lookup x la tbl = Some gamma}.
+  Definition ptlk_dec x la tbl : Datatypes.sum (pt_lookup x la tbl = None)
+                                               {gamma | pt_lookup x la tbl = Some gamma}.
     destruct (pt_lookup x la tbl) eqn:Hlk.
     - right.
       econstructor; eauto.
@@ -114,52 +121,16 @@ Module ParserFn (Import G : Grammar.T).
       auto.
   Defined.
   
-  Inductive sa_order : sym_arg -> sym_arg -> Prop := 
-  | f_lt_g : forall sym gamma,
-      sa_order (F_arg sym) (G_arg gamma)
-  | g'_lt_g : forall gamma' gamma,
-      List.length gamma' < List.length gamma
-      -> sa_order (G_arg gamma') (G_arg gamma).
-  
   Definition meas tbl (word : list terminal) (vis : NtSet.t) (sa : sym_arg) :=
     (List.length word,
      NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl)) vis),
-     sa).
+     sa_size sa).
   
-  Definition triple_lt : relation (nat * nat * sym_arg) :=
-    triple_lex nat nat sym_arg lt lt sa_order.
-  
-  Lemma sa_order_wf'' :
-    forall sym, Acc sa_order (F_arg sym).
-  Proof.
-    intros.
-    constructor; intros a H.
-    inv H.
-  Defined.
-  
-  Lemma sa_order_wf' :
-    forall n gamma,
-      List.length gamma < n
-      -> Acc sa_order (G_arg gamma).
-  Proof.
-    induction n; intros gamma H; simpl in *.
-    - inv H.
-    - constructor; intros a Ha.
-      inv Ha; simpl in *.
-      + apply sa_order_wf''.
-      + apply IHn; omega.
-  Defined.
-  
-  Theorem sa_order_wf : well_founded sa_order.
-  Proof.
-    red; intros a; destruct a.
-    - apply sa_order_wf''.
-    - eapply sa_order_wf'; eauto.
-  Defined.
+  Definition triple_lt : relation (nat * nat * nat) :=
+    triple_lex nat nat nat lt lt lt.
   
   Theorem triple_lt_wf : well_founded triple_lt.
     apply triple_lex_wf; try apply lt_wf.
-    apply sa_order_wf.
   Defined.
   
   Lemma hole1 :
@@ -183,7 +154,7 @@ Module ParserFn (Import G : Grammar.T).
   Proof.
     intros.
     eapply Acc_inv; eauto.
-    apply thd_lt; constructor.
+    apply thd_lt; simpl; omega.
   Defined.
   
   Lemma hole3 :
@@ -205,8 +176,7 @@ Module ParserFn (Import G : Grammar.T).
   Proof.
     intros.
     eapply Acc_inv; eauto.
-    apply thd_lt; subst.
-    constructor; auto.
+    apply thd_lt; subst; simpl; omega.
   Defined.
   
   Open Scope list_scope.
@@ -223,7 +193,8 @@ Module ParserFn (Import G : Grammar.T).
   | Reject   : string -> list terminal -> parse_failure
   | LeftRec  : nonterminal -> NtSet.t -> list terminal -> parse_failure.
   
-  Definition mem_dec (x : nonterminal) (s : NtSet.t) : {NtSet.In x s} + {~ NtSet.In x s}.
+  Definition mem_dec (x : nonterminal) (s : NtSet.t) :
+                     {NtSet.In x s} + {~ NtSet.In x s}.
     destruct (NtSet.mem x s) eqn:Hm.
     - left.
       apply NtSet.mem_spec; auto.
@@ -332,15 +303,6 @@ Module ParserFn (Import G : Grammar.T).
                                 end
                               end
          end eq_refl.
-
-  Definition sa_size (sa : sym_arg) : nat :=
-    match sa with
-    | F_arg _ => 0
-    | G_arg gamma => 1 + List.length gamma
-    end.
-  
-  Definition parse_wrapper tbl sym input :=
-    parseTree tbl sym input NtSet.empty (triple_lt_wf (meas tbl input NtSet.empty (F_arg sym))).
   
 End ParserFn.
 
