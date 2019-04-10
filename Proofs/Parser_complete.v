@@ -39,12 +39,10 @@ Module ParserProofsFn (Import G : Grammar.T).
                    \/ (exists Hle,
                           parseForest tbl gamma (word ++ rem) vis a = inr (f, existT _ rem Hle))); intros vis a.
     
-    - right.
-      eexists.
-      destruct a.
-      step; tc.
+    - right; eexists.
+      destruct a. simpl in *; dm; tc; auto.
 
-    - destruct a; step.
+    - destruct a; simpl in *; dm.
       + exfalso.
         apply Htbl in l; tc.
       + destruct s as [gamma' Hlk].
@@ -52,7 +50,7 @@ Module ParserProofsFn (Import G : Grammar.T).
         { apply Htbl in l; auto.
           eapply lookups_eq; eauto. }
         subst.
-        step; eauto.
+        dm; eauto.
         edestruct IHHd with (vis := NtSet.add x vis).
         * destruct H as [x' [vis' [input' Hpf]]].
           rewrite Hpf.
@@ -68,13 +66,11 @@ Module ParserProofsFn (Import G : Grammar.T).
 
     - destruct a; simpl.
       rewrite app_assoc in IHHd.
-      edestruct IHHd with (vis := vis).
+      edestruct IHHd with (vis := vis); clear IHHd.
       + destruct H as [x' [vis' [input' Hp]]].
         rewrite Hp; eauto.
       + destruct H as [Hp_le Hp].
-        rewrite Hp.
-        clear IHHd.
-        step.
+        rewrite Hp; dm.
         * (* length lt case *)
           edestruct IHHd0.
           -- destruct H as [x [vis' [input' Hpf]]].
