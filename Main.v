@@ -3,7 +3,7 @@ Require Import Tactics.
 Require Import mkParseTable_correct.
 Require Import Parser_complete.
 
-Module Main (Import G : Grammar.T).
+Module Make (Import G : Grammar.T).
 
   Module Import GeneratorAndProofs := GeneratorProofsFn G.
   Module Import ParserAndProofs    := ParserProofsFn G.
@@ -70,10 +70,10 @@ Module Main (Import G : Grammar.T).
     intros g tbl sym word rem tr Ht Hp.
     unfold parse in Hp.
     step_eq Hp; tc.
-    dm; dm; invh.
-    eapply parse_sound; eauto.
+    dms; invh.
+    eapply parseTree_sound; eauto.
   Qed.
-    
+
   Theorem parse_safe :
     forall (g   : grammar)
            (tbl : parse_table)
@@ -84,40 +84,33 @@ Module Main (Import G : Grammar.T).
       -> forall x vis input',
         ~ parse tbl sym input = inl (LeftRec x vis input').
   Proof.
-    unfold not; intros.
-    unfold parse in H0.
-    match goal with
-    | H : match ?X with | _ => _ end = _ |- _ => destruct X eqn:Hp
-    end.
-    - destruct p; tc.
-      inversion H0; subst.
-      eapply leftrec_conditions with (sa := F_arg sym) in Hp; eauto.
-      destruct Hp.
-      + destruct H1.
-        ND.fsetdec.
-      + destruct H1.
-        eapply LL1_parse_table_impl_no_left_recursion; eauto.
-    - step; step; tc.
+    unfold not; intros g tbl sym input tr Ht x vis input' Hp.
+    unfold parse in Hp.
+    step_eq Hp'; dms; tc.
+    invh.
+    eapply leftrec_conditions with (sa := F_arg sym) in Hp'; eauto.
+    destruct Hp' as [Hf | Hex]; try ND.fsetdec.
+    destruct Hex.
+    eapply LL1_parse_table_impl_no_left_recursion; eauto.
   Qed.
 
-  Theorem parse_complete :
+    Theorem parse_complete :
     forall g tbl sym word tr rem,
       parse_table_correct tbl g
       -> (@sym_derives_prefix g) sym word tr rem
       -> parse tbl sym (word ++ rem) = inr (tr, rem).
   Proof.
-    intros.
-    eapply parseTree_complete_or_leftrec in H0; eauto.
-    destruct H0.
+    intros g tbl sym word tr rem Ht Hd.
+    eapply parseTree_complete_or_leftrec in Hd; eauto.
+    destruct Hd as [Hlr | Hp].
     - exfalso.
-      destruct H0 as [x [vis [input' Hp]]].
+      destruct Hlr as [x [vis' [input' Hp]]].
       eapply parse_safe; eauto.
       unfold parse.
-      rewrite Hp; eauto.
-    - destruct H0 as [Hle Hp].
-      unfold parse.
       rewrite Hp; auto.
+    - destruct Hp as [Hle Hp].
+      unfold parse; rewrite Hp; auto.
   Qed.
   
-End Main.
+End Make.
 

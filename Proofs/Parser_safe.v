@@ -438,7 +438,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
     intros sa; induct_sa_size sa.
     destruct sa.
     - (* sa = F_arg sym *)
-      intros a x vis' input' Hp; destruct a.
+      intros a x vis' input' Hp; destruct a; simpl in *.
       dms; tc.
       + inv Hp.
         left; auto.
@@ -465,7 +465,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
              right; eauto.
         * eapply cardinal_diff_add_lt; eauto.
 
-    - intros a x vis' input' Hpf; destruct a.
+    - intros a x vis' input' Hpf; destruct a; simpl in *.
       dms; tc.
       step_eq Hp.
       + invh.

@@ -74,7 +74,7 @@ Definition g311 : grammar :=
 
    parse : parse_table -> symbol -> list terminal -> 
            sum parse_failure (tree * list terminal) *)
-Module Import PG := Main G.
+Module Import PG := Make G.
 
 (* Example input to the parser *)
 Definition example_prog :=

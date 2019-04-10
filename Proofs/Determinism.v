@@ -8,7 +8,7 @@ Require Import Main.
 
 Module DetFn (Import G : Grammar.T).
 
-  Module Import PG := Main G.
+  Module Import PG := Make G.
   
   Corollary LL1_derivation_deterministic :
     forall (tbl : parse_table)

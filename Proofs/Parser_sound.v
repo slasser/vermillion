@@ -14,21 +14,20 @@ Module ParserSoundnessFn (Import G : Grammar.T).
   Module Import L := LemmasFn G.
 
   Ltac dms :=
-    repeat (simpl in *; subst;
-            match goal with
-            | H : context[match ?X with _ => _ end] |- _ =>
-              match X with
-              | parseTree _ _ _ _ _ => idtac
-              | parseForest _ _ _ _ _ => idtac
-              | _ => dm
-              end
-            | |- context[match ?X with _ => _ end] =>
-              match X with
-              | parseTree _ _ _ _ _ => idtac
-              | parseForest _ _ _ _ _ => idtac
-              | _ => dm
-              end
-            end).
+    repeat match goal with
+           | H : context[match ?X with _ => _ end] |- _ =>
+             match X with
+             | parseTree _ _ _ _ _ => idtac
+             | parseForest _ _ _ _ _ => idtac
+             | _ => dm
+             end
+           | |- context[match ?X with _ => _ end] =>
+             match X with
+             | parseTree _ _ _ _ _ => idtac
+             | parseForest _ _ _ _ _ => idtac
+             | _ => dm
+             end
+           end.
 
   Ltac dlle := match goal with
                | H : length_lt_eq _ _ _ |- _ => destruct H; subst
@@ -171,7 +170,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
                        (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
                   parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
                   -> List.length rem < List.length input
-                     \/ nullable_gamma g gamma); intros; destruct a.
+                     \/ nullable_gamma g gamma); intros; destruct a; simpl in *.
 
     - dms; tc.
       + invhs; auto. 
@@ -234,7 +233,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
                   parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
                   -> exists word,
                     word ++ rem = input
-                    /\ gamma_derives_prefix gamma word f rem); intros; destruct a.
+                    /\ gamma_derives_prefix gamma word f rem); intros; destruct a; simpl in *.
 
     - dms; tc.
       + invh.
@@ -274,7 +273,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
         exists ([] ++ wsuf); split; auto.
   Qed.      
 
-  Lemma parse_sound :
+  Lemma parseTree_sound :
     forall (g   : grammar)
            (tbl : parse_table),
       parse_table_correct tbl g
