@@ -387,27 +387,8 @@ Module ParserSafetyFn (Import G : Grammar.T).
     | G_arg gamma => 1 + List.length gamma
     end.
 
-  Ltac induct_list_length xs := 
-    remember (List.length xs) as l;
-    generalize dependent xs;
-    induction l as [l IHl] using lt_wf_ind;
-    intros input Hl; subst.
-
-  Ltac induct_card tbl vis :=
-    remember (NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl))
-                                         vis)) as card;
-    generalize dependent vis;
-    induction card as [card IHcard] using lt_wf_ind;
-    intros vis Hcard; subst.
-
-  Ltac induct_sa_size sa := 
-    remember (sa_size sa) as sz;
-    generalize dependent sa;
-    induction sz as [sz IHsz] using lt_wf_ind;
-    intros sa Hsa; subst.
-
     Lemma leftrec_conditions :
-    forall g tbl,
+     forall g tbl,
       parse_table_correct tbl g
       -> forall (input : list terminal)
                 (vis : NtSet.t)
