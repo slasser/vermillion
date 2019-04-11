@@ -378,17 +378,71 @@ Module ParserSafetyFn (Import G : Grammar.T).
       -> exists (x y : nonterminal),
         sym = NT x /\ sym' = NT y.
   Proof.
-    intros. inv H; eauto.
+    intros; inv H; eauto.
   Qed.
-  
-  Definition sa_size (sa : sym_arg) : nat :=
-    match sa with
-    | F_arg _ => 0
-    | G_arg gamma => 1 + List.length gamma
-    end.
 
-    Lemma leftrec_conditions :
-     forall g tbl,
+  Lemma input_length_lt_or_nullable_sym :
+    forall g tbl,
+      parse_table_correct tbl g
+      -> forall (input : list terminal)
+                (vis   : NtSet.t)
+                (sa    : sym_arg),
+        match sa with
+        | F_arg sym =>
+          forall a tr rem Hle,
+            parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
+            -> List.length rem < List.length input
+               \/ nullable_sym g sym
+        | G_arg gamma =>
+          forall a f rem Hle,
+            parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
+            -> List.length rem < List.length input
+               \/ nullable_gamma g gamma
+        end.
+  Proof.
+    intros g tbl Htbl input.
+    induct_list_length input.
+    intros vis; induct_card tbl vis.
+    intros sa; induct_sa_size sa.
+    destruct sa.
+    - intros a tr rem Hle Hp; destruct a; simpl in *; dms; tc.
+      + invh; auto.
+      + step_eq Hpf; dms; tc.
+        invh.
+        pose proof e as e'; apply Htbl in e'; destruct e'.
+        eapply IHcard with (sa := G_arg x) in Hpf; destruct Hpf; eauto.
+        eapply cardinal_diff_add_lt; eauto.
+    - intros a f rem Hle Hpf; destruct a; simpl in *; dms; tc.
+      + invh; auto.
+      + step_eq Hp; dms; tc.
+        * step_eq Hpf'; dms; tc; invh.
+          left; dlle; omega.
+        * step_eq Hpf'; dms; tc; invh.
+          dlle; try (left; omega).
+          eapply IHsz with (sa := F_arg s)
+                           (m  := sa_size (F_arg s)) in Hp;
+            try (simpl; omega).
+          eapply IHsz with (sa := G_arg l) in Hpf'; eauto.
+          destruct Hp; destruct Hpf'; try omega; eauto.
+  Qed.
+
+  Lemma input_length_eq_nullable_sym :
+    forall g tbl,
+      parse_table_correct tbl g
+      -> forall (sym   : symbol)
+                (input : list terminal)
+                (vis   : NtSet.t)
+                a tr Hle,
+        parseTree tbl sym input vis a = inr (tr, existT _ input Hle)
+        -> nullable_sym g sym.
+  Proof.
+    intros g tbl Htbl sym input vis a tr Hle Hp.
+    eapply input_length_lt_or_nullable_sym with (sa := F_arg sym) in Hp; eauto.
+    destruct Hp; try omega; auto.
+  Qed.
+
+  Lemma leftrec_conditions :
+    forall g tbl,
       parse_table_correct tbl g
       -> forall (input : list terminal)
                 (vis : NtSet.t)
@@ -462,8 +516,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
           destruct Hpf'; eauto.
           destruct H as [pre [sym [suf [Heq [Hng [Hin Hrest]]]]]]; subst.
           left; exists (s :: pre); exists sym; exists suf; repeat split; auto.
-          eapply input_length_invariant in Hp; eauto.
-          destruct Hp; try omega; eauto.
+          eapply input_length_eq_nullable_sym in Hp; eauto.
   Qed.
 
 End ParserSafetyFn.

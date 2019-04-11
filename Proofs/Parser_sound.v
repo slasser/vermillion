@@ -32,16 +32,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
   Ltac dlle := match goal with
                | H : length_lt_eq _ _ _ |- _ => destruct H; subst
                end.
-  (*
-  Lemma lengths_contra :
-    forall A (xs ys : list A),
-      List.length xs = List.length ys
-      -> List.length xs < List.length ys
-      -> False.
-  Proof.
-    intros; omega.
-  Qed.
-   *)
+  
   Ltac induct_list_length xs := 
     remember (List.length xs) as l;
     generalize dependent xs;
@@ -60,66 +51,12 @@ Module ParserSoundnessFn (Import G : Grammar.T).
     generalize dependent sa;
     induction sz as [sz IHsz] using lt_wf_ind;
     intros sa Hsa; subst.
-  
-  Lemma input_length_invariant :
-    forall (g   : grammar)
-           (tbl : parse_table),
-      parse_table_correct tbl g
-      -> forall (tr        : tree)
-                (sym       : symbol)
-                (input rem : list terminal)
-                Hle
-                (vis       : NtSet.t)
-                (a : Acc triple_lt (meas tbl input vis (F_arg sym))),
-        parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
-        -> List.length rem < List.length input
-           \/ nullable_sym g sym.
+
+  Lemma list_neq_cons :
+    forall A (x : A) (xs : list A),
+      xs <> x :: xs.
   Proof.
-    intros g tbl Htbl tr.
-    induction tr as [ s
-                    | s f IHpf
-                    |
-                    | tr IHp f IHpf ]
-                      using tree_nested_ind with
-        
-        (Q := fun f =>
-                forall (gamma : list symbol)
-                       (input rem : list terminal)
-                       Hle
-                       (vis : NtSet.t)
-                       (a   : Acc triple_lt (meas tbl input vis (G_arg gamma))),
-                  parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
-                  -> List.length rem < List.length input
-                     \/ nullable_gamma g gamma); intros; destruct a; simpl in *.
-
-    - dms; tc.
-      + invhs; auto. 
-      + dm; dms; tc.
-
-    - dms; tc.
-      step_eq Hpf; dms; tc.
-      invh.
-      apply IHpf in Hpf; clear IHpf.
-      destruct Hpf; auto.
-      apply Htbl in e; destruct e; eauto.
-
-    - dms.
-      + invhs; auto.
-      + dm; tc.
-        dms; dm; dms; tc.
-
-    - dms; tc.
-      step_eq Hp; dms; tc.
-      + step_eq Hpf; dms; tc.
-        invh.
-        dlle; auto.
-        left; omega.
-      + step_eq Hpf; dms; tc.
-        invh.
-        apply IHp in Hp; clear IHp.
-        apply IHpf in Hpf; clear IHpf.
-        destruct Hp; try omega.
-        destruct Hpf; auto.
+    unfold not; intros A x xs Heq; induction xs as [| x' xs IHxs]; try inv Heq; auto.
   Qed.
   
   Lemma parseTree_sound' :
