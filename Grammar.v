@@ -2,38 +2,66 @@ Require Import List PeanoNat String.
 Require Import FMaps MSets.
 Export ListNotations.
 
+(* fn from terminals to semty
+   fn from nts to semty
+*)
+
 (* Types of grammar symbols and their decidable equality *)
 Module Type SYMBOL_TYPES.
-  Parameters terminal nonterminal literal : Type.
+  Parameters terminal nonterminal : Type.
   
   Hypothesis t_eq_dec : forall a a' : terminal,
       {a = a'} + {a <> a'}.
   
   Hypothesis nt_eq_dec : forall x x' : nonterminal,
       {x = x'} + {x <> x'}.
+
+  Parameter t_semty  : terminal    -> Type.
+  Parameter nt_semty : nonterminal -> Type.
+  
 End SYMBOL_TYPES.
 
 (* Accompanying definitions for a grammar. *)
-Module DefsFn (Import SymTy : SYMBOL_TYPES).
+Module DefsFn (Import Ty : SYMBOL_TYPES).
   
   Inductive symbol :=
   | T  : terminal -> symbol
   | NT : nonterminal -> symbol.
 
-  Hint Resolve SymTy.t_eq_dec SymTy.nt_eq_dec.
+  Hint Resolve Ty.t_eq_dec Ty.nt_eq_dec.
   
   Lemma symbol_eq_dec : forall s s' : symbol,
       {s = s'} + {s <> s'}.
   Proof. decide equality. Defined.
 
-  Definition production := (nonterminal * list symbol)%type.
+  Definition symbol_semty (sym : symbol) : Type :=
+    match sym with
+    | T a  => t_semty  a
+    | NT x => nt_semty x
+    end.
 
-  Definition token := (terminal * literal)%type.
+  Fixpoint tuple (xs : list Type) : Type :=
+    match xs with
+    | [] => unit
+    | x :: xs' => prod x (tuple xs')
+    end.
+  
+  Definition rhs_semty (gamma : list symbol) : Type :=
+    tuple (List.map symbol_semty gamma).
+
+  Definition prod  := (nonterminal * list symbol)%type.
+  
+  Definition action_ty (prod : nonterminal * list symbol) : Type :=
+    let (x, gamma) := prod in rhs_semty gamma -> nt_semty x.
+
+  Definition xprod := {p : prod & action_ty p}.
+
+  Definition token := {t : terminal & t_semty t}.
 
   (* We represent a grammar as a record so that functions 
      can consume the start symbol and productions easily. *)
   Record grammar := mkGrammar {start : nonterminal ;
-                               prods : list production }.
+                               prods : list xprod }.
   
   (* Derivation trees *)
   Module Export Tree.
@@ -89,13 +117,13 @@ Module DefsFn (Import SymTy : SYMBOL_TYPES).
     | EOF : lookahead.
 
     Inductive nullable_sym (g : grammar) : symbol -> Prop :=
-    | NullableSym : forall (x : nonterminal) (ys : list symbol),
-        In (x, ys) g.(prods)
+    | NullableSym : forall x ys f,
+        In (existT _ (x, ys) f) g.(prods)
         -> nullable_gamma g ys
         -> nullable_sym g (NT x)
     with nullable_gamma (g : grammar) : list symbol -> Prop :=
          | NullableNil  : nullable_gamma g []
-         | NullableCons : forall (hd : symbol) (tl : list symbol),
+         | NullableCons : forall hd tl,
              nullable_sym g hd
              -> nullable_gamma g tl
              -> nullable_gamma g (hd :: tl).
@@ -109,8 +137,8 @@ Module DefsFn (Import SymTy : SYMBOL_TYPES).
       lookahead -> symbol -> Prop :=
     | FirstT : forall y,
         first_sym g (LA y) (T y)
-    | FirstNT : forall x gpre s gsuf la,
-        In (x, gpre ++ s :: gsuf) g.(prods)
+    | FirstNT : forall x gpre s gsuf f la,
+        In (existT _ (x, gpre ++ s :: gsuf) f) g.(prods)
         -> nullable_gamma g gpre
         -> first_sym g la s
         -> first_sym g la (NT x).
@@ -129,12 +157,12 @@ Module DefsFn (Import SymTy : SYMBOL_TYPES).
     | FollowStart : forall x,
         x = g.(start)
         -> follow_sym g EOF (NT x)
-    | FollowRight : forall x1 x2 la gpre gsuf,
-        In (x1, gpre ++ NT x2 :: gsuf) g.(prods)
+    | FollowRight : forall x1 x2 la gpre gsuf f,
+        In (existT _ (x1, gpre ++ NT x2 :: gsuf) f) g.(prods)
         -> first_gamma g la gsuf
         -> follow_sym g la (NT x2)
-    | FollowLeft : forall x1 x2 la gpre gsuf,
-        In (x1, gpre ++ NT x2 :: gsuf) g.(prods)
+    | FollowLeft : forall x1 x2 la gpre gsuf f,
+        In (existT _ (x1, gpre ++ NT x2 :: gsuf) f) g.(prods)
         -> nullable_gamma g gsuf
         -> follow_sym g la (NT x1)
         -> follow_sym g la (NT x2).
@@ -158,7 +186,7 @@ Module DefsFn (Import SymTy : SYMBOL_TYPES).
 
     Module MDT_NT.
       Definition t := nonterminal.
-      Definition eq_dec := SymTy.nt_eq_dec.
+      Definition eq_dec := Ty.nt_eq_dec.
     End MDT_NT.
     Module NT_as_DT := Make_UDT(MDT_NT).
     Module NtSet := MSetWeakList.Make NT_as_DT.
