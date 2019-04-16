@@ -431,22 +431,20 @@ End NatStringTypes.
 
 (* Next, we generate grammar definitions for those types. *)
 Module Export NatStringGrammar <: T.
-  Module SymTy := NatStringTypes.
-  Module Defs  := DefsFn SymTy.
-  Export SymTy.
-  Export Defs.
+  Module Export SymTy := NatStringTypes.
+  Module Export Defs  := DefsFn SymTy.
 End NatStringGrammar.
 
 (* Now we can define a grammar as a record containing a start symbol
    and a list of productions. *)
 Open Scope string_scope.
-Definition p : prod := (0, [T "hello"; NT 0]).
-Definition f : action_ty p := fun (tup : string * (nat * unit)) =>
-                                match tup with
-                                | (s, (n, _)) => 5
-                                end.
-
-Definition g : grammar := {| start := 0;
-                             prods := [existT _ p f]
-                          |}.
+Definition g : grammar :=
+  {| start := 0;
+     prods := [existT action_ty
+                      (0, [T "hello"; NT 0]) (* production *)
+                      (fun tup =>            (* action     *)
+                         match tup with
+                         | (s, (n, _)) => 5
+                         end)]
+  |}.
 
