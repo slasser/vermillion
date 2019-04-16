@@ -194,8 +194,8 @@ Proof.
       assert (Hlk' : lookahead_for la x ys g).
       { unfold lookahead_for; auto. }
       unfold pt_complete in Hcom.
-      apply Hcom in Hlk; auto.
-      apply Hcom in Hlk'; auto.
+      eapply Hcom in Hlk; eauto.
+      eapply Hcom in Hlk'; eauto.
       congruence. }
     subst.
     eapply IHHfi.
@@ -240,40 +240,40 @@ Qed.
 Lemma gamma_derives_cons_first_gamma :
   forall g gamma word f rem,
     gamma_derives_prefix g gamma word f rem
-    -> forall tok toks,
-      word = tok :: toks
-      -> first_gamma g (LA tok) gamma.
+    -> forall t v toks,
+      word = (existT _ t v) :: toks
+      -> first_gamma g (LA t) gamma.
 Proof.
   intros g gamma word f rem Hder.
   induction Hder using gdp_mutual_ind with
       (P := fun sym word tr rem
                 (pf : sym_derives_prefix g sym word tr rem) =>
-              forall tok toks,
-                word = tok :: toks
-                -> first_sym g (LA tok) sym)
+              forall t v toks,
+                word = (existT _ t v) :: toks
+                -> first_sym g (LA t) sym)
       (P0 := fun gamma word f rem
                  (pf : gamma_derives_prefix g gamma word f rem)
              =>
-               forall tok toks,
-                 word = tok :: toks
-                 -> first_gamma g (LA tok) gamma); intros; subst.
+               forall t v toks,
+                 word = (existT _ t v) :: toks
+                 -> first_gamma g (LA t) gamma); intros; subst.
   - inv H; constructor.
   - simpl in *.
-    specialize (IHHder tok toks).
+    specialize (IHHder t v toks).
     destruct IHHder; auto.
     econstructor; eauto.
   - inv H.
-  - destruct hdRoot.
-    + inv s.
+  - destruct s.
+    + inv s0.
       inv H.
       eapply FirstGamma with (gpre := nil); constructor.
     + destruct wpre as [| ptok ptoks]; simpl in *.
       * subst.
-        specialize (IHHder0 tok toks).
+        specialize (IHHder0 t v0 toks).
         destruct IHHder0; auto.
         eapply FirstGamma with (gpre := NT n :: gpre).
         -- constructor; auto.
-           apply sym_derives_nil_nullable in s; auto.
+           apply sym_derives_nil_nullable in s0; auto.
         -- auto.
       * inv H.
         eapply FirstGamma with (gpre := nil).
@@ -282,24 +282,24 @@ Proof.
 Qed.
 
 Lemma tbl_entry_is_lookahead :
-  forall tbl g x la gamma,
+  forall tbl g x x' la gamma f,
     parse_table_correct tbl g
-    -> pt_lookup x la tbl = Some gamma
+    -> pt_lookup x la tbl = Some (existT _ (x', gamma) f)
     -> lookahead_for la x gamma g.
 Proof.
-  intros tbl g x la gamma Htbl Hlkp.
+  intros tbl g x x' la gamma f Htbl Hlkp.
   destruct Htbl as [Hsou Hcom].
   unfold pt_sound in Hsou.
-  apply Hsou; auto.
+  apply Hsou in Hlkp; destruct Hlkp as [Heq [Hin Hl]]; subst; auto.
 Qed.
 
 Lemma first_gamma_first_sym :
-  forall g x la gamma,
-    In (x, gamma) g.(prods)
+  forall g x la gamma f,
+    In (existT _ (x, gamma) f) g.(prods)
     -> first_gamma g la gamma
     -> first_sym g la (NT x).
 Proof.
-  intros g x la gamma Hin Hfg.
+  intros g x la gamma f Hin Hfg.
   inv Hfg.
   econstructor; eauto.
 Qed.
@@ -327,17 +327,17 @@ Proof.
 Defined.
 
 Lemma pt_lookup_elements' :
-  forall (k : ParseTable.key) (gamma : list symbol) (l : list (ParseTable.key * list symbol)),
-    findA (ParseTableFacts.eqb k) l = Some gamma
-    -> In (k, gamma) l.
+  forall (k : ParseTable.key) (A : Type) (a : A) (l : list (ParseTable.key * A)),
+    findA (ParseTableFacts.eqb k) l = Some a
+    -> In (k, a) l.
 Proof.
-  intros.
-  induction l.
-  - inv H.
+  intros k A a l Hf.
+  induction l as [| p l' IHl].
+  - inv Hf.
   - simpl in *.
-    destruct a as (k', gamma').
+    destruct p as (k', gamma').
     destruct (ParseTableFacts.eqb k k') eqn:Heq.
-    + inv H.
+    + inv Hf.
       unfold ParseTableFacts.eqb in *.
       destruct (ParseTableFacts.eq_dec k k').
       * subst; auto.
@@ -346,9 +346,9 @@ Proof.
 Defined.
       
 Lemma pt_lookup_elements :
-  forall x la tbl gamma,
-    pt_lookup x la tbl = Some gamma
-    -> In ((x, la), gamma) (ParseTable.elements tbl).
+  forall x la tbl p,
+    pt_lookup x la tbl = Some p
+    -> In ((x, la), p) (ParseTable.elements tbl).
 Proof.
   intros.
   unfold pt_lookup in *.
@@ -448,53 +448,70 @@ Defined.
     apply first_gamma_iff_first_gamma'; auto.
   Qed.
 
+  Lemma app_assoc_under_rhs_semty :
+    forall xs ys zs,
+      rhs_semty (xs ++ ys ++ zs) = rhs_semty ((xs ++ ys) ++ zs).
+  Proof.
+    intros xs; induction xs as [| x xs' IHxs]; intros ys zs; simpl in *; auto.
+    unfold rhs_semty in *; simpl in *.
+    rewrite IHxs; auto.
+  Qed.
+
+  Lemma rhss_eq_exists_prod' :
+    forall g x gamma gamma' f,
+      In (existT action_ty (x, gamma) f) g.(prods)
+      -> gamma = gamma'
+      -> exists f',
+          In (existT action_ty (x, gamma') f') g.(prods).
+  Proof.
+    intros; simpl in *; subst; eauto.
+  Qed.
+
   Lemma follow_pre :
-    forall g x la sym suf pre,
-      In (x, pre ++ suf) g.(prods)
+    forall g x la sym suf pre f,
+      In (existT _ (x, pre ++ suf) f) g.(prods)
       -> In sym pre
       -> nullable_gamma g pre
       -> first_gamma g la suf
       -> follow_sym g la sym.
   Proof.
-    intros.
-    apply in_split in H0.
-    destruct H0 as [l1 [l2 Heq]].
-    subst.
+    intros g x la sym suf pre f Hin Hin' Hng Hfg.
+    apply in_split in Hin'.
+    destruct Hin' as [l1 [l2 Heq]]; subst.
     destruct sym.
     - exfalso.
       eapply gamma_with_terminal_not_nullable; eauto. 
-    - replace ((l1 ++ NT n :: l2) ++ suf) with (l1 ++ NT n :: (l2 ++ suf)) in H.
-      + eapply FollowRight; eauto.
-        apply nullable_split in H1.
-        inv H1.
+    - apply rhss_eq_exists_prod' with
+          (gamma' := l1 ++ NT n :: (l2 ++ suf))
+        in Hin.
+      + destruct Hin as [f' Hin]; simpl in Hin.
+        eapply FollowRight with (x1 := x)
+                                (gpre := l1)
+                                (gsuf := l2 ++ suf); eauto.
+        apply nullable_split in Hng; inv Hng.
         apply first_gamma_split; auto.
-      + rewrite cons_app_singleton.
-        rewrite app_assoc.
-        rewrite app_assoc.
-        replace (((l1 ++ [NT n]) ++ l2)) with (l1 ++ NT n :: l2).
-        * auto.
-        * rewrite <- app_assoc; simpl; auto.
+      + rewrite <- app_assoc; auto.
   Qed.
 
   Lemma first_sym_rhs_eqs :
     forall g t,
       parse_table_correct t g
-      -> forall x pre pre' sym sym' suf suf' la,
-        In (x, pre ++ sym :: suf) g.(prods)
-        -> In (x, pre' ++ sym' :: suf') g.(prods)
+      -> forall x pre pre' sym sym' suf suf' f f' la,
+        In (existT _ (x, pre ++ sym :: suf) f) g.(prods)
+        -> In (existT _ (x, pre' ++ sym' :: suf') f') g.(prods)
         -> nullable_gamma g pre
         -> nullable_gamma g pre'
         -> first_sym g la sym
         -> first_sym g la sym'
         -> pre = pre' /\ sym = sym' /\ suf = suf'.
   Proof.
-    intros g t Ht x pre pre' sym sym' suf suf' la Hi Hi' Hn Hn' Hf Hf'.
+    intros g t Ht x pre pre' sym sym' suf suf' f f' la Hi Hi' Hn Hn' Hf Hf'.
     assert (Heq: pre ++ sym :: suf = pre' ++ sym' :: suf').
     { assert (Hl : lookahead_for la x (pre ++ sym :: suf) g).
       { left; eauto. }
       assert (Hl' : lookahead_for la x (pre' ++ sym' :: suf') g).
       { left; eauto. }
-      apply Ht in Hl; apply Ht in Hl'; auto.
+      eapply Ht in Hl; eapply Ht in Hl'; eauto.
       rewrite Hl in Hl'; inv Hl'; auto. }
     apply medial in Heq.
     destruct Heq as [Hin | [Hin' | Heq]]; auto.
