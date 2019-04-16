@@ -220,9 +220,9 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     
     Module ParseTable := FMapWeakList.Make PtKey_as_DT.
     
-    Definition first_map := NtMap.t LaSet.t.
-    Definition follow_map := NtMap.t LaSet.t.
-    Definition parse_table := ParseTable.t (list symbol).
+    Definition first_map   := NtMap.t LaSet.t.
+    Definition follow_map  := NtMap.t LaSet.t.
+    Definition parse_table := ParseTable.t xprod.
     
   End Collections.
 
@@ -247,43 +247,45 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     (* Grammar semantics *)
   Module Export Derivation.
 
-    Definition peek input :=
+    Definition peek (input : list token) : lookahead :=
       match input with
       | nil => EOF
-      | token :: _ => LA token
+      | (existT _ a _) :: _ => LA a
       end.
 
     Inductive sym_derives_prefix (g : grammar) :
-      symbol -> list terminal -> tree -> list terminal -> Prop :=
-    | T_sdp : 
-        forall (y : terminal) (rem : list terminal),
-          sym_derives_prefix g (T y) [y] (Leaf y) rem
-    | NT_sdp :
-        forall (x : nonterminal) 
-               (gamma : list symbol)
-               (word rem : list terminal) 
-               (subtrees : list tree),
-          In (x, gamma) g.(prods)
-          -> lookahead_for (peek (word ++ rem)) x gamma g
-          -> gamma_derives_prefix g gamma word subtrees rem
-          -> sym_derives_prefix g (NT x) word (Node x subtrees) rem
-    with gamma_derives_prefix (g : grammar) : 
-           list symbol -> list terminal -> list tree -> list terminal -> Prop :=
-         | Nil_gdp : forall rem,
-             gamma_derives_prefix g [] [] [] rem
-         | Cons_gdp : 
-             forall (hdRoot : symbol)
-                    (wpre wsuf rem : list terminal)
-                    (hdTree : tree)
-                    (tlRoots : list symbol)
-                    (tlTrees : list tree),
-               sym_derives_prefix g hdRoot wpre hdTree (wsuf ++ rem)
-               -> gamma_derives_prefix g tlRoots wsuf tlTrees rem
-               -> gamma_derives_prefix g
-                                       (hdRoot :: tlRoots) 
-                                       (wpre ++ wsuf)
-                                       (hdTree :: tlTrees)
-                                       rem.
+      forall (s : symbol)
+             (w : list token)
+             (v : symbol_semty s)
+             (r : list token), Prop :=  
+    | T_sdp  : forall (a : terminal)
+                      (v : t_semty a)
+                      (r : list token),
+          sym_derives_prefix g (T a) [existT _ a v] v r
+    | NT_sdp : forall (x     : nonterminal) 
+                      (gamma : list symbol)
+                      (w r   : list token) 
+                      (vs    : rhs_semty gamma)
+                      (f     : action_ty (x, gamma)),
+        In (existT _ (x, gamma) f) g.(prods)
+        -> lookahead_for (peek (w ++ r)) x gamma g
+        -> gamma_derives_prefix g gamma w vs r
+        -> sym_derives_prefix g (NT x) w (f vs) r
+    with gamma_derives_prefix (g : grammar) :
+           forall (gamma : list symbol)
+                  (w     : list token)
+                  (vs    : rhs_semty gamma)
+                  (r     : list token), Prop :=
+         | Nil_gdp : forall r,
+             gamma_derives_prefix g [] [] tt r
+         | Cons_gdp : forall (s           : symbol)
+                             (wpre wsuf r : list token)
+                             (v           : symbol_semty s)
+                             (ss          : list symbol)
+                             (vs          : rhs_semty ss),
+             sym_derives_prefix g s wpre v (wsuf ++ r)
+             -> gamma_derives_prefix g ss wsuf vs r
+             -> gamma_derives_prefix g (s :: ss) (wpre ++ wsuf) (v, vs) r.
     
     Hint Constructors sym_derives_prefix gamma_derives_prefix.
     
@@ -297,15 +299,15 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     Definition pt_lookup
                (x   : nonterminal)
                (la  : lookahead)
-               (tbl : parse_table) : option (list symbol) :=
+               (tbl : parse_table) : option xprod :=
       ParseTable.find (x, la) tbl.
     
     Definition pt_add
-               (x : nonterminal)
-               (la : lookahead)
-               (gamma : list symbol)
+               (x   : nonterminal)
+               (la  : lookahead)
+               (p   : xprod)
                (tbl : parse_table) : parse_table :=
-      ParseTable.add (x, la) gamma tbl.
+      ParseTable.add (x, la) p tbl.
 
       Definition isNT sym := 
         match sym with
@@ -324,7 +326,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
       
   End Utils.
 
-  (* Definitions related to orrectness specs *)
+  (* Definitions related to correctness specs *)
   Module Export Specs.
 
     Definition nullable_set_sound (nu : NtSet.t) (g  : grammar) : Prop :=
@@ -376,16 +378,24 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     Definition follow_map_for (fo : follow_map) (g : grammar) : Prop :=
       follow_map_sound fo g /\ follow_map_complete fo g.
     
-    Definition pt_sound (tbl : parse_table) (g : grammar) :=
-      forall (x : nonterminal) (la : lookahead) (gamma : list symbol),
-        pt_lookup x la tbl = Some gamma
-        -> List.In (x, gamma) g.(prods) /\ lookahead_for la x gamma g.
+    Definition pt_sound (tbl : parse_table) (g : grammar) : Prop :=
+      forall (x x'  : nonterminal)
+             (la    : lookahead)
+             (gamma : list symbol)
+             (f     : action_ty (x, gamma)),
+        pt_lookup x' la tbl = Some (existT _ (x, gamma) f)
+        -> x' = x
+           /\ List.In (existT _ (x, gamma) f) g.(prods)
+           /\ lookahead_for la x gamma g.
     
-    Definition pt_complete (tbl : parse_table) (g : grammar) :=
-      forall (x : nonterminal) (la : lookahead) (gamma : list symbol),
-        List.In (x, gamma) g.(prods)
+    Definition pt_complete (tbl : parse_table) (g : grammar) : Prop :=
+      forall (x     : nonterminal)
+             (la    : lookahead)
+             (gamma : list symbol)
+             (f     : action_ty (x, gamma)),
+        List.In (existT _ (x, gamma) f) g.(prods)
         -> lookahead_for la x gamma g
-        -> pt_lookup x la tbl = Some gamma.
+        -> pt_lookup x la tbl = Some (existT _ (x, gamma) f).
     
     Definition parse_table_correct (tbl : parse_table) (g : grammar) :=
       pt_sound tbl g /\ pt_complete tbl g.
@@ -415,6 +425,8 @@ Module NatStringTypes <: SYMBOL_TYPES.
     Definition literal := string.
     Definition t_eq_dec := string_dec.
     Definition nt_eq_dec := Nat.eq_dec.
+    Definition t_semty (a : terminal) := string.
+    Definition nt_semty (x : nonterminal) := nat.
 End NatStringTypes.
 
 (* Next, we generate grammar definitions for those types. *)
@@ -428,7 +440,13 @@ End NatStringGrammar.
 (* Now we can define a grammar as a record containing a start symbol
    and a list of productions. *)
 Open Scope string_scope.
+Definition p : prod := (0, [T "hello"; NT 0]).
+Definition f : action_ty p := fun (tup : string * (nat * unit)) =>
+                                match tup with
+                                | (s, (n, _)) => 5
+                                end.
+
 Definition g : grammar := {| start := 0;
-                             prods := [(0, [T "hello"; NT 0])]
+                             prods := [existT _ p f]
                           |}.
 
