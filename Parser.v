@@ -121,8 +121,8 @@ Module ParserFn (Import G : Grammar.T).
       auto.
   Defined.
   
-  Definition meas tbl (word : list terminal) (vis : NtSet.t) (sa : sym_arg) :=
-    (List.length word,
+  Definition meas tbl (tokens : list token) (vis : NtSet.t) (sa : sym_arg) :=
+    (List.length tokens,
      NtSet.cardinal (NtSet.diff (fromNtList (nt_keys tbl)) vis),
      sa_size sa).
   
@@ -134,11 +134,11 @@ Module ParserFn (Import G : Grammar.T).
   Defined.
   
   Lemma hole1 :
-    forall tbl input vis sa sa' x gamma,
-      Acc triple_lt (meas tbl input vis sa)
-      -> pt_lookup x (peek input) tbl = Some gamma
+    forall tbl tokens vis sa sa' x gamma,
+      Acc triple_lt (meas tbl tokens vis sa)
+      -> pt_lookup x (peek tokens) tbl = Some gamma
       -> ~ NtSet.In x vis
-      -> Acc triple_lt (meas tbl input (NtSet.add x vis) sa').
+      -> Acc triple_lt (meas tbl tokens (NtSet.add x vis) sa').
   Proof.
     intros.
     eapply Acc_inv; eauto.
@@ -148,9 +148,9 @@ Module ParserFn (Import G : Grammar.T).
   Defined.
   
   Lemma hole2 :
-    forall tbl input vis gamma sym,
-      Acc triple_lt (meas tbl input vis (G_arg gamma))
-      -> Acc triple_lt (meas tbl input vis (F_arg sym)).
+    forall tbl tokens vis gamma sym,
+      Acc triple_lt (meas tbl tokens vis (G_arg gamma))
+      -> Acc triple_lt (meas tbl tokens vis (F_arg sym)).
   Proof.
     intros.
     eapply Acc_inv; eauto.
@@ -158,10 +158,10 @@ Module ParserFn (Import G : Grammar.T).
   Defined.
   
   Lemma hole3 :
-    forall tbl input input' vis vis' sa sa',
-      Acc triple_lt (meas tbl input vis sa)
-      -> List.length input' < List.length input
-      -> Acc triple_lt (meas tbl input' vis' sa').
+    forall tbl tokens tokens' vis vis' sa sa',
+      Acc triple_lt (meas tbl tokens vis sa)
+      -> List.length tokens' < List.length tokens
+      -> Acc triple_lt (meas tbl tokens' vis' sa').
   Proof.
     intros.
     eapply Acc_inv; eauto.
@@ -169,10 +169,10 @@ Module ParserFn (Import G : Grammar.T).
   Defined.
   
   Lemma hole4 :
-    forall tbl input vis gamma sym gamma',
-      Acc triple_lt (meas tbl input vis (G_arg gamma))
+    forall tbl tokens vis gamma sym gamma',
+      Acc triple_lt (meas tbl tokens vis (G_arg gamma))
       -> gamma = sym :: gamma'
-      -> Acc triple_lt (meas tbl input vis (G_arg gamma')).
+      -> Acc triple_lt (meas tbl tokens vis (G_arg gamma')).
   Proof.
     intros.
     eapply Acc_inv; eauto.
@@ -190,8 +190,8 @@ Module ParserFn (Import G : Grammar.T).
   Qed.
   
   Inductive parse_failure : Type :=
-  | Reject   : string -> list terminal -> parse_failure
-  | LeftRec  : nonterminal -> NtSet.t -> list terminal -> parse_failure.
+  | Reject   : string -> list token -> parse_failure
+  | LeftRec  : nonterminal -> NtSet.t -> list token -> parse_failure.
   
   Definition mem_dec (x : nonterminal) (s : NtSet.t) :
                      {NtSet.In x s} + {~ NtSet.In x s}.
@@ -234,71 +234,71 @@ Module ParserFn (Import G : Grammar.T).
   Fixpoint parseTree
            (tbl : parse_table)
            (sym : symbol)
-           (input : list terminal)
+           (tokens : list token)
            (vis : NtSet.t)
-           (a : Acc triple_lt (meas tbl input vis (F_arg sym)))
+           (a : Acc triple_lt (meas tbl tokens vis (F_arg sym)))
            {struct a}
-    : Datatypes.sum parse_failure (tree * {input' & length_lt_eq _ input' input}) :=
+    : Datatypes.sum parse_failure (tree * {tokens' & length_lt_eq _ tokens' tokens}) :=
     match sym with
     | T a =>
-      match input as i return input = i -> _ with
+      match tokens as i return tokens = i -> _ with
       | nil =>
-        fun _ => inl (Reject "input exhausted" input)
-      | token :: input' => 
+        fun _ => inl (Reject "input exhausted" tokens)
+      | (existT _ a' v) :: tokens' => 
         fun Hin => 
-          if t_eq_dec a token then
-            inr (Leaf a, existT _ input' (length_lt_eq_cons _ _ _ _ Hin))
+          if t_eq_dec a a' then
+            inr (Leaf a, existT _ tokens' (length_lt_eq_cons _ _ _ _ Hin))
           else
-            inl (Reject "token mismatch" input)
+            inl (Reject "token mismatch" tokens)
       end eq_refl
     | NT x =>
-      match ptlk_dec x (peek input) tbl with
-      | inl _ => inl (Reject "lookup failure" input)
-      | inr (exist _ gamma Hlk) =>
-        match mem_dec x vis with
-        | left _ => inl (LeftRec x vis input)
-        | right Hnin =>
-          match parseForest tbl gamma input (NtSet.add x vis)
+      match mem_dec x vis with
+      | left _ => inl (LeftRec x vis tokens)
+      | right Hnin =>
+        match ptlk_dec x (peek tokens) tbl with
+        | inl _ => inl (Reject "lookup failure" tokens)
+        | inr (exist _ (existT _ (x', gamma) f) Hlk) =>
+          match parseForest tbl gamma tokens (NtSet.add x vis)
                             (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
           with
           | inl pfail => inl pfail
-          | inr (sts, existT _ input' Hle) =>
-            inr (Node x sts, existT _ input' Hle)
+          | inr (sts, existT _ tokens' Hle) =>
+            inr (Node x sts, existT _ tokens' Hle)
           end
         end
       end
     end
   with parseForest (tbl : parse_table)
                    (gamma : list symbol)
-                   (input : list terminal)
+                   (tokens : list token)
                    (vis : NtSet.t)
-                   (a : Acc triple_lt (meas tbl input vis (G_arg gamma)))
+                   (a : Acc triple_lt (meas tbl tokens vis (G_arg gamma)))
                    {struct a}
-       : Datatypes.sum parse_failure (list tree * {input' & length_lt_eq _ input' input}) :=
+       : Datatypes.sum parse_failure (list tree * {tokens' & length_lt_eq _ tokens' tokens}) :=
          match gamma as g return gamma = g -> _  with
-         | nil => fun _ => inr (nil, existT (fun input' => length_lt_eq terminal input' input)
-                                            input
+         | nil => fun _ => inr (nil, existT (fun tokens' => length_lt_eq _ tokens' tokens)
+                                            tokens
                                             (length_lt_eq_refl _ _))
          | sym :: gamma' => fun Hg => 
-                              match parseTree tbl sym input vis (hole2 _ _ _ _ _ a) with
+                              match parseTree tbl sym tokens vis (hole2 _ _ _ _ _ a) with
                               | inl pfail => inl pfail
-                              | inr (lSib, existT _ input' Hle) =>
+                              | inr (lSib, existT _ tokens' Hle) =>
                                 match Hle with
                                 | left Hlt =>
-                                  match parseForest tbl gamma' input' NtSet.empty
+                                  match parseForest tbl gamma' tokens' NtSet.empty
                                                        (hole3 _ _ _ _ _ _ _ a Hlt)
                                   with
                                   | inl pfail => inl pfail
-                                  | inr (rSibs, existT _ input'' Hle'') =>
-                                    inr (lSib :: rSibs, existT _ input'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
+                                  | inr (rSibs, existT _ tokens'' Hle'') =>
+                                    inr (lSib :: rSibs, existT _ tokens'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
                                   end
                                 | right Heq =>
-                                  match parseForest tbl gamma' input vis
+                                  match parseForest tbl gamma' tokens vis
                                                        (hole4 _ _ _ _ _ _ a Hg)
                                   with
                                   | inl pfail => inl pfail
-                                  | inr (rSibs, existT _ input'' Hle'') =>
-                                    inr (lSib :: rSibs, existT _ input'' Hle'')
+                                  | inr (rSibs, existT _ tokens'' Hle'') =>
+                                    inr (lSib :: rSibs, existT _ tokens'' Hle'')
                                   end
                                 end
                               end

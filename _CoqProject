@@ -3,7 +3,7 @@
 Grammar.v
 Tactics.v
 Lemmas.v
-Generator.v
+#Generator.v
 Parser.v
 
 Proofs/mkNullableSet_correct.v
