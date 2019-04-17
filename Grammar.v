@@ -49,12 +49,12 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
   Definition rhs_semty (gamma : list symbol) : Type :=
     tuple (List.map symbol_semty gamma).
 
-  Definition prod  := (nonterminal * list symbol)%type.
+  Definition production := (nonterminal * list symbol)%type.
   
-  Definition action_ty (prod : nonterminal * list symbol) : Type :=
-    let (x, gamma) := prod in rhs_semty gamma -> nt_semty x.
+  Definition action_ty (p : production) : Type :=
+    let (x, gamma) := p in rhs_semty gamma -> nt_semty x.
 
-  Definition xprod := {p : prod & action_ty p}.
+  Definition xprod := {p : production & action_ty p}.
 
   Definition token := {t : terminal & t_semty t}.
 
