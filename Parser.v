@@ -171,7 +171,7 @@ Module ParserFn (Import G : Grammar.T).
   Lemma hole4 :
     forall tbl tokens vis gamma sym gamma',
       Acc triple_lt (meas tbl tokens vis (G_arg gamma))
-      -> gamma = sym :: gamma'
+      -> sym :: gamma' = gamma
       -> Acc triple_lt (meas tbl tokens vis (G_arg gamma')).
   Proof.
     intros.
@@ -230,78 +230,94 @@ Module ParserFn (Import G : Grammar.T).
       destruct H; destruct H'; subst; auto.
     left; omega.
   Defined.
-  
+
   Fixpoint parseTree
            (tbl : parse_table)
            (sym : symbol)
-           (tokens : list token)
+           (ts  : list token)
            (vis : NtSet.t)
-           (a : Acc triple_lt (meas tbl tokens vis (F_arg sym)))
+           (a : Acc triple_lt (meas tbl ts vis (F_arg sym)))
            {struct a}
-    : Datatypes.sum parse_failure (tree * {tokens' & length_lt_eq _ tokens' tokens}) :=
+    : Datatypes.sum parse_failure
+                    (symbol_semty sym * {ts' & length_lt_eq _ ts' ts}) :=
     match sym with
     | T a =>
-      match tokens as i return tokens = i -> _ with
-      | nil =>
-        fun _ => inl (Reject "input exhausted" tokens)
-      | (existT _ a' v) :: tokens' => 
-        fun Hin => 
-          if t_eq_dec a a' then
-            inr (Leaf a, existT _ tokens' (length_lt_eq_cons _ _ _ _ Hin))
-          else
-            inl (Reject "token mismatch" tokens)
+      match ts as l return ts = l -> _ with
+      | [] =>
+        fun _ => inl (Reject "input exhausted" ts)
+      | (existT _ a' v') :: ts' =>
+        fun Hts => match t_eq_dec a' a with
+                   | left Heq =>
+                     let v := eq_rect _ _ v' _ Heq in
+                     inr (v, existT _ ts' (length_lt_eq_cons _ _ _ _ Hts))
+                   | right _ =>
+                     inl (Reject "token mismatch" ts)
+                   end
       end eq_refl
     | NT x =>
       match mem_dec x vis with
-      | left _ => inl (LeftRec x vis tokens)
+      | left _ => inl (LeftRec x vis ts)
       | right Hnin =>
-        match ptlk_dec x (peek tokens) tbl with
-        | inl _ => inl (Reject "lookup failure" tokens)
+        match ptlk_dec x (peek ts) tbl with
+        | inl _ => inl (Reject "lookup failure" ts)
         | inr (exist _ (existT _ (x', gamma) f) Hlk) =>
-          match parseForest tbl gamma tokens (NtSet.add x vis)
-                            (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
-          with
-          | inl pfail => inl pfail
-          | inr (sts, existT _ tokens' Hle) =>
-            inr (Node x sts, existT _ tokens' Hle)
+          match nt_eq_dec x' x with
+          | left Heq =>
+            match parseForest tbl gamma ts (NtSet.add x vis)
+                              (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
+            with
+            | inl pfail => inl pfail
+            | inr (vs, existT _ ts' Hle) =>
+              let v := eq_rect _ _ (f vs) _ Heq in
+              inr (v, existT _ ts' Hle)
+            end
+          | right _ =>
+            inl (Reject "malformed parse table" ts)
           end
         end
       end
     end
-  with parseForest (tbl : parse_table)
+  with parseForest (tbl   : parse_table)
                    (gamma : list symbol)
-                   (tokens : list token)
-                   (vis : NtSet.t)
-                   (a : Acc triple_lt (meas tbl tokens vis (G_arg gamma)))
+                   (ts    : list token)
+                   (vis   : NtSet.t)
+                   (a     : Acc triple_lt (meas tbl ts vis (G_arg gamma)))
                    {struct a}
-       : Datatypes.sum parse_failure (list tree * {tokens' & length_lt_eq _ tokens' tokens}) :=
-         match gamma as g return gamma = g -> _  with
-         | nil => fun _ => inr (nil, existT (fun tokens' => length_lt_eq _ tokens' tokens)
-                                            tokens
-                                            (length_lt_eq_refl _ _))
-         | sym :: gamma' => fun Hg => 
-                              match parseTree tbl sym tokens vis (hole2 _ _ _ _ _ a) with
-                              | inl pfail => inl pfail
-                              | inr (lSib, existT _ tokens' Hle) =>
-                                match Hle with
-                                | left Hlt =>
-                                  match parseForest tbl gamma' tokens' NtSet.empty
-                                                       (hole3 _ _ _ _ _ _ _ a Hlt)
-                                  with
-                                  | inl pfail => inl pfail
-                                  | inr (rSibs, existT _ tokens'' Hle'') =>
-                                    inr (lSib :: rSibs, existT _ tokens'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
-                                  end
-                                | right Heq =>
-                                  match parseForest tbl gamma' tokens vis
-                                                       (hole4 _ _ _ _ _ _ a Hg)
-                                  with
-                                  | inl pfail => inl pfail
-                                  | inr (rSibs, existT _ tokens'' Hle'') =>
-                                    inr (lSib :: rSibs, existT _ tokens'' Hle'')
-                                  end
-                                end
-                              end
+       : Datatypes.sum parse_failure
+                       (rhs_semty gamma * {ts' & length_lt_eq _ ts' ts}) :=
+         match gamma as l return l = gamma -> _ with
+         | nil =>
+           fun Hg =>
+             let vs := eq_rect _ _ tt _ Hg in
+             inr (vs, existT (fun ts' => length_lt_eq _ ts' ts)
+                             ts
+                             (length_lt_eq_refl _ _))
+         | sym :: gamma' =>
+           fun Hg => 
+             match parseTree tbl sym ts vis (hole2 _ _ _ _ _ a) with
+             | inl pfail => inl pfail
+             | inr (lSib, existT _ ts' Hle) =>
+               match Hle with
+               | left Hlt =>
+                 match parseForest tbl gamma' ts' NtSet.empty
+                                   (hole3 _ _ _ _ _ _ _ a Hlt)
+                 with
+                 | inl pfail => inl pfail
+                 | inr (rSibs, existT _ ts'' Hle'') =>
+                   let vs := eq_rect _ _ (lSib, rSibs) _ Hg in
+                   inr (vs, existT _ ts'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
+                 end
+               | right Heq =>
+                 match parseForest tbl gamma' ts vis
+                                   (hole4 _ _ _ _ _ _ a Hg)
+                 with
+                 | inl pfail => inl pfail
+                 | inr (rSibs, existT _ ts'' Hle'') =>
+                   let vs := eq_rect _ _ (lSib, rSibs) _ Hg in
+                   inr (vs, existT _ ts'' Hle'')
+                 end
+               end
+             end
          end eq_refl.
   
 End ParserFn.
