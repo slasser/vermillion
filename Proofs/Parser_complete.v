@@ -4,7 +4,6 @@ Require Import String.
 Require Import Grammar.
 Require Import Tactics.
 Require Import Parser_safe.
-Require Import Generator.
 Require Import Lemmas.
 Import ListNotations.
 
@@ -12,36 +11,54 @@ Module ParserProofsFn (Import G : Grammar.T).
   
   Module Export ParserSafety := ParserSafetyFn G.
   Module Import L := LemmasFn G.
+
+  Lemma eq_rect_terminal_eq :
+    forall (a   : terminal)
+           (v   : t_semty a)
+           (Heq : a = a),
+      eq_rect a t_semty v a Heq = v.
+  Proof.
+    intros a v Heq.
+    erewrite Eqdep_dec.eq_rect_eq_dec; eauto.
+  Qed.
   
   Theorem parseTree_complete_or_leftrec :
-    forall g tbl sym word tr rem,
+    forall (g : grammar)
+           (tbl : parse_table)
+           (s : symbol)
+           (w r : list token)
+           (v : symbol_semty s),
       parse_table_correct tbl g
-      -> sym_derives_prefix g sym word tr rem
+      -> sym_derives_prefix g s w v r
       -> forall vis a,
-          (exists x vis' input',
-              parseTree tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
+          (exists x vis' ts',
+              parseTree tbl s (w ++ r) vis a = inl (LeftRec x vis' ts'))
           \/ (exists Hle,
-                 parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)).
+                 parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)).
   Proof.
-    intros g tbl sym word tr rem Htbl Hd.
+    intros g tbl s w v r Htbl Hd.
     induction Hd using sdp_mutual_ind with
-        (P := fun sym word tr rem (H : sym_derives_prefix g sym word tr rem) =>
+        (P := fun s w v r (H : sym_derives_prefix g s w v r) =>
                 forall vis a,
-                  (exists x vis' input',
-                      parseTree tbl sym (word ++ rem) vis a = inl (LeftRec x vis' input'))
+                  (exists x vis' ts',
+                      parseTree tbl s (w ++ r) vis a = inl (LeftRec x vis' ts'))
                   \/ (exists Hle,
-                         parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)))
+                         parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)))
         
-        (P0 := fun gamma word f rem (H : gamma_derives_prefix g gamma word f rem) =>
+        (P0 := fun gamma w vs r (H : gamma_derives_prefix g gamma w vs r) =>
                  forall vis a,
-                   (exists x vis' input',
-                       parseForest tbl gamma (word ++ rem) vis a = inl (LeftRec x vis' input'))
+                   (exists x vis' ts',
+                       parseForest tbl gamma (w ++ r) vis a = inl (LeftRec x vis' ts'))
                    \/ (exists Hle,
-                          parseForest tbl gamma (word ++ rem) vis a = inr (f, existT _ rem Hle))); intros vis a.
+                          parseForest tbl gamma (w ++ r) vis a = inr (vs, existT _ r Hle))); intros vis a'.
     
     - right; eexists.
-      destruct a. simpl in *; dm; tc; auto.
-
+      destruct a'; simpl in *; dm; tc.
+      rewrite eq_rect_terminal_eq; auto.
+    - admit.
+    - admit.
+    - admit.
+  Admitted.
     - destruct a; simpl in *; dm.
       + exfalso.
         apply Htbl in l; tc.

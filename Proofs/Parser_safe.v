@@ -5,7 +5,6 @@ Require Import Wf_nat.
 Require Import Grammar.
 Require Import Tactics.
 Require Import Lemmas.
-Require Import Generator.
 Require Import Parser.
 Require Import Parser_sound.
 Import ListNotations.
@@ -18,14 +17,14 @@ Module ParserSafetyFn (Import G : Grammar.T).
 
   Inductive nullable_path g (la : lookahead) :
     symbol -> symbol -> Prop :=
-  | DirectPath : forall x z gamma pre suf,
-      In (x, gamma) g.(prods)
+  | DirectPath : forall x z gamma f pre suf,
+      In (existT _ (x, gamma) f) g.(prods)
       -> gamma = pre ++ NT z :: suf
       -> nullable_gamma g pre
       -> lookahead_for la x gamma g
       -> nullable_path g la (NT x) (NT z)
-  | IndirectPath : forall x y z gamma pre suf,
-      In (x, gamma) g.(prods)
+  | IndirectPath : forall x y z gamma f pre suf,
+      In (existT _ (x, gamma) f) g.(prods)
       -> gamma = pre ++ NT y :: suf
       -> nullable_gamma g pre
       -> lookahead_for la x gamma g
@@ -38,11 +37,9 @@ Module ParserSafetyFn (Import G : Grammar.T).
     nullable_path g la sym sym.
 
   Inductive sized_first_sym (g : grammar) : lookahead -> symbol -> nat -> Prop :=
-  | SzFirstT  : forall y : terminal, sized_first_sym g (LA y) (T y) 0
-  | SzFirstNT : forall (x : nonterminal) (gpre : list symbol)
-                       (s : symbol) (gsuf : list symbol)
-                       (la : lookahead) (n : nat),
-      In (x, gpre ++ s :: gsuf) g.(prods)
+  | SzFirstT  : forall y, sized_first_sym g (LA y) (T y) 0
+  | SzFirstNT : forall x gpre s gsuf f la n,
+      In (existT _ (x, gpre ++ s :: gsuf) f) g.(prods)
       -> nullable_gamma g gpre
       -> sized_first_sym g la s n
       -> sized_first_sym g la (NT x) (S n).
@@ -81,7 +78,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
           -> n = n'.
   Proof.
     intros g t la sym n Ht Hf.
-    induction Hf as [y | x pre sym suf la n Hi Hn Hf IH]; intros n' Hf'; inv Hf'; auto.
+    induction Hf as [y | x pre sym suf f la n Hi Hn Hf IH]; intros n' Hf'; inv Hf'; auto.
     pose proof Hf as Hf'; pose proof H3 as H3'.
     apply sized_fs_fs in Hf; apply sized_fs_fs in H3.
     eapply first_sym_rhs_eqs in Hf; eauto.
@@ -113,23 +110,21 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Qed.
 
   Inductive sized_nullable_sym (g : grammar) : symbol -> nat -> Prop :=
-  | SzNullableSym : forall (x : nonterminal)
-                           (ys : list symbol)
-                           (n : nat),
-      In (x, ys) g.(prods)
-      -> sized_nullable_gamma g ys n
+  | SzNullableSym : forall x gamma f n,
+      In (existT _ (x, gamma) f) g.(prods)
+      -> sized_nullable_gamma g gamma n
       -> sized_nullable_sym g (NT x) (S n)
   with sized_nullable_gamma (g : grammar) : list symbol -> nat -> Prop :=
        | SzNullableNil : sized_nullable_gamma g [] 0
-       | SzNullableCons : forall (hd : symbol) (tl : list symbol)(n n' : nat),
-           sized_nullable_sym g hd n
-           -> sized_nullable_gamma g tl n'
-           -> sized_nullable_gamma g (hd :: tl) (n + n').
-
+       | SzNullableCons : forall s ss n n',
+           sized_nullable_sym g s n
+           -> sized_nullable_gamma g ss n'
+           -> sized_nullable_gamma g (s :: ss) (n + n').
+  
   Hint Constructors sized_nullable_sym sized_nullable_gamma.
 
-  Scheme sized_nullable_sym_mutual_ind := Induction for sized_nullable_sym Sort Prop
-    with sized_nullable_gamma_mutual_ind := Induction for sized_nullable_gamma Sort Prop.
+  Scheme sized_ns_mutual_ind := Induction for sized_nullable_sym Sort Prop
+    with sized_ng_mutual_ind := Induction for sized_nullable_gamma Sort Prop.
 
   Lemma sized_ns_ns :
     forall g sym n,
@@ -137,7 +132,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
       -> nullable_sym g sym.
   Proof.
     intros.
-    induction H using sized_nullable_sym_mutual_ind with
+    induction H using sized_ns_mutual_ind with
         (P := fun sym n (H : sized_nullable_sym g sym n) =>
                 nullable_sym g sym)
         (P0 := fun gamma n (H : sized_nullable_gamma g gamma n) =>
@@ -153,7 +148,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
       -> nullable_gamma g gamma.
   Proof.
     intros.
-    induction H using sized_nullable_gamma_mutual_ind with
+    induction H using sized_ng_mutual_ind with
         (P := fun sym n (H : sized_nullable_sym g sym n) =>
                 nullable_sym g sym)
         (P0 := fun gamma n (H : sized_nullable_gamma g gamma n) =>
@@ -170,28 +165,31 @@ Module ParserSafetyFn (Import G : Grammar.T).
           -> n = n'.
   Proof.
     intros g t la sym n Ht Hs.
-    induction Hs using sized_nullable_sym_mutual_ind with
+    induction Hs using sized_ns_mutual_ind with
         (P := fun sym n (H : sized_nullable_sym g sym n) =>
                 follow_sym g la sym
-                -> forall n', sized_nullable_sym g sym n' -> n = n')
+                -> forall n',
+                  sized_nullable_sym g sym n'
+                  -> n = n')
         (P0 := fun gsuf n (H : sized_nullable_gamma g gsuf n) =>
-                 forall x gpre n',
-                   In (x, gpre ++ gsuf) g.(prods)
+                 forall x gpre f n',
+                   In (existT _ (x, gpre ++ gsuf) f) g.(prods)
                    -> follow_sym g la (NT x)
-                   -> sized_nullable_gamma g gsuf n' -> n = n').
+                   -> sized_nullable_gamma g gsuf n'
+                   -> n = n').
 
     - intros Hf n' Hs.
       inv Hs.
-      assert (ys = ys0).
-      { assert (lookahead_for la x ys g).
+      assert (gamma = gamma0).
+      { assert (lookahead_for la x gamma g).
         { right.
           split; auto.
           apply sized_ng_ng in s; auto. }
-        assert (lookahead_for la x ys0 g).
+        assert (lookahead_for la x gamma0 g).
         { right; split; auto.
           apply sized_ng_ng in H1; auto. }
-        apply Ht in H; auto.
-        apply Ht in H2; auto.
+        eapply Ht in H; eauto.
+        eapply Ht in H2; eauto.
         congruence. }
       subst.
       eapply IHHs with (gpre := nil) in Hf; eauto.
@@ -200,14 +198,17 @@ Module ParserSafetyFn (Import G : Grammar.T).
       auto.
     - intros.
       inv H1.
-      assert (follow_sym g la hd).
-      { destruct hd as [y | x'].
+      assert (follow_sym g la s).
+      { destruct s as [y | x'].
         - inv H4.
         - eapply FollowLeft; eauto.
           apply sized_ng_ng in H6; auto. }
       apply IHHs in H4; auto; subst.
-      eapply IHHs0 with (gpre := gpre ++ [hd]) in H6; eauto.
-      rewrite <- app_assoc; auto.
+      apply rhss_eq_exists_prod' with
+          (gamma' := (gpre ++ [s]) ++ ss) in H.
+      + destruct H as [f' Hin].
+        eapply IHHs0 with (gpre := gpre ++ [s]) in H6; eauto.
+      + rewrite <- app_assoc; auto.        
   Qed.
 
   Lemma sized_ns_ex :
@@ -278,8 +279,8 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Qed.
 
   Lemma sized_ns_np :
-    forall g x y pre suf,
-      In (x, pre ++ NT y :: suf) g.(prods)
+    forall g x y pre suf f,
+      In (existT _ (x, pre ++ NT y :: suf) f) g.(prods)
       -> nullable_gamma g (pre ++ NT y :: suf)
       -> nullable_sym g (NT y)
       -> exists nx ny,
@@ -310,18 +311,18 @@ Module ParserSafetyFn (Import G : Grammar.T).
           /\ ny < nx.
   Proof.
     intros g t la x y Ht Hn Hf Hnp.
-    induction Hnp as [x y gamma pre suf Hi He Hng Hl |
-                      x y z gamma pre suf Hi Heq Hng Hl Hnp IH]; intros; subst.
+    induction Hnp as [x y gamma f pre suf Hi He Hng Hl |
+                      x y z gamma f pre suf Hi Heq Hng Hl Hnp IH]; intros; subst.
     - inv Hn.
       destruct Hl as [Hfg | [Hng' Hfo]].
       + (* LEMMA *)
         exfalso; eapply no_first_follow_conflicts with (sym := NT x); eauto.
-        apply first_gamma_first_sym with (gamma := pre ++ NT y :: suf); auto.
+        eapply first_gamma_first_sym with (gamma := pre ++ NT y :: suf); eauto.
       + eapply sized_ns_np; eauto.
         eapply nullable_middle_sym; eauto.
     - destruct Hl as [Hfg | [Hng' Hfo]].
       + exfalso; eapply no_first_follow_conflicts with (sym := NT x); eauto.
-        apply first_gamma_first_sym with (gamma := pre ++ NT y :: suf); auto.
+        eapply first_gamma_first_sym with (gamma := pre ++ NT y :: suf); eauto.
       + assert (Hn' : nullable_sym g (NT y)).
         { eapply nullable_middle_sym; eauto. }
         assert (Hfo' : follow_sym g la (NT y)).
@@ -341,8 +342,8 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Lemma nullable_path_exists_production :
     forall g la x y,
       nullable_path g la (NT x) y
-      -> exists gamma,
-        In (x, gamma) g.(prods)
+      -> exists gamma f,
+        In (existT _ (x, gamma) f) g.(prods)
         /\ lookahead_for la x gamma g.
   Proof.
     intros g la x y Hn; inv Hn; eauto.
@@ -354,11 +355,11 @@ Module ParserSafetyFn (Import G : Grammar.T).
       -> ~ left_recursive g (NT x) la.
   Proof.
     intros g t la x Ht; unfold not; intros Hlr; red in Hlr.
-    assert (Hex : exists gamma,
-               In (x, gamma) g.(prods)
+    assert (Hex : exists gamma f,
+               In (existT _ (x, gamma) f) g.(prods)
                /\ lookahead_for la x gamma g).
     { apply nullable_path_exists_production in Hlr; auto. }
-    destruct Hex as [gamma [Hi Hl]].
+    destruct Hex as [gamma [f [Hi Hl]]].
     destruct Hl as [Hfg | [Hng Hfo]].
     - assert (Hf : first_sym g la (NT x)) by (inv Hfg; eauto).
       eapply sized_first_sym_np in Hf; eauto.
@@ -384,35 +385,35 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Lemma input_length_lt_or_nullable_sym :
     forall g tbl,
       parse_table_correct tbl g
-      -> forall (input : list terminal)
-                (vis   : NtSet.t)
-                (sa    : sym_arg),
+      -> forall (ts  : list token)
+                (vis : NtSet.t)
+                (sa  : sym_arg),
         match sa with
-        | F_arg sym =>
-          forall a tr rem Hle,
-            parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
-            -> List.length rem < List.length input
-               \/ nullable_sym g sym
+        | F_arg s =>
+          forall a v r Hle,
+            parseTree tbl s ts vis a = inr (v, existT _ r Hle)
+            -> List.length r < List.length ts
+               \/ nullable_sym g s
         | G_arg gamma =>
-          forall a f rem Hle,
-            parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
-            -> List.length rem < List.length input
+          forall a vs r Hle,
+            parseForest tbl gamma ts vis a = inr (vs, existT _ r Hle)
+            -> List.length r < List.length ts
                \/ nullable_gamma g gamma
         end.
   Proof.
-    intros g tbl Htbl input.
-    induct_list_length input.
+    intros g tbl Htbl ts.
+    induct_list_length ts.
     intros vis; induct_card tbl vis.
     intros sa; induct_sa_size sa.
     destruct sa.
-    - intros a tr rem Hle Hp; destruct a; simpl in *; dms; tc.
+    - intros a v r Hle Hp; destruct a; simpl in *; dms; tc.
       + invh; auto.
       + step_eq Hpf; dms; tc.
         invh.
-        pose proof e as e'; apply Htbl in e'; destruct e'.
-        eapply IHcard with (sa := G_arg x) in Hpf; destruct Hpf; eauto.
+        pose proof e as e'; apply Htbl in e'; destruct e' as [Heq [Hin Hlk]].
+        eapply IHcard with (sa := G_arg l) in Hpf; destruct Hpf; eauto.
         eapply cardinal_diff_add_lt; eauto.
-    - intros a f rem Hle Hpf; destruct a; simpl in *; dms; tc.
+    - intros a vs r Hle Hpf; destruct a; simpl in *; dms; tc.
       + invh; auto.
       + step_eq Hp; dms; tc.
         * step_eq Hpf'; dms; tc; invh.
@@ -427,80 +428,83 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Qed.
 
   Lemma input_length_eq_nullable_sym :
-    forall g tbl,
-      parse_table_correct tbl g
-      -> forall (sym   : symbol)
-                (input : list terminal)
-                (vis   : NtSet.t)
-                a tr Hle,
-        parseTree tbl sym input vis a = inr (tr, existT _ input Hle)
-        -> nullable_sym g sym.
+    forall (g   : grammar)
+           (tbl : parse_table)
+           (s   : symbol)
+           (ts  : list token)
+           (vis : NtSet.t)
+           (a : Acc triple_lt (meas tbl ts vis (F_arg s)))
+           (v   : symbol_semty s)
+           Hle,
+        parse_table_correct tbl g
+        -> parseTree tbl s ts vis a = inr (v, existT _ ts Hle)
+        -> nullable_sym g s.
   Proof.
-    intros g tbl Htbl sym input vis a tr Hle Hp.
-    eapply input_length_lt_or_nullable_sym with (sa := F_arg sym) in Hp; eauto.
+    intros g tbl s ts vis a v Hle Htbl Hp.
+    eapply input_length_lt_or_nullable_sym with (sa := F_arg s) in Hp; eauto.
     destruct Hp; try omega; auto.
   Qed.
 
   Lemma leftrec_conditions :
     forall g tbl,
       parse_table_correct tbl g
-      -> forall (input : list terminal)
+      -> forall (ts : list token)
                 (vis : NtSet.t)
                 (sa : sym_arg),
         match sa with
-        | F_arg sym =>
-          forall a x vis' input',
-            parseTree tbl sym input vis a = inl (LeftRec x vis' input')
+        | F_arg s =>
+          forall a x vis' ts',
+            parseTree tbl s ts vis a = inl (LeftRec x vis' ts')
             -> (NtSet.In x vis
-                /\ (sym = NT x
-                    \/ nullable_path g (peek input) sym (NT x)))
+                /\ (s = NT x
+                    \/ nullable_path g (peek ts) s (NT x)))
                \/ exists la, (left_recursive g (NT x) la)
         | G_arg gamma =>
-          forall a x vis' input',
-            parseForest tbl gamma input vis a = inl (LeftRec x vis' input')
-            -> (exists pre sym suf,
-                   gamma = pre ++ sym :: suf
+          forall a x vis' ts',
+            parseForest tbl gamma ts vis a = inl (LeftRec x vis' ts')
+            -> (exists pre s suf,
+                   gamma = pre ++ s :: suf
                    /\ nullable_gamma g pre
                    /\ NtSet.In x vis
-                   /\ (sym = NT x
-                       \/ nullable_path g (peek input) sym (NT x)))
+                   /\ (s = NT x
+                       \/ nullable_path g (peek ts) s (NT x)))
                \/ exists la, (left_recursive g (NT x) la)
         end.
   Proof.
-    intros g tbl Ht input.
-    induct_list_length input.
+    intros g tbl Ht ts.
+    induct_list_length ts.
     intros vis; induct_card tbl vis.
     intros sa; induct_sa_size sa.
     destruct sa.
     - (* sa = F_arg sym *)
-      intros a x vis' input' Hp; destruct a; simpl in *.
+      intros a x vis' ts' Hp; destruct a; simpl in *.
       dms; tc.
       + inv Hp.
         left; auto.
       + step_eq Hpf; dms; tc.
         inv Hp.
         (* tactic *)
-        eapply IHcard with (sa := G_arg x0) in Hpf; eauto.
+        eapply IHcard with (sa := G_arg l) in Hpf; eauto.
         * destruct Hpf as [Hex | Hex]; auto.
           destruct Hex as [pre [sym [suf [Hg [Hng [Hin Hrest]]]]]]; subst.
-          apply Ht in e; destruct e.
+          apply Ht in e; destruct e as [Heq [Hin' Hlk]].
           destruct (NtSetFacts.eq_dec x n); subst.
           -- right; exists (peek input).
-             destruct Hrest as [Heq | Hnp]; subst.
+             destruct Hrest as [Heq' | Hnp]; subst.
              ++ eapply DirectPath; eauto.
              ++ pose proof Hnp as Hnp'.
                 apply nullable_path_ex_nt in Hnp.
-                destruct Hnp as [x [x' [Heq Heq']]]; subst.
+                destruct Hnp as [x [x' [Heq' Heq'']]]; subst.
                 eapply IndirectPath; eauto.
           -- left; split; try ND.fsetdec.
-             destruct Hrest as [Heq | Hnp]; subst; eauto.
+             destruct Hrest as [Heq' | Hnp]; subst; eauto.
              pose proof Hnp as Hnp'.
              apply nullable_path_ex_nt in Hnp.
-             destruct Hnp as [y [y' [Heq Heq']]]; subst.
+             destruct Hnp as [y [y' [Heq' Heq'']]]; subst.
              right; eauto.
         * eapply cardinal_diff_add_lt; eauto.
 
-    - intros a x vis' input' Hpf; destruct a; simpl in *.
+    - intros a x vis' ts' Hpf; destruct a; simpl in *.
       dms; tc.
       step_eq Hp.
       + invh.

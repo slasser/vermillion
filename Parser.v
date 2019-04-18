@@ -319,6 +319,6 @@ Module ParserFn (Import G : Grammar.T).
                end
              end
          end eq_refl.
-  
 End ParserFn.
+
 

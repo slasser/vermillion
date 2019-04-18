@@ -2,10 +2,6 @@ Require Import List PeanoNat String.
 Require Import FMaps MSets.
 Export ListNotations.
 
-(* fn from terminals to semty
-   fn from nts to semty
-*)
-
 (* Types of grammar symbols and their decidable equality *)
 Module Type SYMBOL_TYPES.
   Parameters terminal nonterminal : Type.
@@ -261,7 +257,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     | T_sdp  : forall (a : terminal)
                       (v : t_semty a)
                       (r : list token),
-          sym_derives_prefix g (T a) [existT _ a v] v r
+          sym_derives_prefix g (T a) [existT _ t v] v r
     | NT_sdp : forall (x     : nonterminal) 
                       (gamma : list symbol)
                       (w r   : list token) 
@@ -401,7 +397,6 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
       pt_sound tbl g /\ pt_complete tbl g.
 
   End Specs.
-
 End DefsFn.
 
 Module Type DefsT (SymTy : SYMBOL_TYPES).
