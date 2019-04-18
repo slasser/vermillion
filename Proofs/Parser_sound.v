@@ -5,7 +5,6 @@ Require Import Grammar.
 Require Import Lemmas.
 Require Import Tactics.
 Require Import Parser.
-Require Import Generator.
 Import ListNotations.
 
 Module ParserSoundnessFn (Import G : Grammar.T).
@@ -62,41 +61,48 @@ Module ParserSoundnessFn (Import G : Grammar.T).
   Lemma parseTree_sound' :
     forall g tbl,
       parse_table_correct tbl g
-      -> forall (input : list terminal)
+      -> forall (ts    : list token)
                 (vis   : NtSet.t)
                 (sa    : sym_arg),
         match sa with
         | F_arg sym =>
-          forall a tr rem Hle,
-            parseTree tbl sym input vis a = inr (tr, existT _ rem Hle)
+          forall (a   : Acc triple_lt (meas tbl ts vis (F_arg sym)))
+                 (v   : symbol_semty sym)
+                 (r   : list token)
+                 (Hle : length_lt_eq _ r ts),
+            parseTree tbl sym ts vis a = inr (v, existT _ r Hle)
             -> exists word,
-              word ++ rem = input
-              /\ sym_derives_prefix g sym word tr rem
+              word ++ r = ts
+              /\ sym_derives_prefix g sym word v r
         | G_arg gamma =>
-          forall a f rem Hle,
-            parseForest tbl gamma input vis a = inr (f, existT _ rem Hle)
+          forall (a   : Acc triple_lt (meas tbl ts vis (G_arg gamma)))
+                 (vs  : rhs_semty gamma)
+                 (r   : list token)
+                 (Hle : length_lt_eq _ r ts),
+            parseForest tbl gamma ts vis a = inr (vs, existT _ r Hle)
             -> exists word,
-              word ++ rem = input
-              /\ gamma_derives_prefix g gamma word f rem
+              word ++ r = ts
+              /\ gamma_derives_prefix g gamma word vs r
         end.
   Proof.
-    intros g tbl Htbl input.
-    induct_list_length input.
+    intros g tbl Htbl ts.
+    induct_list_length ts.
     intros vis; induct_card tbl vis.
     intros sa; induct_sa_size sa.
     destruct sa.
-    - intros a tr rem Hle Hp; destruct a; simpl in *.
+    - intros a v r Hle Hp; destruct a; simpl in *.
       dms; tc.
       + (* terminal *)
         invh. eexists; split; eauto.
         rewrite <- cons_app_singleton; auto.
       + (* nonterminal *)
         step_eq Hpf; dms; tc; invh.
-        eapply IHcard with (sa := G_arg x) in Hpf; eauto.
+        eapply IHcard with (sa := G_arg l) in Hpf; eauto.
         * destruct Hpf as [word [Happ Hg]]; subst.
-          apply Htbl in e; destruct e; eauto.
+          apply Htbl in e.
+          destruct e as [Heq [Hin Hlk]]; simpl; eauto.
         * eapply cardinal_diff_add_lt; eauto.
-    - intros a f rem Hle Hpf; destruct a; simpl in *; dms; tc.
+    - intros a vs r Hle Hpf; destruct a; simpl in *; dms; tc.
       + invh.
         exists nil; eauto.
       + step_eq Hp; dms; tc; subst.
@@ -122,23 +128,22 @@ Module ParserSoundnessFn (Import G : Grammar.T).
 
   Lemma parseTree_sound :
     forall (g   : grammar)
-           (tbl : parse_table),
+           (tbl : parse_table)
+           (s   : symbol)
+           (w r : list token)
+           (vis : NtSet.t)
+           (a   : Acc triple_lt (meas tbl (w ++ r) vis (F_arg s)))
+           (v   : symbol_semty s)
+           (Hle : length_lt_eq _ r (w ++ r)),
       parse_table_correct tbl g
-      -> forall (tr        : tree)
-                (sym       : symbol)
-                (word rem  : list terminal)
-                Hle
-                (vis       : NtSet.t)
-                (a : Acc triple_lt (meas tbl (word ++ rem) vis (F_arg sym))),
-        parseTree tbl sym (word ++ rem) vis a = inr (tr, existT _ rem Hle)
-        -> sym_derives_prefix g sym word tr rem.
+      -> parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)
+      -> sym_derives_prefix g s w v r.
   Proof.
-    intros g tbl Htbl tr sym word rem Hle vis a Hp.
+    intros g tbl s w r vis a v Hle Htbl Hp.
     pose proof Hp as Hp'.
-    eapply parseTree_sound' with (sa := F_arg sym) in Hp; eauto.
+    eapply parseTree_sound' with (sa := F_arg s) in Hp; eauto.
     destruct Hp as [word' [Happ Hder]].
-    apply app_inv_tail in Happ.
-    subst; auto.
+    apply app_inv_tail in Happ; subst; auto.
   Qed.
 
 End ParserSoundnessFn.
