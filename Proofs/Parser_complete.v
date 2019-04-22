@@ -21,8 +21,25 @@ Module ParserProofsFn (Import G : Grammar.T).
     intros a v Heq.
     erewrite Eqdep_dec.eq_rect_eq_dec; eauto.
   Qed.
+
+  Lemma eq_rect_nonterminal_eq :
+    forall (x   : nonterminal)
+           (v   : nt_semty x)
+           (Heq : x = x),
+      eq_rect x nt_semty v x Heq = v.
+  Proof.
+    intros x v Heq.
+    erewrite Eqdep_dec.eq_rect_eq_dec; eauto.
+  Qed.
+
+  Lemma production_eq_dec :
+    forall (p p' : production),
+      {p = p'} + {p <> p'}.
+  Proof.
+    repeat decide equality.
+  Qed.
   
-  Theorem parseTree_complete_or_leftrec :
+  Theorem parseTree_complete_or_error :
     forall (g : grammar)
            (tbl : parse_table)
            (s : symbol)
@@ -31,8 +48,8 @@ Module ParserProofsFn (Import G : Grammar.T).
       parse_table_correct tbl g
       -> sym_derives_prefix g s w v r
       -> forall vis a,
-          (exists x vis' ts',
-              parseTree tbl s (w ++ r) vis a = inl (LeftRec x vis' ts'))
+          (exists m x ts',
+              parseTree tbl s (w ++ r) vis a = inl (Error m x ts'))
           \/ (exists Hle,
                  parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)).
   Proof.
@@ -40,95 +57,62 @@ Module ParserProofsFn (Import G : Grammar.T).
     induction Hd using sdp_mutual_ind with
         (P := fun s w v r (H : sym_derives_prefix g s w v r) =>
                 forall vis a,
-                  (exists x vis' ts',
-                      parseTree tbl s (w ++ r) vis a = inl (LeftRec x vis' ts'))
+                  (exists m x ts',
+                      parseTree tbl s (w ++ r) vis a = inl (Error m x ts'))
                   \/ (exists Hle,
                          parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)))
         
         (P0 := fun gamma w vs r (H : gamma_derives_prefix g gamma w vs r) =>
                  forall vis a,
-                   (exists x vis' ts',
-                       parseForest tbl gamma (w ++ r) vis a = inl (LeftRec x vis' ts'))
+                   (exists m x ts',
+                       parseForest tbl gamma (w ++ r) vis a = inl (Error m x ts'))
                    \/ (exists Hle,
                           parseForest tbl gamma (w ++ r) vis a = inr (vs, existT _ r Hle))); intros vis a'.
-    
     - right; eexists.
       destruct a'; simpl in *; dm; tc.
       rewrite eq_rect_terminal_eq; auto.
-    - destruct a'; simpl in *; dms; tc; subst; eauto.
-      + exfalso.
-        eapply Htbl in l; tc; eauto.
-      + admit.
-      +
-  Abort.
-      dms.
-      + eauto. exfalso.
-        eapply Htbl in l; eauto. 
-      + destruct s as [gamma' Hlk].
-        assert (gamma' = gamma).
-        { apply Htbl in l; auto.
-          eapply lookups_eq; eauto. }
-        subst.
-        dm; eauto.
+    - destruct a'; simpl in *; dm; tc; eauto.
+      eapply Htbl in l; tc; eauto.
+      destruct (ptlk_dec x (peek (w ++ r))) as
+          [Hlk | [[(x', gamma') f'] Hlk]]; tc.
+      rewrite Hlk in l; inv l.
+      assert (f' = f).
+      { apply Eqdep_dec.inj_pair2_eq_dec; auto.
+        apply production_eq_dec. }
+        subst; dms; tc.
         edestruct IHHd with (vis := NtSet.add x vis).
-        * destruct H as [x' [vis' [input' Hpf]]].
-          rewrite Hpf.
-          left; eauto.
+        * destruct H as [m [x' [ts' Hpf]]].
+          rewrite Hpf; left; eauto.
         * destruct H as [Hle Hpf].
-          rewrite Hpf.
-          right; eauto.
-
-      
-    - admit.
-    - admit.
-    - admit.
-  Admitted.
-    - destruct a; simpl in *; dm.
-      + exfalso.
-        apply Htbl in l; tc.
-      + destruct s as [gamma' Hlk].
-        assert (gamma' = gamma).
-        { apply Htbl in l; auto.
-          eapply lookups_eq; eauto. }
-        subst.
-        dm; eauto.
-        edestruct IHHd with (vis := NtSet.add x vis).
-        * destruct H as [x' [vis' [input' Hpf]]].
-          rewrite Hpf.
-          left; eauto.
-        * destruct H as [Hle Hpf].
-          rewrite Hpf.
-          right; eauto.
-
+          rewrite Hpf; right.
+          rewrite eq_rect_nonterminal_eq; eauto.
     - simpl in *.
       right.
-      destruct a; simpl.
-      eauto.
-
-    - destruct a; simpl.
+      destruct a'; simpl; eauto.
+    - destruct a'; simpl.
       rewrite app_assoc in IHHd.
       edestruct IHHd with (vis := vis); clear IHHd.
-      + destruct H as [x' [vis' [input' Hp]]].
+      + destruct H as [m [x [ts' Hp]]].
         rewrite Hp; eauto.
       + destruct H as [Hp_le Hp].
         rewrite Hp; dm.
         * (* length lt case *)
           edestruct IHHd0.
-          -- destruct H as [x [vis' [input' Hpf]]].
+          -- destruct H as [m [x [ts' Hpf]]].
              rewrite Hpf; eauto.
           -- destruct H as [Hpf_le Hpf].
              rewrite Hpf; eauto.
         * assert (wpre = nil).
           { eapply l_ident_eq_nil with
-                (xs := wpre) (ys := wsuf ++ rem).
+                (xs := wpre) (ys := wsuf ++ r).
             rewrite app_assoc; auto. }
           subst; simpl in *.
           edestruct IHHd0.
-          -- destruct H as [x [vis' [input' Hpf]]].
+          -- destruct H as [m [x [ts' Hpf]]].
              rewrite Hpf; eauto.
           -- destruct H as [Hpf_le Hpf].
              rewrite Hpf; eauto.
   Qed.
-
+  
 End ParserProofsFn.
 

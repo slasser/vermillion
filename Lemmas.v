@@ -526,10 +526,10 @@ Defined.
   Qed.
 
   Lemma lookups_eq :
-    forall x la t gamma gamma',
-      pt_lookup x la t = Some gamma
-      -> pt_lookup x la t = Some gamma'
-      -> gamma = gamma'.
+    forall x la t xp xp',
+      pt_lookup x la t = Some xp
+      -> pt_lookup x la t = Some xp'
+      -> xp = xp'.
   Proof.
     intros; tc.
   Qed.

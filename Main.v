@@ -1,13 +1,15 @@
+Require Import String.
 Require Import Grammar.
 Require Import Tactics.
-Require Import mkParseTable_correct.
+(*Require Import mkParseTable_correct.*)
 Require Import Parser_complete.
 
 Module Make (Import G : Grammar.T).
 
-  Module Import GeneratorAndProofs := GeneratorProofsFn G.
+(*  Module Import GeneratorAndProofs := GeneratorProofsFn G. *)
   Module Import ParserAndProofs    := ParserProofsFn G.
 
+  (*
   Definition parseTableOf (g : grammar) : option parse_table :=
     let nu    := mkNullableSet g in
     let nu_pf := (mkNullableSet_correct g) in
@@ -48,26 +50,28 @@ Module Make (Import G : Grammar.T).
       apply mkNullableSet_correct; auto.
   Qed.
 
+*)
+
   Definition parse (tbl : parse_table)
                    (sym : symbol)
-                   (input : list terminal) :
-    Datatypes.sum parse_failure (tree * list terminal) :=
-    match parseTree tbl sym input NtSet.empty (triple_lt_wf _) with
+                   (ts  : list token) :
+    Datatypes.sum parse_failure (symbol_semty sym * list token) :=
+    match parseTree tbl sym ts NtSet.empty (triple_lt_wf _) with
     | inl failure => inl failure
-    | inr (tr, existT _ input' _) => inr (tr, input')
+    | inr (v, existT _ ts' _) => inr (v, ts')
     end.
 
   Theorem parse_sound :
     forall (g   : grammar)
            (tbl : parse_table)
-           (sym : symbol)
-           (word rem : list terminal)
-           (tr : tree),
+           (s   : symbol)
+           (w r : list token)
+           (v   : symbol_semty s),
       parse_table_correct tbl g
-      -> parse tbl sym (word ++ rem) = inr (tr, rem)
-      -> sym_derives_prefix g sym word tr rem.
+      -> parse tbl s (w ++ r) = inr (v, r)
+      -> sym_derives_prefix g s w v r.
   Proof.
-    intros g tbl sym word rem tr Ht Hp.
+    intros g tbl s w r v Ht Hp.
     unfold parse in Hp.
     step_eq Hp; tc.
     dms; invh.
@@ -75,36 +79,40 @@ Module Make (Import G : Grammar.T).
   Qed.
 
   Theorem parse_safe :
-    forall (g   : grammar)
-           (tbl : parse_table)
-           (sym : symbol)
-           (input : list terminal)
-           (tr : tree),
+    forall (g      : grammar)
+           (tbl    : parse_table)
+           (s      : symbol)
+           (ts ts' : list token)
+           (m      : string)
+           (x      : nonterminal),
       parse_table_correct tbl g
-      -> forall x vis input',
-        ~ parse tbl sym input = inl (LeftRec x vis input').
+      -> ~ parse tbl s ts = inl (Error m x ts').
   Proof.
-    unfold not; intros g tbl sym input tr Ht x vis input' Hp.
+    unfold not; intros g tbl s ts ts' m x Ht Hp.
     unfold parse in Hp.
     step_eq Hp'; dms; tc.
     invh.
-    eapply leftrec_conditions with (sa := F_arg sym) in Hp'; eauto.
+    eapply error_conditions with (sa := F_arg s) in Hp'; eauto.
     destruct Hp' as [Hf | Hex]; try ND.fsetdec.
     destruct Hex.
     eapply LL1_parse_table_impl_no_left_recursion; eauto.
   Qed.
 
   Theorem parse_complete :
-    forall g tbl sym word tr rem,
+    forall (g   : grammar)
+           (tbl : parse_table)
+           (s   : symbol)
+           (w r : list token)
+           (v   : symbol_semty s),
       parse_table_correct tbl g
-      -> sym_derives_prefix g sym word tr rem
-      -> parse tbl sym (word ++ rem) = inr (tr, rem).
+      -> sym_derives_prefix g s w v r
+      -> parse tbl s (w ++ r) = inr (v, r).
   Proof.
-    intros g tbl sym word tr rem Ht Hd.
-    eapply parseTree_complete_or_leftrec in Hd; eauto.
-    destruct Hd as [Hlr | Hp].
+    intros g tbl s w r v Ht Hd.
+    eapply parseTree_complete_or_error in Hd; eauto.
+    destruct Hd as [Herr | Hp].
     - exfalso.
-      destruct Hlr as [x [vis' [input' Hp]]].
+      destruct Herr as [m [x [ts' Hp]]].
       eapply parse_safe; eauto.
       unfold parse.
       rewrite Hp; auto.
