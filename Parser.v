@@ -191,7 +191,7 @@ Module ParserFn (Import G : Grammar.T).
   
   Inductive parse_failure : Type :=
   | Reject   : string -> list token -> parse_failure
-  | LeftRec  : nonterminal -> NtSet.t -> list token -> parse_failure.
+  | Error    : string -> nonterminal -> list token -> parse_failure.
   
   Definition mem_dec (x : nonterminal) (s : NtSet.t) :
                      {NtSet.In x s} + {~ NtSet.In x s}.
@@ -256,7 +256,7 @@ Module ParserFn (Import G : Grammar.T).
       end eq_refl
     | NT x =>
       match mem_dec x vis with
-      | left _ => inl (LeftRec x vis ts)
+      | left _ => inl (Error "left recursion detected" x ts)
       | right Hnin =>
         match ptlk_dec x (peek ts) tbl with
         | inl _ => inl (Reject "lookup failure" ts)
@@ -272,7 +272,7 @@ Module ParserFn (Import G : Grammar.T).
               inr (v, existT _ ts' Hle)
             end
           | right _ =>
-            inl (Reject "malformed parse table" ts)
+            inl (Error "malformed parse table" x ts)
           end
         end
       end
@@ -319,6 +319,6 @@ Module ParserFn (Import G : Grammar.T).
                end
              end
          end eq_refl.
-End ParserFn.
 
+End ParserFn.
 

@@ -445,7 +445,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
     destruct Hp; try omega; auto.
   Qed.
 
-  Lemma leftrec_conditions :
+    Lemma error_conditions :
     forall g tbl,
       parse_table_correct tbl g
       -> forall (ts : list token)
@@ -453,15 +453,15 @@ Module ParserSafetyFn (Import G : Grammar.T).
                 (sa : sym_arg),
         match sa with
         | F_arg s =>
-          forall a x vis' ts',
-            parseTree tbl s ts vis a = inl (LeftRec x vis' ts')
+          forall a m x ts',
+            parseTree tbl s ts vis a = inl (Error m x ts')
             -> (NtSet.In x vis
                 /\ (s = NT x
                     \/ nullable_path g (peek ts) s (NT x)))
-               \/ exists la, (left_recursive g (NT x) la)
+               \/ exists la, left_recursive g (NT x) la
         | G_arg gamma =>
-          forall a x vis' ts',
-            parseForest tbl gamma ts vis a = inl (LeftRec x vis' ts')
+          forall a m x ts',
+            parseForest tbl gamma ts vis a = inl (Error m x ts')
             -> (exists pre s suf,
                    gamma = pre ++ s :: suf
                    /\ nullable_gamma g pre
@@ -477,10 +477,8 @@ Module ParserSafetyFn (Import G : Grammar.T).
     intros sa; induct_sa_size sa.
     destruct sa.
     - (* sa = F_arg sym *)
-      intros a x vis' ts' Hp; destruct a; simpl in *.
-      dms; tc.
-      + inv Hp.
-        left; auto.
+      intros a m x ts' Hp; destruct a; simpl in *; dms; tc.
+      + inv Hp; left; auto.
       + step_eq Hpf; dms; tc.
         inv Hp.
         (* tactic *)
@@ -503,9 +501,10 @@ Module ParserSafetyFn (Import G : Grammar.T).
              destruct Hnp as [y [y' [Heq' Heq'']]]; subst.
              right; eauto.
         * eapply cardinal_diff_add_lt; eauto.
+      + exfalso.
+        inv Hp; eapply Ht in e; destruct e as [Heq [Hin Hlk]]; tc.
 
-    - intros a x vis' ts' Hpf; destruct a; simpl in *.
-      dms; tc.
+    - intros a m x ts' Hpf; destruct a; simpl in *; dms; tc.
       step_eq Hp.
       + invh.
         eapply IHsz with (sa := F_arg s) (m := sa_size (F_arg s)) in Hp;
@@ -524,3 +523,4 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Qed.
 
 End ParserSafetyFn.
+

@@ -257,7 +257,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     | T_sdp  : forall (a : terminal)
                       (v : t_semty a)
                       (r : list token),
-          sym_derives_prefix g (T a) [existT _ t v] v r
+          sym_derives_prefix g (T a) [existT _ a v] v r
     | NT_sdp : forall (x     : nonterminal) 
                       (gamma : list symbol)
                       (w r   : list token) 
