@@ -55,6 +55,30 @@ Module ParserProofsFn (Import G : Grammar.T).
     - right; eexists.
       destruct a'; simpl in *; dm; tc.
       rewrite eq_rect_terminal_eq; auto.
+    - destruct a'; simpl in *; dms; tc; subst; eauto.
+      + exfalso.
+        eapply Htbl in l; tc; eauto.
+      + admit.
+      +
+  Abort.
+      dms.
+      + eauto. exfalso.
+        eapply Htbl in l; eauto. 
+      + destruct s as [gamma' Hlk].
+        assert (gamma' = gamma).
+        { apply Htbl in l; auto.
+          eapply lookups_eq; eauto. }
+        subst.
+        dm; eauto.
+        edestruct IHHd with (vis := NtSet.add x vis).
+        * destruct H as [x' [vis' [input' Hpf]]].
+          rewrite Hpf.
+          left; eauto.
+        * destruct H as [Hle Hpf].
+          rewrite Hpf.
+          right; eauto.
+
+      
     - admit.
     - admit.
     - admit.
