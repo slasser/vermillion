@@ -53,10 +53,10 @@ Module Make (Import G : Grammar.T).
 *)
 
   Definition parse (tbl : parse_table)
-                   (sym : symbol)
+                   (s   : symbol)
                    (ts  : list token) :
-    Datatypes.sum parse_failure (symbol_semty sym * list token) :=
-    match parseTree tbl sym ts NtSet.empty (triple_lt_wf _) with
+    Datatypes.sum parse_failure (symbol_semty s * list token) :=
+    match parseTree tbl s ts NtSet.empty (triple_lt_wf _) with
     | inl failure => inl failure
     | inr (v, existT _ ts' _) => inr (v, ts')
     end.

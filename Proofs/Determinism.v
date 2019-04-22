@@ -9,29 +9,25 @@ Require Import Main.
 Module DetFn (Import G : Grammar.T).
 
   Module Import PG := Make G.
-  
+
   Corollary LL1_derivation_deterministic :
-    forall (tbl : parse_table)
-           (g : grammar),
+    forall (g         : grammar)
+           (tbl       : parse_table)
+           (s         : symbol)
+           (w w' r r' : list token)
+           (v v'      : symbol_semty s),
       parse_table_correct tbl g
-      -> forall (sym : symbol)
-                (word rem : list terminal)
-                (tr : tree),
-        (@sym_derives_prefix g) sym word tr rem
-        -> forall (word' rem' : list terminal)
-                  (tr' : tree),
-          (@sym_derives_prefix g) sym word' tr' rem'
-          -> word ++ rem = word' ++ rem'
-          -> word = word' /\ rem = rem' /\ tr = tr'.
+      -> w ++ r = w' ++ r'
+      -> sym_derives_prefix g s w  v  r
+      -> sym_derives_prefix g s w' v' r'
+      -> w = w' /\ r = r' /\ v = v'.
   Proof.
-    intros tbl g Htbl sym word  rem  tr  Hder
-           word' rem' tr' Hder' Heq.
-    eapply parse_complete in Hder; eauto.
-    eapply parse_complete in Hder'; eauto.
-    rewrite Heq in Hder.
-    rewrite Hder in Hder'.
-    inv Hder'.
+    intros g tbl s w w' r r' v v' Ht Heq Hd Hd'.
+    eapply parse_complete in Hd;  eauto.
+    eapply parse_complete in Hd'; eauto.
+    rewrite Heq in Hd; rewrite Hd in Hd'; inv Hd'.
     apply app_inv_tail in Heq; subst; auto.
   Qed.
 
 End DetFn.
+
