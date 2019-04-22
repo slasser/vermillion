@@ -31,13 +31,6 @@ Module ParserProofsFn (Import G : Grammar.T).
     intros x v Heq.
     erewrite Eqdep_dec.eq_rect_eq_dec; eauto.
   Qed.
-
-  Lemma production_eq_dec :
-    forall (p p' : production),
-      {p = p'} + {p <> p'}.
-  Proof.
-    repeat decide equality.
-  Qed.
   
   Theorem parseTree_complete_or_error :
     forall (g : grammar)

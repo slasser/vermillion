@@ -533,6 +533,13 @@ Defined.
   Proof.
     intros; tc.
   Qed.
+
+  Lemma production_eq_dec :
+    forall (p p' : production),
+      {p = p'} + {p <> p'}.
+  Proof.
+    repeat decide equality.
+  Qed.
   
 End LemmasFn.
 
