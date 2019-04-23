@@ -15,7 +15,17 @@ Require Import Main.
    L -> ; S L
 
    E -> num = num 
-*) 
+ *)
+
+(* Abstract syntax for the language that Grammar 3.11 represents.
+   The values that our parser produces will be ASTs with these types. *)
+Inductive exp :=
+| Cmp_exp : nat -> nat -> exp.
+
+Inductive stmt :=
+| If_stmt    : exp -> stmt -> stmt -> stmt
+| Begin_stmt : list stmt -> stmt
+| Print_stmt : exp -> stmt.
 
 (* First, we provide the types of grammar symbols 
    and their decidable equalities. *)
@@ -35,11 +45,26 @@ Module G311_Types <: SYMBOL_TYPES.
   
   Lemma t_eq_dec : forall (t t' : terminal),
       {t = t'} + {t <> t'}.
-  Proof. decide equality. Defined.
+  Proof. decide equality. Qed.
   
   Lemma nt_eq_dec : forall (nt nt' : nonterminal),
       {nt = nt'} + {nt <> nt'}.
-  Proof. decide equality. Defined.
+  Proof. decide equality. Qed.
+
+  (* A Num token carries a natural number -- no other token
+     carries a meaningful semantic value. *)
+  Definition t_semty (a : terminal) : Type :=
+    match a with
+    | Num => nat
+    | _   => unit
+    end.
+
+  Definition nt_semty (x : nonterminal) : Type :=
+    match x with
+    | S => stmt
+    | L => list stmt
+    | E => exp
+    end.
 
 End G311_Types.
 
@@ -47,24 +72,57 @@ End G311_Types.
    and we package the types and their accompanying defs
    into a single module *)
 Module Export G <: Grammar.T.
-  Module SymTy := G311_Types.
-  Module Defs  := DefsFn SymTy.
-  Export SymTy.
-  Export Defs.
+  Module Export SymTy := G311_Types.
+  Module Export Defs  := DefsFn SymTy.
 End G.
 
 (* Now we can represent the grammar from the textbook
    as a record with "start" and "prods" fields. *)
 Definition g311 : grammar :=
   {| start := S ;
-     prods := [(S, [T If; NT E; T Then; NT S; T Else; NT S]);
-               (S, [T Begin; NT S; NT L]);
-               (S, [T Print; NT E]);
+     prods := [existT action_ty
+                      (S, [T If; NT E; T Then; NT S; T Else; NT S])
+                      (fun tup =>
+                         match tup with
+                         | (_, (e, (_, (s1, (_, (s2, _)))))) =>
+                           If_stmt e s1 s2
+                         end);
                  
-               (L, [T End]);
-               (L, [T Semi; NT S; NT L]);
+               existT action_ty
+                      (S, [T Begin; NT S; NT L])
+                      (fun tup =>
+                         match tup with
+                         | (_, (s, (ss, _))) =>
+                           Begin_stmt (s :: ss)
+                         end);
+                      
+               existT action_ty
+                      (S, [T Print; NT E])
+                      (fun tup =>
+                         match tup with
+                         | (_, (e, _)) =>
+                           Print_stmt e
+                         end);
                  
-               (E, [T Num; T Eq; T Num])]
+               existT action_ty
+                      (L, [T End])
+                      (fun _ => []);
+                         
+               existT action_ty
+                      (L, [T Semi; NT S; NT L])
+                      (fun tup =>
+                         match tup with
+                         | (_, (s, (ss, _))) =>
+                           s :: ss
+                         end);
+                 
+               existT action_ty
+                      (E, [T Num; T Eq; T Num])
+                      (fun tup =>
+                         match tup with
+                         | (n1, (_, (n2, _))) =>
+                           Cmp_exp n1 n2
+                         end)]
   |}.
 
 (* Now we create a module that gives us access to
@@ -76,9 +134,22 @@ Definition g311 : grammar :=
            sum parse_failure (tree * list terminal) *)
 Module Import PG := Make G.
 
-(* Example input to the parser *)
-Definition example_prog :=
-  [If; Num; Eq; Num; Then; Print; Num; Eq; Num; Else; Print; Num; Eq; Num].
+Definition tok (a : terminal) (v : t_semty a) : token :=
+  existT _ a v.
+
+(* Example input to the parser:
+
+   if 2 = 5 then
+     print 2 = 5
+   else 
+     print 42 = 42
+
+*)
+Definition example_prog : list token :=
+  [tok If tt; tok Num 2; tok Eq tt; tok Num 5; tok Then tt;
+     tok Print tt; tok Num 2; tok Eq tt; tok Num 5;
+   tok Else tt;
+     tok Print tt; tok Num 42; tok Eq tt; tok Num 42].
 
 (* Now we can generate an LL(1) parse table for the grammar
    and use it to parse the example input. *)
