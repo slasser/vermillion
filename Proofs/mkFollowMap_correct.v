@@ -2,6 +2,7 @@ Require Import List.
 Require Import Wf_nat.
 
 Require Import Grammar.
+Require Import Lemmas.
 Require Import Tactics.
 
 Require Import mkFirstMap_correct.
@@ -11,11 +12,12 @@ Import ListNotations.
 Module FollowProofsFn (G : Grammar.T).
 
   Module Export FirstProofs := FirstProofsFn G.
+  Module Export L           := LemmasFn G.
 
 Lemma mkFollowMap'_eq_body :
   forall g nu fi fi_pf fo fo_pf,
   mkFollowMap' g nu fi fi_pf fo fo_pf =
-  let fo' := followPass g.(prods) nu fi fo in
+  let fo' := followPass (prodsOf g) nu fi fo in
   if follow_map_equiv_dec fo fo' then
     fo
   else
@@ -37,7 +39,7 @@ Qed.
 Lemma nullableGamma_nullable_gamma :
   forall g nu x gsuf gpre,
     nullable_set_for nu g
-    -> In (x, gpre ++ gsuf) g.(prods)
+    -> In (x, gpre ++ gsuf) (prodsOf g)
     -> nullableGamma gsuf nu = true
     -> nullable_gamma g gsuf.
 Proof.
@@ -154,11 +156,14 @@ Lemma updateFo_preserves_soundness' :
     -> first_map_for fi g
     -> follow_map_sound fo g
     -> forall gsuf gpre,
-        In (lx, gpre ++ gsuf) g.(prods)
+        In (lx, gpre ++ gsuf) (prodsOf g)
     -> follow_map_sound (updateFo' nu fi lx gsuf fo) g.
 Proof.
   intros g nu fi lx fo Hnu Hfi Hfo gsuf.
   induction gsuf as [| sym gsuf]; intros gpre Hin; simpl in *; auto.
+  pose proof Hin as Hin'.
+  apply in_prodsOf_exists_in_xprods in Hin'.
+  destruct Hin' as [f Hin'].
   pose proof Hin as Hprod.
   rewrite cons_app_singleton in Hin.
   rewrite app_assoc in Hin.
@@ -169,22 +174,21 @@ Proof.
     | |- context[LaSet.subset ?s1 ?s2] => destruct (LaSet.subset s1 s2) eqn:Hsub
     end; auto.
     unfold follow_map_sound.
-    intros x xFollow la Hf' Hin'.
+    intros x xFollow la Hf' Hin''.
     destruct (NtSetFacts.eq_dec x rx); subst.
     + apply find_values_eq in Hf'; subst.
-      apply LaSetFacts.union_1 in Hin'.
-      destruct Hin' as [Hrxf | Hin'].
+      apply LaSetFacts.union_1 in Hin''.
+      destruct Hin'' as [Hrxf | Hin''].
       * eapply Hin; eauto.
       * destruct (nullableGamma gsuf nu) eqn:Hng.
-        -- apply LaSetFacts.union_1 in Hin'.
-           destruct Hin' as [Hfe | Hfg].
+        -- apply LaSetFacts.union_1 in Hin''.
+           destruct Hin'' as [Hfe | Hfg].
            ++ apply in_findOrEmpty_exists_set in Hfe.
               destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
               eapply FollowLeft; eauto.
               eapply nullableGamma_nullable_gamma; eauto.
               rewrite cons_app_singleton in Hprod.
-              rewrite app_assoc in Hprod.
-              eauto.
+              rewrite app_assoc in Hprod; eauto.
            ++ eapply FollowRight; eauto.
               eapply firstGamma_first_gamma; eauto.
         -- eapply FollowRight; eauto.
@@ -196,24 +200,23 @@ Proof.
     end; auto.
     destruct (nullableGamma gsuf nu) eqn:Hng.
     + unfold follow_map_sound.
-      intros x xFollow la Hf' Hin'.
+      intros x xFollow la Hf' Hin''.
       destruct (NtSetFacts.eq_dec x rx); subst.
       * apply find_values_eq in Hf'; subst.
-        apply LaSetFacts.union_1 in Hin'.
-        destruct Hin' as [Hfe | Hfg].
+        apply LaSetFacts.union_1 in Hin''.
+        destruct Hin'' as [Hfe | Hfg].
         -- apply in_findOrEmpty_exists_set in Hfe.
            destruct Hfe as [lxFollow [Hf_lx Hin_lx]].
            eapply FollowLeft; eauto.
            eapply nullableGamma_nullable_gamma; eauto.
            rewrite cons_app_singleton in Hprod.
-           rewrite app_assoc in Hprod.
-           eauto.
+           rewrite app_assoc in Hprod; eauto.
         -- eapply FollowRight; eauto.
            eapply firstGamma_first_gamma; eauto.
       * rewrite NtMapFacts.add_neq_o in Hf'; auto.
         eapply Hin; eauto.
     + unfold follow_map_sound.
-      intros x xFollow la Hf' Hin'.
+      intros x xFollow la Hf' Hin''.
       destruct (NtSetFacts.eq_dec x rx); subst.
       * apply find_values_eq in Hf'; subst.
         eapply FollowRight; eauto.
@@ -226,7 +229,7 @@ Lemma updateFo_preserves_soundness :
   forall g nu fi lx gamma fo,
     nullable_set_for nu g
     -> first_map_for fi g
-    -> In (lx, gamma) g.(prods)
+    -> In (lx, gamma) (prodsOf g)
     -> follow_map_sound fo g
     -> follow_map_sound (updateFo' nu fi lx gamma fo) g.
 Proof.
@@ -244,7 +247,7 @@ Lemma followPass_preserves_soundness' :
     -> first_map_for fi g
     -> follow_map_sound fo g
     -> forall suf pre : list production,
-        pre ++ suf = g.(prods)
+        pre ++ suf = (prodsOf g)
         -> follow_map_sound (followPass suf nu fi fo) g.
 Proof. 
   intros g nu fi fo Hnu Hfi Hfo suf.
@@ -263,7 +266,7 @@ Lemma followPass_preserves_soundness :
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_sound fo g
-    ->  follow_map_sound (followPass g.(prods) nu fi fo) g.
+    ->  follow_map_sound (followPass (prodsOf g) nu fi fo) g.
 Proof.
   intros.
   eapply followPass_preserves_soundness'; eauto.
@@ -271,12 +274,12 @@ Proof.
 Qed.
 
 Lemma mkFollowMap'_preserves_soundness :
-  forall (g  : grammar)
-         (nu : NtSet.t)
+  forall (g     : grammar)
+         (nu    : NtSet.t)
          (nu_pf : nullable_set_for nu g)
-         (fi : first_map)
+         (fi    : first_map)
          (fi_pf : first_map_for fi g)
-         (fo : follow_map)
+         (fo    : follow_map)
          (fo_pf : all_pairs_are_follow_candidates fo g),
     follow_map_sound fo g
     -> follow_map_sound (mkFollowMap' g nu fi fi_pf fo fo_pf) g.
@@ -313,9 +316,9 @@ Proof.
 Qed.
 
 Theorem mkFollowMap_sound :
-  forall (g  : grammar)
-         (nu : NtSet.t)
-         (fi : first_map)
+  forall (g     : grammar)
+         (nu    : NtSet.t)
+         (fi    : first_map)
          (nu_pf : nullable_set_for nu g)
          (fi_pf : first_map_for fi g),
     follow_map_sound (mkFollowMap g nu fi fi_pf) g.
