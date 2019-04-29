@@ -423,7 +423,7 @@ Lemma firstPass_equiv_right_t' :
     -> nullable_gamma g gpre
     -> NtMap.Equiv LaSet.Equal fi (firstPass psuf nu fi)
     -> forall ppre, 
-        g.(prods) = ppre ++ psuf
+        (prodsOf g) = ppre ++ psuf
         -> exists lxFirst : LaSet.t,
             NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
             LaSet.In (LA y) lxFirst.
@@ -457,10 +457,10 @@ Qed.
 
 Lemma firstPass_equiv_right_t :
   forall g nu lx y gpre gsuf fi,
-    In (lx, gpre ++ T y :: gsuf) g.(prods)
+    In (lx, gpre ++ T y :: gsuf) (prodsOf g)
     -> nullable_set_for nu g
     -> nullable_gamma g gpre
-    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass (prodsOf g) nu fi)
     -> exists lxFirst : LaSet.t,
         NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
         LaSet.In (LA y) lxFirst.
@@ -469,17 +469,6 @@ Proof.
   eapply firstPass_equiv_right_t'; eauto.
   rewrite app_nil_l; auto.
 Qed.
-
-Lemma foo :
-  forall x s m1 m2,
-    NtMap.Equiv LaSet.Equal m1 m2
-    -> NtMap.find x m1 = Some s
-    -> NtMap.find x m2 = Some s.
-Proof.
-  intros x s m1 m2 Heq Hf.
-  destruct Heq as [Hin Hmt].
-  
-Abort.
 
 Lemma equiv_in_A_in_B :
   forall x m1 m2,
@@ -511,7 +500,7 @@ Lemma firstPass_equiv_right_nt' :
     -> NtMap.find rx fi = Some rxFirst
     -> LaSet.In la rxFirst
     -> forall ppre, 
-        g.(prods) = ppre ++ psuf
+        (prodsOf g) = ppre ++ psuf
         -> exists lxFirst : LaSet.t,
             NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
             LaSet.In la lxFirst.
@@ -567,8 +556,8 @@ Qed.
 Lemma firstPass_equiv_right_nt :
   forall g nu fi lx rx gpre gsuf rxFirst la,
     nullable_set_for nu g
-    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
-    -> In (lx, gpre ++ NT rx :: gsuf) g.(prods)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass (prodsOf g) nu fi)
+    -> In (lx, gpre ++ NT rx :: gsuf) (prodsOf g)
     -> nullable_gamma g gpre
     -> NtMap.find rx fi = Some rxFirst
     -> LaSet.In la rxFirst
@@ -584,7 +573,7 @@ Qed.
 Lemma firstPass_equiv_complete :
   forall g nu fi,
     nullable_set_for nu g
-    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass (prodsOf g) nu fi)
     -> first_map_complete fi g.
 Proof.
   intros g nu fi Hns Hequiv.
@@ -592,6 +581,7 @@ Proof.
   intros la sym x Hfs.
   revert x.
   induction Hfs; intros lx Heq; inv Heq.
+  apply in_xprods_in_prodsOf in H.
   destruct s as [y | rx].
   + inv Hfs.
     clear IHHfs.
@@ -605,12 +595,12 @@ Lemma mkFirstMap'_complete :
   forall (g  : grammar)
          (nu : NtSet.t)
          (fi : first_map)
-         (pf : all_pairs_are_candidates fi g.(prods)),
+         (pf : all_pairs_are_candidates fi (prodsOf g)),
     nullable_set_for nu g
-    -> first_map_complete (mkFirstMap' g.(prods) nu fi pf) g.
+    -> first_map_complete (mkFirstMap' (prodsOf g) nu fi pf) g.
 Proof.
   intros g nu fi pf Hns.
-  remember (numFirstCandidates g.(prods) fi) as card.
+  remember (numFirstCandidates (prodsOf g) fi) as card.
   generalize dependent fi.
   induction card using lt_wf_ind.
   intros fi pf Hc; subst.
@@ -650,5 +640,4 @@ Proof.
 Qed.
 
 End FirstProofsFn.
-
 
