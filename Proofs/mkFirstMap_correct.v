@@ -2,6 +2,7 @@ Require Import List.
 Require Import Wf_nat.
 
 Require Import Grammar.
+Require Import Lemmas.
 Require Import Tactics.
 Require Import mkNullableSet_correct.
 
@@ -10,6 +11,7 @@ Import ListNotations.
 Module FirstProofsFn (G : Grammar.T).
 
   Module Export NullableProofs := NullableProofsFn G.
+  Module Import L              := LemmasFn G.
 
 Lemma mkFirstMap'_eq_body :
   forall ps nu fi pf,
@@ -91,7 +93,7 @@ Lemma firstGamma_first_sym' :
     nullable_set_for nu g
     -> first_map_sound fi g
     -> forall gsuf gpre,
-        In (x, gpre ++ gsuf) g.(prods)
+        In (x, gpre ++ gsuf) (prodsOf g)
         -> nullable_gamma g gpre
         -> LaSet.In la (firstGamma gsuf nu fi)
         -> first_sym g la (NT x).
@@ -101,14 +103,16 @@ Proof.
   - inv Hin'.
   - destruct (nullableSym sym nu) eqn:Hsym.
     + destruct (LaSetFacts.union_1 Hin') as [Hfs | Hfg].
-      * econstructor; eauto.
+      * apply in_prodsOf_exists_in_xprods in Hin.
+        destruct Hin as [f Hin]; econstructor; eauto.
         eapply firstSym_first_sym; eauto.
       * eapply IHsyms with (gpre := gpre ++ [sym]); auto.
         -- rewrite <- app_assoc; auto.
         -- apply nullable_app; auto.
            constructor; auto.
            eapply nullableSym_nullable_sym; eauto.
-    + econstructor; eauto.
+    + apply in_prodsOf_exists_in_xprods in Hin.
+      destruct Hin as [f Hin]; econstructor; eauto.
       eapply firstSym_first_sym; eauto.
 Qed.
 
@@ -116,7 +120,7 @@ Lemma firstGamma_first_sym :
   forall g nu fi la x gamma,
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> In (x, gamma) g.(prods)
+    -> In (x, gamma) (prodsOf g)
     -> LaSet.In la (firstGamma gamma nu fi)
     -> first_sym g la (NT x).
 Proof.
@@ -132,7 +136,7 @@ Lemma firstPass_preserves_soundness' :
     nullable_set_for nu g
     -> first_map_sound fi g
     -> forall suf pre : list production,
-      pre ++ suf = g.(prods)
+      pre ++ suf = (prodsOf g)
       -> first_map_sound (firstPass suf nu fi) g.
 Proof. 
   intros g nu fi Hnf Hfm.
@@ -166,7 +170,7 @@ Lemma firstPass_preserves_soundness :
          (fi : first_map),
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> first_map_sound (firstPass g.(prods) nu fi) g.
+    -> first_map_sound (firstPass (prodsOf g) nu fi) g.
 Proof.
   intros g nu fi Hns Hfm.
   apply firstPass_preserves_soundness' with (pre := []); eauto.
@@ -176,13 +180,13 @@ Lemma mkFirstMap'_preserves_soundness :
   forall (g  : grammar)
          (nu : NtSet.t)
          (fi : first_map)
-         (pf : all_pairs_are_candidates fi g.(prods)),
+         (pf : all_pairs_are_candidates fi (prodsOf g)),
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> first_map_sound (mkFirstMap' g.(prods) nu fi pf) g.
+    -> first_map_sound (mkFirstMap' (prodsOf g) nu fi pf) g.
 Proof.
   intros g nu fi pf Hns Hfm.
-  remember (numFirstCandidates g.(prods) fi) as card.
+  remember (numFirstCandidates (prodsOf g) fi) as card.
   generalize dependent fi.
   induction card using lt_wf_ind.
   intros fi pf Hfm Hc; subst.
@@ -222,7 +226,6 @@ Proof.
 Qed.
 
 (* Completeness *)
-
 
 Lemma mapsto_add_values_eq :
   forall x (s s' : LaSet.t)  m,
@@ -647,3 +650,5 @@ Proof.
 Qed.
 
 End FirstProofsFn.
+
+
