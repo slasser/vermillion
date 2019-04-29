@@ -1489,16 +1489,6 @@ Module GeneratorFn (Export G : Grammar.T).
         apply medial_t_in_lookaheadsOfGamma.
       + apply LaSetFacts.union_3; auto.
   Defined.
-
-  Lemma in_xprods_in_prodsOf :
-    forall g p f,
-      In (existT _ p f) g.(prods)
-      -> In p (prodsOf g).
-  Proof.
-    intros g p f Hin.
-    unfold prodsOf. unfold prodOf.
-    induction g.(prods) as [| xp xps]; simpl in *; inv Hin; auto.
-  Qed.
   
   Lemma first_sym_in_lookaheadsOf :
     forall g la sym,

@@ -3,13 +3,15 @@ Require Import Wf_nat.
 
 Require Import Generator.
 Require Import Grammar.
-Require Import Tactics.
+Require Import Lemmas.
+Require Import Vermillion.Tactics.
 
 Import ListNotations.
 
 Module NullableProofsFn (Import G : Grammar.T).
 
   Module Export Gen := GeneratorFn G.
+  Module Import L   := LemmasFn G.
 
   Lemma mkNullableSet'_eq_body :
     forall (ps : list production)
@@ -71,7 +73,7 @@ Module NullableProofsFn (Import G : Grammar.T).
            (nu : NtSet.t),
       nullable_set_sound nu g
       -> forall suf pre : list production,
-        pre ++ suf = g.(prods)
+        pre ++ suf = (prodsOf g)
         -> nullable_set_sound (nullablePass suf nu) g.
   Proof. 
     intros g nu Hsou suf.
@@ -84,10 +86,12 @@ Module NullableProofsFn (Import G : Grammar.T).
     unfold nullable_set_sound.
     intros x' Hin.
     destruct (NtSetFacts.eq_dec x x'); subst.
-    - econstructor.
-      + rewrite <- Happ'.
-        apply in_app_cons.
-      + eapply nu_sound_nullableGamma_sound; eauto.
+    - assert (Hin' : In (x', gamma) (prodsOf g)).
+      { rewrite <- Happ'; apply in_app_cons. }
+      apply in_prodsOf_exists_in_xprods in Hin'.
+      destruct Hin' as [f Hin']. 
+      econstructor; eauto.
+      eapply nu_sound_nullableGamma_sound; eauto.
     - apply NtSetFacts.add_3 in Hin; auto.
   Qed.
   
@@ -95,7 +99,7 @@ Module NullableProofsFn (Import G : Grammar.T).
     forall (g  : grammar)
            (nu : NtSet.t),
       nullable_set_sound nu g
-      -> nullable_set_sound (nullablePass g.(prods) nu) g.
+      -> nullable_set_sound (nullablePass (prodsOf g) nu) g.
   Proof.
     intros g nu Hsou.
     apply nullablePass_preserves_soundness' with (pre := []); auto.
@@ -105,15 +109,15 @@ Module NullableProofsFn (Import G : Grammar.T).
     forall (g  : grammar)
            (nu : NtSet.t),
       nullable_set_sound nu g
-      -> nullable_set_sound (mkNullableSet' g.(prods) nu) g.
+      -> nullable_set_sound (mkNullableSet' (prodsOf g) nu) g.
   Proof.
     intros g nu.
-    remember (countNullableCandidates g.(prods) nu) as card.
+    remember (countNullableCandidates (prodsOf g) nu) as card.
     generalize dependent nu.
     induction card using lt_wf_ind.
     intros nu Hcard Hsou; subst.
     rewrite mkNullableSet'_eq_body; simpl.
-    destruct (NtSet.eq_dec nu (nullablePass g.(prods) nu)) as [Heq | Hneq]; auto.
+    destruct (NtSet.eq_dec nu (nullablePass (prodsOf g) nu)) as [Heq | Hneq]; auto.
     eapply H; clear H; eauto.
     - apply nullablePass_neq_candidates_lt; auto. 
     - apply nullablePass_preserves_soundness; auto.

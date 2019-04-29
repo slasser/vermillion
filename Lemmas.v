@@ -540,6 +540,27 @@ Defined.
   Proof.
     repeat decide equality.
   Qed.
+
+  Lemma in_xprods_in_prodsOf :
+    forall g p f,
+      In (existT _ p f) g.(prods)
+      -> In p (prodsOf g).
+  Proof.
+    intros g p f Hin.
+    unfold prodsOf. unfold prodOf.
+    induction g.(prods) as [| xp xps]; simpl in *; inv Hin; auto.
+  Qed.
+
+  Lemma in_prodsOf_exists_in_xprods :
+    forall g p,
+      In p (prodsOf g)
+      -> exists f, In (existT _ p f) g.(prods).
+  Proof.
+    unfold prodsOf; unfold prodOf; intros g (x, gamma) Hin.
+    induction g.(prods) as [| [(x', gamma') f] xps]; simpl in *; inv Hin.
+    - inv H; eauto.
+    - apply IHxps in H; destruct H as [f' Hin]; eauto.
+  Qed.
   
 End LemmasFn.
 

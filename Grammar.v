@@ -308,6 +308,12 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
 
     Definition rhs (xp : xprod) : list symbol :=
       match xp with existT _ (_, gamma) _ => gamma end.
+
+    Definition prodOf (xp : xprod) : production :=
+      match xp with existT _ p _ => p end.
+    
+    Definition prodsOf (g : grammar) : list production :=
+      List.map prodOf g.(prods).
     
     Definition pt_lookup
                (x   : nonterminal)
