@@ -2073,24 +2073,12 @@ Module GeneratorFn (Export G : Grammar.T).
     mkFollowMap' g nu fi fi_pf (initial_fo g) (initial_fo_apac g).
  
   (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
+
+  Definition table_entry := (xprod * lookahead)%type.
   
-  (*  Definition table_entry := (nonterminal * lookahead * list symbol * )%type. *)
-  Definition table_entry := (nonterminal * lookahead * xprod)%type.
-  
-  Lemma table_entry_dec :
-    forall e e2 : table_entry,
-      {e = e2} + {e <> e2}.
-  Proof.
-    repeat decide equality.
-    subst.
-    destruct x as [(x, gamma) f]; destruct b as [(x', gamma') f'].
-    simpl in *.
-    destruct (production_eq_dec (x, gamma) (x', gamma')).
-    - inv e0. destruct 
-  Defined.
-  
-  Definition fromLookaheadList x gamma las : list table_entry :=
-    map (fun la => (x, la, gamma)) las.
+  Definition fromLookaheadList (xp  : xprod) (las : list lookahead) :
+    list table_entry :=
+    List.map (fun la => (xp, la)) las.
   
   (* To do: rename this function, or create a single version *)
   Fixpoint firstGamma' (gamma : list symbol) (nu : NtSet.t) (fi : first_map) :
@@ -2106,10 +2094,12 @@ Module GeneratorFn (Export G : Grammar.T).
       in  if NtSet.mem x nu then xFirst ++ firstGamma' gamma' nu fi else xFirst
     end.
   
-  Definition firstEntries x gamma nu fi :=
-    fromLookaheadList x gamma (firstGamma' gamma nu fi).
+  Definition firstEntries (xp : xprod) (nu : NtSet.t) (fi : first_map) :
+    list table_entry :=
+    fromLookaheadList xp (firstGamma' (rhs xp) nu fi).
   
-  Definition followLookahead x gamma nu fo :=
+  Definition followLookahead (x : nonterminal) (gamma : list symbol)
+             (nu : NtSet.t) (fo : follow_map) : list lookahead := 
     if nullableGamma gamma nu then
       match NtMap.find x fo with 
       | Some s => LaSet.elements s
@@ -2118,53 +2108,34 @@ Module GeneratorFn (Export G : Grammar.T).
     else 
       [].
   
-  Definition followEntries x gamma nu fo :=
-    fromLookaheadList x gamma (followLookahead x gamma nu fo).
+  Definition followEntries (xp : xprod) (nu : NtSet.t) (fo : follow_map) :
+    list table_entry :=
+    fromLookaheadList xp (followLookahead (lhs xp) (rhs xp) nu fo).
   
-  Definition entriesForProd nu fi fo (prod : production) : list table_entry :=
-    let (x, gamma) := prod in
-    firstEntries x gamma nu fi ++ followEntries x gamma nu fo.
+  Definition entriesForProd nu fi fo xp : list table_entry :=
+    firstEntries xp nu fi ++ followEntries xp nu fo.
   
-  Definition mkEntries' nu fi fo ps :=
-    flat_map (entriesForProd nu fi fo) ps.
+  Definition mkEntries' nu fi fo xps : list table_entry :=
+    flat_map (entriesForProd nu fi fo) xps.
   
-  Definition mkEntries nu fi fo g :=
-    mkEntries' nu fi fo (prodsOf g).
+  Definition mkEntries nu fi fo g : list table_entry :=
+    mkEntries' nu fi fo g.(prods).
 
   (* Step 5 : build a parse table from a (correct) list of parse table entries *)
   
-  Definition empty_table := ParseTable.empty (list symbol).
+  Definition empty_table := ParseTable.empty xprod.
 
   Definition addEntry (p : table_entry) (o : option parse_table) :=
     match o with
     | None => None
     | Some tbl =>
       match p with
-      | (x, la, gamma) =>
+        (xp, la) =>
+        let x := lhs xp in
         match pt_lookup x la tbl with
-        | None => Some (pt_add x la gamma tbl)
-        | Some gamma' =>
-          if list_eq_dec symbol_eq_dec gamma gamma' then
-            Some tbl
-          else
-            None
-        end
-      end
-    end.
-  
-  Definition addEntry (p : table_entry) (o : option parse_table) :=
-    match o with
-    | None => None
-    | Some tbl =>
-      match p with
-      | (x, la, gamma) =>
-        match pt_lookup x la tbl with
-        | None => Some (pt_add x la gamma tbl)
-        | Some gamma' =>
-          if list_eq_dec symbol_eq_dec gamma gamma' then
-            Some tbl
-          else
-            None
+        | None => Some (pt_add x la xp tbl)
+          (* the cell already contains an entry *)
+        | Some _  => None
         end
       end
     end.

@@ -290,6 +290,24 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
   End Derivation.
 
   Module Export Utils.
+
+    Definition isNT sym := 
+      match sym with
+      | NT _ => true
+      | _    => false
+      end.
+    
+    Definition isT sym :=
+      match sym with
+      | T _ => true
+      | _   => false
+      end.
+    
+    Definition lhs (xp : xprod) : nonterminal :=
+      match xp with existT _ (x, _) _ => x end.
+
+    Definition rhs (xp : xprod) : list symbol :=
+      match xp with existT _ (_, gamma) _ => gamma end.
     
     Definition pt_lookup
                (x   : nonterminal)
@@ -303,18 +321,6 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
                (p   : xprod)
                (tbl : parse_table) : parse_table :=
       ParseTable.add (x, la) p tbl.
-
-      Definition isNT sym := 
-        match sym with
-        | NT _ => true
-        | _    => false
-        end.
-      
-      Definition isT sym :=
-        match sym with
-        | T _ => true
-        | _   => false
-        end.
       
       Definition fromNtList (ls : list nonterminal) : NtSet.t :=
         fold_right NtSet.add NtSet.empty ls.
