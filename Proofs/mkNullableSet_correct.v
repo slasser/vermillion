@@ -197,7 +197,7 @@ Module NullableProofsFn (Import G : Grammar.T).
            (x  : nonterminal)
            (ys : list symbol)
            (suf pre : list production),
-      pre ++ suf = g.(prods)
+      pre ++ suf = (prodsOf g)
       -> In (x, ys) suf
       -> nullable_gamma g ys
       -> forall nu,
@@ -250,7 +250,7 @@ Qed.
    the resulting  NULLABLE set is complete *)
 Lemma nullablePass_equal_complete' :
   forall g nu,
-    NtSet.Equal nu (nullablePass g.(prods) nu)
+    NtSet.Equal nu (nullablePass (prodsOf g) nu)
     -> nullable_set_complete' nu g.
 Proof.
   intros g nu Heq.
@@ -265,7 +265,8 @@ Proof.
   - intros x' Heq'.
     inv Heq'.
     eapply nullablePass_right_in_left_in with 
-    (pre := nil); simpl; eauto.
+        (pre := nil); simpl; eauto.
+    eapply in_xprods_in_prodsOf; eauto.
   - intros x Hin.
     inv Hin.
   - intros x Hin.
@@ -277,7 +278,7 @@ Qed.
 
 Lemma nullablePass_equal_complete :
   forall g nu,
-    NtSet.Equal nu (nullablePass g.(prods) nu)
+    NtSet.Equal nu (nullablePass (prodsOf g) nu)
     -> nullable_set_complete nu g.
 Proof.
   intros.
@@ -287,15 +288,15 @@ Qed.
 
 Lemma mkNullableSet'_complete :
   forall g nu,
-    nullable_set_complete (mkNullableSet' g.(prods) nu) g.
+    nullable_set_complete (mkNullableSet' (prodsOf g) nu) g.
 Proof.
   intros g nu.
-  remember (countNullableCandidates g.(prods) nu) as card.
+  remember (countNullableCandidates (prodsOf g) nu) as card.
   generalize dependent nu.
   induction card using lt_wf_ind.
   intros nu Hcard; subst.
   rewrite mkNullableSet'_eq_body; simpl.
-  destruct (NtSet.eq_dec nu (nullablePass g.(prods) nu)) as [Heq | Hneq].
+  destruct (NtSet.eq_dec nu (nullablePass (prodsOf g) nu)) as [Heq | Hneq].
   - apply nullablePass_equal_complete; auto.
   - eapply H; clear H; eauto.
     apply nullablePass_neq_candidates_lt; auto.
@@ -323,3 +324,4 @@ Proof.
 Qed.
 
 End NullableProofsFn.
+
