@@ -128,9 +128,17 @@ Module GeneratorFn (Export G : Grammar.T).
   Next Obligation.
     apply nullablePass_neq_candidates_lt; auto.
   Defined.
+
+  Definition prodOf (xp : xprod) : production :=
+    match xp with
+      existT _ p _ => p
+    end.
+
+  Definition prodsOf (g : grammar) : list production :=
+    List.map prodOf g.(prods).
   
   Definition mkNullableSet (g : grammar) : NtSet.t :=
-    mkNullableSet' g.(prods) NtSet.empty.
+    mkNullableSet' (prodsOf g) NtSet.empty.
   
   (* Step 2 : compute the FIRST map for the grammar 
      using the (correct) NULLABLE set. *)
@@ -1290,7 +1298,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
   
   Definition mkFirstMap (g : grammar) (nu : NtSet.t) :=
-    let ps := g.(prods) in
+    let ps := prodsOf g in
     mkFirstMap' ps nu empty_fi (empty_fi_apac ps).
   
   (* Step 3 : compute the FOLLOW map for the grammar using the (correct) NULLABLE set and FIRST map. *)
@@ -1363,7 +1371,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Definition ntsOf (g : grammar) : NtSet.t :=
     fold_right (fun p acc => NtSet.union (ntsOfProd p) acc)
                (NtSet.singleton (start g))
-               g.(prods).
+               (prodsOf g).
   
   Fixpoint lookaheadsOfGamma (gamma : list symbol) : LaSet.t :=
     match gamma with
@@ -1378,7 +1386,7 @@ Module GeneratorFn (Export G : Grammar.T).
                   | (_, gamma) => LaSet.union (lookaheadsOfGamma gamma) acc
                   end)
                (LaSet.singleton EOF)
-               (prods g).
+               (prodsOf g).
   
   Definition all_pairs_are_follow_candidates
              (fo : follow_map)
@@ -1396,11 +1404,10 @@ Module GeneratorFn (Export G : Grammar.T).
 
   Lemma app_cons_apps :
     forall g x gpre sym gsuf,
-      In (x, gpre ++ sym :: gsuf) g.(prods)
-      -> In (x, (gpre ++ [sym]) ++ gsuf) g.(prods).
+      In (x, gpre ++ sym :: gsuf) (prodsOf g)
+      -> In (x, (gpre ++ [sym]) ++ gsuf) (prodsOf g).
   Proof.
-    intros.
-    rewrite <- app_assoc; auto.
+    intros; rewrite <- app_assoc; auto.
   Defined.
   
   Lemma find_in_pairsOf :
@@ -1425,14 +1432,14 @@ Module GeneratorFn (Export G : Grammar.T).
     - destruct sym as [y | x']; auto.
       ND.fsetdec.
   Defined.
-  
+
   Lemma medial_nt_in_ntsOf :
     forall g lx rx gpre gsuf,
-      In (lx, gpre ++ NT rx :: gsuf) g.(prods)
+      In (lx, gpre ++ NT rx :: gsuf) (prodsOf g)
       -> NtSet.In rx (ntsOf g).
   Proof.
     intros g lx rx gpre gsuf Hin.
-    unfold ntsOf.
+    unfold ntsOf; unfold prodsOf in *.
     induction g.(prods) as [| (lx', gamma) ps]; simpl in *.
     - inv Hin.
     - destruct Hin as [Heq | Hin].
@@ -1469,12 +1476,12 @@ Module GeneratorFn (Export G : Grammar.T).
   
   Lemma medial_t_in_lookaheadsOf :
     forall g x gpre gsuf y,
-      In (x, gpre ++ T y :: gsuf) g.(prods)
+      In (x, gpre ++ T y :: gsuf) (prodsOf g)
       -> LaSet.In (LA y) (lookaheadsOf g).
   Proof.
     intros g x gpre gsuf y Hin.
-    unfold lookaheadsOf.
-    induction g.(prods) as [| (x', gamma) ps]; simpl in *.
+    unfold lookaheadsOf; unfold prodsOf in *.
+    induction g.(prods) as [| [(x', gamma) f] ps]; simpl in *.
     - inv Hin.
     - destruct Hin as [Heq | Hin].
       + inv Heq.
@@ -1482,6 +1489,16 @@ Module GeneratorFn (Export G : Grammar.T).
         apply medial_t_in_lookaheadsOfGamma.
       + apply LaSetFacts.union_3; auto.
   Defined.
+
+  Lemma in_xprods_in_prodsOf :
+    forall g p f,
+      In (existT _ p f) g.(prods)
+      -> In p (prodsOf g).
+  Proof.
+    intros g p f Hin.
+    unfold prodsOf. unfold prodOf.
+    induction g.(prods) as [| xp xps]; simpl in *; inv Hin; auto.
+  Qed.
   
   Lemma first_sym_in_lookaheadsOf :
     forall g la sym,
@@ -1497,6 +1514,7 @@ Module GeneratorFn (Export G : Grammar.T).
       destruct s as [y | x].
       + inv Hfs.
         eapply medial_t_in_lookaheadsOf; eauto.
+        eapply in_xprods_in_prodsOf; eauto.
       + eapply IHHfs; eauto.
   Defined.
   
@@ -1515,7 +1533,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Lemma in_firstGamma_in_lookaheadsOf :
     forall g nu fi x gsuf gpre la,
       first_map_for fi g
-      -> In (x, gpre ++ gsuf) g.(prods)
+      -> In (x, gpre ++ gsuf) (prodsOf g)
       -> LaSet.In la (firstGamma gsuf nu fi)
       -> LaSet.In la (lookaheadsOf g).
   Proof.
@@ -1545,7 +1563,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Lemma updateFo_preserves_apac :
     forall g nu fi lx gsuf gpre fo,
       first_map_for fi g
-      -> In (lx, gpre ++ gsuf) g.(prods)
+      -> In (lx, gpre ++ gsuf) (prodsOf g)
       -> all_pairs_are_follow_candidates fo g
       -> all_pairs_are_follow_candidates (updateFo' nu fi lx gsuf fo) g.
   Proof.
@@ -1622,7 +1640,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Lemma followPass_preserves_apac' :
     forall g nu fi suf pre fo,
       first_map_for fi g
-      -> pre ++ suf = g.(prods)
+      -> pre ++ suf = (prodsOf g)
       -> all_pairs_are_follow_candidates fo g
       -> all_pairs_are_follow_candidates (followPass suf nu fi fo) g.
   Proof.
@@ -1641,7 +1659,7 @@ Module GeneratorFn (Export G : Grammar.T).
     forall g nu fi fo,
       first_map_for fi g
       -> all_pairs_are_follow_candidates fo g
-      -> all_pairs_are_follow_candidates (followPass g.(prods) nu fi fo) g.
+      -> all_pairs_are_follow_candidates (followPass (prodsOf g) nu fi fo) g.
   Proof.
     intros.
     eapply followPass_preserves_apac'; eauto.
@@ -1745,7 +1763,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Lemma updateFo_equiv_or_exists' :
     forall g nu fi lx gsuf gpre fo,
       first_map_for fi g
-      -> In (lx, gpre ++ gsuf) g.(prods)
+      -> In (lx, gpre ++ gsuf) (prodsOf g)
       -> all_pairs_are_follow_candidates fo g
       -> NtMap.Equiv LaSet.Equal fo (updateFo' nu fi lx gsuf fo)
          \/ exists (x' : NtSet.elt) (la : LaSet.elt),
@@ -1834,7 +1852,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Lemma updateFo_equiv_or_exists :
     forall g nu fi x gamma fo,
       first_map_for fi g
-      -> In (x, gamma) g.(prods)
+      -> In (x, gamma) (prodsOf g)
       -> all_pairs_are_follow_candidates fo g
       -> NtMap.Equiv LaSet.Equal fo (updateFo' nu fi x gamma fo)
          \/ exists (x' : NtSet.elt) (la : LaSet.elt),
@@ -1897,7 +1915,7 @@ Module GeneratorFn (Export G : Grammar.T).
     forall g nu fi suf pre fo,
       first_map_for fi g
       -> all_pairs_are_follow_candidates fo g
-      -> pre ++ suf = g.(prods)
+      -> pre ++ suf = (prodsOf g)
       -> NtMap.Equiv LaSet.Equal fo (followPass suf nu fi fo)
          \/ exists x la,
           NtSet.In x (ntsOf g)
@@ -1946,12 +1964,12 @@ Module GeneratorFn (Export G : Grammar.T).
     forall g nu fi fo,
       first_map_for fi g
       -> all_pairs_are_follow_candidates fo g
-      -> NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
+      -> NtMap.Equiv LaSet.Equal fo (followPass (prodsOf g) nu fi fo)
          \/ exists x la,
           NtSet.In x (ntsOf g)
           /\ LaSet.In la (lookaheadsOf g)
           /\ ~ PairSet.In (x, la) (pairsOf fo)
-          /\ PairSet.In (x, la) (pairsOf (followPass g.(prods) nu fi fo)).
+          /\ PairSet.In (x, la) (pairsOf (followPass (prodsOf g) nu fi fo)).
   Proof.
     intros.
     eapply followPass_equiv_or_exists'; eauto.
@@ -1962,12 +1980,12 @@ Module GeneratorFn (Export G : Grammar.T).
     forall g nu fi fo,
       first_map_for fi g
       -> all_pairs_are_follow_candidates fo g
-      -> ~ NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
+      -> ~ NtMap.Equiv LaSet.Equal fo (followPass (prodsOf g) nu fi fo)
       -> exists x la,
           NtSet.In x (ntsOf g)
           /\ LaSet.In la (lookaheadsOf g)
           /\ ~ PairSet.In (x, la) (pairsOf fo)
-          /\ PairSet.In (x, la) (pairsOf (followPass g.(prods) nu fi fo)).
+          /\ PairSet.In (x, la) (pairsOf (followPass (prodsOf g) nu fi fo)).
   Proof.
     intros g nu fi fo Hap Hneq.
     destruct (followPass_equiv_or_exists g nu fi fo); auto; try congruence.
@@ -1977,8 +1995,8 @@ Module GeneratorFn (Export G : Grammar.T).
     forall g nu fi fo,
       first_map_for fi g
       -> all_pairs_are_follow_candidates fo g
-      -> ~ NtMap.Equiv LaSet.Equal fo (followPass g.(prods) nu fi fo)
-      -> numFollowCandidates g (followPass g.(prods) nu fi fo) < numFollowCandidates g fo.
+      -> ~ NtMap.Equiv LaSet.Equal fo (followPass (prodsOf g) nu fi fo)
+      -> numFollowCandidates g (followPass (prodsOf g) nu fi fo) < numFollowCandidates g fo.
   Proof.
     intros g nu fi fo Hfm Hap Hneq.
     apply followPass_not_equiv_exists in Hneq; auto.
@@ -1999,7 +2017,7 @@ Module GeneratorFn (Export G : Grammar.T).
           (fo : follow_map)
           (apac_pf : all_pairs_are_follow_candidates fo g)
           {measure (numFollowCandidates g fo) } :=
-    let fo' := followPass g.(prods) nu fi fo in
+    let fo' := followPass (prodsOf g) nu fi fo in
     if follow_map_equiv_dec fo fo' then
       fo
     else
@@ -2016,7 +2034,7 @@ Module GeneratorFn (Export G : Grammar.T).
       NtSet.In (start g) (ntsOf g).
   Proof.
     intros g.
-    unfold ntsOf.
+    unfold ntsOf; unfold prodsOf.
     induction g.(prods) as [| (x, gamma) ps]; simpl in *; ND.fsetdec.
   Defined.
   
@@ -2025,8 +2043,8 @@ Module GeneratorFn (Export G : Grammar.T).
       LaSet.In EOF (lookaheadsOf g).
   Proof.
     intros g.
-    unfold lookaheadsOf.
-    induction g.(prods) as [| (x, gamma) ps]; simpl in *; LD.fsetdec.
+    unfold lookaheadsOf; unfold prodsOf.
+    induction g.(prods) as [| [(x, gamma) f] ps]; simpl in *; LD.fsetdec.
   Defined.
   
   Lemma initial_fo_apac :
@@ -2056,13 +2074,19 @@ Module GeneratorFn (Export G : Grammar.T).
  
   (* Step 4 : build a list of parse table entries from (correct) NULLABLE, FIRST, and FOLLOW sets. *)
   
-  Definition table_entry := (nonterminal * lookahead * list symbol)%type.
+  (*  Definition table_entry := (nonterminal * lookahead * list symbol * )%type. *)
+  Definition table_entry := (nonterminal * lookahead * xprod)%type.
   
   Lemma table_entry_dec :
     forall e e2 : table_entry,
       {e = e2} + {e <> e2}.
   Proof.
     repeat decide equality.
+    subst.
+    destruct x as [(x, gamma) f]; destruct b as [(x', gamma') f'].
+    simpl in *.
+    destruct (production_eq_dec (x, gamma) (x', gamma')).
+    - inv e0. destruct 
   Defined.
   
   Definition fromLookaheadList x gamma las : list table_entry :=
@@ -2105,11 +2129,28 @@ Module GeneratorFn (Export G : Grammar.T).
     flat_map (entriesForProd nu fi fo) ps.
   
   Definition mkEntries nu fi fo g :=
-    mkEntries' nu fi fo g.(prods).
+    mkEntries' nu fi fo (prodsOf g).
 
   (* Step 5 : build a parse table from a (correct) list of parse table entries *)
   
   Definition empty_table := ParseTable.empty (list symbol).
+
+  Definition addEntry (p : table_entry) (o : option parse_table) :=
+    match o with
+    | None => None
+    | Some tbl =>
+      match p with
+      | (x, la, gamma) =>
+        match pt_lookup x la tbl with
+        | None => Some (pt_add x la gamma tbl)
+        | Some gamma' =>
+          if list_eq_dec symbol_eq_dec gamma gamma' then
+            Some tbl
+          else
+            None
+        end
+      end
+    end.
   
   Definition addEntry (p : table_entry) (o : option parse_table) :=
     match o with

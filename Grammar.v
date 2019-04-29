@@ -218,8 +218,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     
     Definition first_map   := NtMap.t LaSet.t.
     Definition follow_map  := NtMap.t LaSet.t.
-    Definition parse_table := ParseTable.t xprod.
-    
+    Definition parse_table := ParseTable.t xprod.               
   End Collections.
 
   (* Lemmas about finite collections *)  

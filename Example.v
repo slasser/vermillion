@@ -156,5 +156,5 @@ Definition example_prog : list token :=
 Compute (match parseTableOf g311 with
          | Some tbl => inr (parse tbl (NT S) example_prog)
          | None => inl "no correct LL(1) parse table"
-         end).                             
+         end).
 
