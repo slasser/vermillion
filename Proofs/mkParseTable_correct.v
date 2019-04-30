@@ -12,8 +12,9 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Module Export EntryProofs := EntryProofsFn G.
 
 Definition table_correct_wrt_entries (tbl : parse_table) (es : list table_entry) :=
-  forall x gamma la,
-    pt_lookup x la tbl = Some gamma <-> In (x, la, gamma) es.
+  forall x la xp,
+    pt_lookup x la tbl = Some xp
+    <-> x = (lhs xp) /\ In (xp, la) es.
 
 Lemma invariant_iff_parse_table_correct :
   forall (g : grammar) (es : list table_entry) (tbl : parse_table),
@@ -22,27 +23,28 @@ Lemma invariant_iff_parse_table_correct :
        <-> parse_table_correct tbl g.
 Proof.
   intros g es tbl Hwf.
+  unfold entries_correct in Hwf.
   split.
   - intros Htc.
     unfold table_correct_wrt_entries in Htc.
     split.
     + unfold pt_sound.
-      intros x la gamma Hlk.
-      apply Hwf.
-      apply Htc; auto.
+      intros x x' la gamma f Hlk.
+      apply Htc in Hlk; destruct Hlk as [Heq Hin]; subst; simpl in *.
+      split; [auto | apply Hwf; auto].
     + unfold pt_complete.
-      intros la x gamma Hin Hlf.
-      apply Htc.
-      apply Hwf; auto.
+      intros x la gamma f Hin Hlf.
+      apply Htc; simpl.
+      split; [auto | apply Hwf; auto].
   - intros Hpt.
     destruct Hpt as [Hsou Hcom].
     unfold table_correct_wrt_entries.
-    intros x gamma la.
+    intros x la [(x', gamma) f].
     split.
     + intros Hlk.
-      apply Hwf.
-      apply Hsou; auto.
-    + intros Hin.
+      apply Hsou in Hlk; destruct Hlk as [Heq [Hin Hlk]]; subst; simpl in *.
+      split; [auto | apply Hwf; auto].
+    + intros [Heq Hin]; subst; simpl in *.
       apply Hwf in Hin.
       destruct Hin as [Hin Hlf].
       apply Hcom; auto.
@@ -51,83 +53,105 @@ Qed.
 (* tableFromEntries soundness *)
 
 Lemma addEntry_outer_Some_inner_Some :
-  forall p o tbl,
-    addEntry p o = Some tbl
+  forall e o tbl,
+    addEntry e o = Some tbl
     -> exists tbl',
       o = Some tbl'.
 Proof.
-  intros p o tbl Hadd.
-  destruct p as ((x, la), gamma).
-  destruct o as [tbl' |] eqn:Ho.
-  - exists tbl'; auto.
-  - unfold addEntry in Hadd; inv Hadd.
+  intros e o tbl Hadd.
+  unfold addEntry in Hadd.
+  destruct o as [tbl' |] eqn:Ho; tc; subst.
+  dm; dm; tc.
+  inv Hadd; eauto.
 Qed.
 
 Lemma duplicate_preserves_invariant :
-  forall tbl es x la gamma,
+  forall tbl es x la xp,
     table_correct_wrt_entries tbl es
-    -> pt_lookup x la tbl = Some gamma
-    -> table_correct_wrt_entries tbl ((x, la, gamma) :: es).
+    -> pt_lookup x la tbl = Some xp
+    -> table_correct_wrt_entries tbl ((xp, la) :: es).
 Proof.
-  intros tbl es x la gamma Htc Hlk.
+  intros tbl es x la xp Htc Hlk.
   unfold table_correct_wrt_entries.
-  intros x' gamma' la'.
+  intros x' la' xp'.
   split.
   - intros Hlk'.
     unfold table_correct_wrt_entries in Htc.
-    apply Htc in Hlk'.
+    apply Htc in Hlk'; destruct Hlk' as [Heq Hin]; split; auto.
     right; auto.
-  - intros Hin.
+  - intros [Heq Hin]; subst.
+    unfold table_correct_wrt_entries in Htc.
     inv Hin.
     + inv H; auto.
+      pose proof Hlk as Hlk'.
+      apply Htc in Hlk; destruct Hlk as [Heq Hin]; subst; auto.
     + apply Htc; auto.
 Qed.
 
 Lemma lookup_add_or :
-  forall x x' la la' gamma gamma' tbl,
-    pt_lookup x' la' (pt_add x la gamma tbl) = Some gamma'
-    -> (x = x' /\ la = la' /\ gamma = gamma')
-       \/ pt_lookup x' la' tbl = Some gamma'.
+  forall x x' la la' xp xp' tbl,
+    pt_lookup x' la' (pt_add x la xp tbl) = Some xp'
+    -> (x = x' /\ la = la' /\ xp = xp')
+       \/ pt_lookup x' la' tbl = Some xp'.
 Proof.
-  intros x x' la la' gamma gamma' tbl Hlk.
+  intros x x' la la' xp xp' tbl Hlk.
   unfold pt_lookup in Hlk; unfold pt_add in Hlk.
   rewrite ParseTableFacts.add_o in Hlk.
-  destruct (ParseTableFacts.eq_dec (x, la) (x', la')).
-  - inv e.
-    inv Hlk.
-    left; auto.
-  - right; auto.
+  destruct (ParseTableFacts.eq_dec (x, la) (x', la')); auto.
+  inv e; inv Hlk; auto.
 Qed.
 
 Lemma new_entry_preserves_invariant :
-  forall tbl es x la gamma,
+  forall tbl es xp la,
     table_correct_wrt_entries tbl es
-    -> pt_lookup x la tbl = None
-    -> table_correct_wrt_entries (pt_add x la gamma tbl) ((x, la, gamma) :: es).
+    -> pt_lookup (lhs xp) la tbl = None
+    -> table_correct_wrt_entries (pt_add (lhs xp) la xp tbl) ((xp, la) :: es).
 Proof.
-  intros tbl es x la gamma Htc Hlk.
+  intros tbl es xp la Htc Hlk.
   unfold table_correct_wrt_entries.
-  intros x' gamma' la'.
+  intros x' la' xp'.
   split.
   - intros Hlk'.
     apply lookup_add_or in Hlk'.
     inv Hlk'.
-    + destruct H as [Hx [Hla Hgamma]]; subst.
+    + destruct H as [Hx [Hla Hgamma]]; subst; split; auto.
       left; auto.
-    + apply Htc in H.
+    + apply Htc in H; destruct H as [Heq Hin]; subst; split; auto.
       right; auto.
-  - intros Hin.
-    inv Hin.
+  - intros [Heq Hin]; subst; inv Hin.
     + inv H.
       unfold pt_lookup.
       unfold pt_add.
       apply ParseTableFacts.add_eq_o; auto.
-    + apply Htc in H.
-      destruct (ParseTableFacts.eq_dec (x, la) (x', la')). 
-      * inv e; congruence.
+    + destruct (ParseTableFacts.eq_dec (lhs xp, la) (lhs xp', la')).
+      * inv e.
+        assert (Hand : lhs xp = lhs xp' /\ In (xp', la') es) by auto.
+        apply Htc in Hand; tc.
       * unfold pt_lookup.
         unfold pt_add.
         rewrite ParseTableFacts.add_neq_o; auto.
+        apply Htc; auto.
+Qed.
+
+(* stopping here for now, because I'm going to change addEntry *)
+Lemma addEntry_preserves_invariant :
+  forall (e : table_entry)
+         (es : list table_entry)
+         (tbl' tbl : parse_table),
+    table_correct_wrt_entries tbl' es
+    -> addEntry e (Some tbl') = Some tbl
+    -> table_correct_wrt_entries tbl (e :: es).
+Proof.
+  intros (xp, la) es tbl' tbl Htc Hadd.
+  unfold addEntry in Hadd.
+  destruct (pt_lookup x la tbl') as [gamma' |] eqn:Hlk.
+  - destruct (list_eq_dec symbol_eq_dec gamma gamma').
+    + inv e.
+      inv Hadd.
+      apply duplicate_preserves_invariant; auto.
+    + inv Hadd.
+  - inv Hadd.
+    apply new_entry_preserves_invariant; auto.
 Qed.
 
 Lemma addEntry_preserves_invariant :
