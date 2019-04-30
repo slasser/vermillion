@@ -12,15 +12,15 @@ Module EntryProofsFn (Import G : Grammar.T).
   Module Export FollowProofs := FollowProofsFn G.
 
 Definition entries_correct es g :=
-  forall x la gamma,
-    In (x, la, gamma) es
-    <-> In (x, gamma) g.(prods)
-        /\ lookahead_for la x gamma g.
+  forall xp la,
+    In (xp, la) es
+    <-> In xp g.(prods)
+        /\ lookahead_for la (lhs xp) (rhs xp) g.
 
 (* invariant relating a list of entries to a list of productions *)
-Definition entries_correct_wrt_productions es ps g :=
-  forall x la gamma,
-    In (x, la, gamma) es <-> In (x, gamma) ps /\ lookahead_for la x gamma g.
+Definition entries_correct_wrt_productions es xps g :=
+  forall xp la,
+    In (xp, la) es <-> In xp xps /\ lookahead_for la (lhs xp) (rhs xp) g.
 
 Lemma invariant_iff_entries_correct :
   forall g es,
@@ -39,11 +39,11 @@ Proof.
 Qed.
 
 Lemma fromLookaheadList_preserves_prod :
-  forall x x' la gamma gamma' las,
-    In (x, la, gamma) (fromLookaheadList x' gamma' las)
-    -> (x, gamma) = (x', gamma').
+  forall xp xp' la las,
+    In (xp, la) (fromLookaheadList xp' las)
+    -> xp = xp'.
 Proof.
-  intros x x' la gamma gamma' las Hin.
+  intros xp xp' la las Hin.
   induction las as [| la' las]; simpl in *.
   - inv Hin.
   - inv Hin.
@@ -52,15 +52,14 @@ Proof.
 Qed.
 
 Lemma entriesForProd_preserves_prod :
-  forall x la gamma nu fi fo p,
-    In (x, la, gamma) (entriesForProd nu fi fo p)
-    -> (x, gamma) = p.
+  forall xp xp' la nu fi fo,
+    In (xp, la) (entriesForProd nu fi fo xp')
+    -> xp = xp'.
 Proof.
-  intros x la gamma nu fi fo p Hin.
-  destruct p as (x', gamma').
+  intros xp xp' la nu fi fo Hin.
   unfold entriesForProd in Hin.
   apply in_app_or in Hin.
-  inv Hin; eapply fromLookaheadList_preserves_prod; eauto.
+  destruct Hin; eapply fromLookaheadList_preserves_prod; eauto.
 Qed.
 
 Lemma first_gamma_tail_first_gamma_cons :
@@ -268,10 +267,10 @@ Proof.
 Qed.
 
 Lemma fromLookaheadList_preserves_in :
-  forall x la gamma las,
-    In (x, la, gamma) (fromLookaheadList x gamma las) <-> In la las.
+  forall xp la las,
+    In (xp, la) (fromLookaheadList xp las) <-> In la las.
 Proof.
-  intros x la gamma las.
+  intros xp la las.
   split; intros Hin.
   - induction las; simpl in *; auto.
     inv Hin; auto.
@@ -281,96 +280,93 @@ Proof.
 Qed.
 
 Lemma fromLookaheadList_preserves_soundness :
-  forall g x la gamma las,
-    In (x, la, gamma) (fromLookaheadList x gamma las)
-    -> (forall la', In la' las -> lookahead_for la' x gamma g)
-    -> lookahead_for la x gamma g.
+  forall g xp la las,
+    In (xp, la) (fromLookaheadList xp las)
+    -> (forall la', In la' las -> lookahead_for la' (lhs xp) (rhs xp) g)
+    -> lookahead_for la (lhs xp) (rhs xp) g.
 Proof.
-  intros g x la gamma las Hin Hcor.
+  intros g xp la las Hin Hcor.
   apply Hcor.
   eapply fromLookaheadList_preserves_in; eauto.
 Qed.
-           
+
 Lemma firstEntries_sound :
-  forall g nu fi x la gamma,
+  forall g nu fi xp la,
     nullable_set_for nu g
     -> first_map_for fi g
-    -> In (x, la, gamma) (firstEntries x gamma nu fi)
-    -> lookahead_for la x gamma g.
+    -> In (xp, la) (firstEntries xp nu fi)
+    -> lookahead_for la (lhs xp) (rhs xp) g.
 Proof.
-  intros g nu fi x la gamma Hns Hfm Hin.
+  intros g nu fi xp la Hns Hfm Hin.
   eapply fromLookaheadList_preserves_soundness; eauto.
   intros la' Hin'.
-  left.
-  eapply firstGamma_sound; eauto.
+  left; eapply firstGamma_sound; eauto.
 Qed.
 
 Lemma followEntries_sound :
-  forall g nu fo x la gamma,
+  forall g nu fo xp la,
     nullable_set_for nu g
     -> follow_map_for fo g
-    -> In (x, la, gamma) (followEntries x gamma nu fo)
-    -> lookahead_for la x gamma g.
+    -> In (xp, la) (followEntries xp nu fo)
+    -> lookahead_for la (lhs xp) (rhs xp) g.
 Proof.
-  intros g nu fo x la gamma Hns Hfm Hin.
+  intros g nu fo xp la Hns Hfm Hin.
   eapply fromLookaheadList_preserves_soundness; eauto.
   intros la' Hin'.
-  right.
-  eapply followLookahead_sound; eauto.
+  right; eapply followLookahead_sound; eauto.
 Qed.
   
 Lemma entriesForProd_sound :
-  forall g nu fi fo p x la gamma,
+  forall g nu fi fo xp xp' la,
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
-    -> In (x, la, gamma) (entriesForProd nu fi fo p)
-    -> lookahead_for la x gamma g.
+    -> In (xp, la) (entriesForProd nu fi fo xp')
+    -> lookahead_for la (lhs xp) (rhs xp) g.
 Proof.
-  intros g nu fi fo p x la gamma Hns Hfi Hfo Hin.
+  intros g nu fi fo xp xp' la Hns Hfi Hfo Hin.
   pose proof Hin as Hin'.
   apply entriesForProd_preserves_prod in Hin'; subst.
   unfold entriesForProd in Hin.
-  apply in_app_or in Hin.
-  inv Hin.
+  apply in_app_or in Hin; destruct Hin.
   - eapply firstEntries_sound; eauto.
   - eapply followEntries_sound; eauto.
 Qed.
 
 Lemma fromLookaheadList_preserves_list_completeness :
-  forall P la las x gamma,
+  forall P xp la las,
     P la
     -> (forall la', P la' -> In la' las)
-    -> In (x, la, gamma) (fromLookaheadList x gamma las).
+    -> In (xp, la) (fromLookaheadList xp las).
 Proof.
-  intros P la las x gamma Hp Hcor.
+  intros P xp la las Hp Hcor.
   apply fromLookaheadList_preserves_in; auto.
 Qed.
 
 Lemma firstEntries_complete :
-  forall g nu fi x la gamma,
+  forall g nu fi xp la,
     nullable_set_for nu g
     -> first_map_for fi g
-    -> first_gamma g la gamma
-    -> In (x, la, gamma) (firstEntries x gamma nu fi).
+    -> first_gamma g la (rhs xp)
+    -> In (xp, la) (firstEntries xp nu fi).
 Proof.
-  intros g nu fi x la gamma Hnu Hfi Hfg.
+  intros g nu fi xp la Hnu Hfi Hfg.
   unfold firstEntries.
   eapply fromLookaheadList_preserves_list_completeness with
-      (P := fun la => first_gamma g la gamma); auto.
+      (P := fun la => first_gamma g la (rhs xp)); auto.
   intros la' Hfg'.
   eapply firstGamma_complete; eauto.
 Qed.
 
 Lemma followLookahead_complete :
-  forall g nu fo x la gamma,
+  forall g nu fo xp la,
     nullable_set_for nu g
     -> follow_map_for fo g
-    -> nullable_gamma g gamma
-    -> follow_sym g la (NT x)
-    -> In la (followLookahead x gamma nu fo).
+    -> nullable_gamma g (rhs xp)
+    -> follow_sym g la (NT (lhs xp))
+    -> In la (followLookahead (lhs xp) (rhs xp) nu fo).
 Proof.
-  intros g nu fo x la gamma Hns Hfm Hng Hfs.
+  intros g nu fo xp la Hns Hfm Hng Hfs.
   unfold followLookahead.
   eapply nullableGamma_correct in Hng; eauto.
   rewrite Hng.
@@ -382,33 +378,32 @@ Proof.
 Qed.
 
 Lemma followEntries_complete :
-  forall g nu fo x la gamma,
+  forall g nu fo xp la,
     nullable_set_for nu g
     -> follow_map_for fo g
-    -> nullable_gamma g gamma
-    -> follow_sym g la (NT x)
-    -> In (x, la, gamma) (followEntries x gamma nu fo).
+    -> nullable_gamma g (rhs xp)
+    -> follow_sym g la (NT (lhs xp))
+    -> In (xp, la) (followEntries xp nu fo).
 Proof.
-  intros g nu fo x la gamma Hns Hfm Hng Hfs.
+  intros g nu fo xp la Hns Hfm Hng Hfs.
   unfold followEntries.
   apply fromLookaheadList_preserves_list_completeness with
-      (P := fun la => follow_sym g la (NT x)); auto.
+      (P := fun la => follow_sym g la (NT (lhs xp))); auto.
     intros la' Hfs'.
     eapply followLookahead_complete; eauto.
 Qed.
 
 Lemma entriesForProd_complete :
-  forall g nu fi fo x la gamma,
+  forall g nu fi fo xp la,
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
-    -> lookahead_for la x gamma g
-    -> In (x, la, gamma) (entriesForProd nu fi fo (x, gamma)).
+    -> lookahead_for la (lhs xp) (rhs xp) g
+    -> In (xp, la) (entriesForProd nu fi fo xp).
 Proof.
-  intros g nu fi fo x la gamma Hnu Hfi Hfo Hlf.
+  intros g nu fi fo xp la Hnu Hfi Hfo Hlf.
   unfold entriesForProd.
-  apply in_or_app.
-  inv Hlf.
+  apply in_or_app; inv Hlf.
   - left; eapply firstEntries_complete; eauto.
   - destruct H.
     right; eapply followEntries_complete; eauto.
@@ -419,27 +414,25 @@ Lemma mkEntries'_correct :
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_for fo g
-    -> forall ps es,
-        mkEntries' nu fi fo ps = es
-        -> entries_correct_wrt_productions es ps g.
+    -> forall xps es,
+        mkEntries' nu fi fo xps = es
+        -> entries_correct_wrt_productions es xps g.
 Proof.
-  intros g nu fi fo Hnu Hfi Hfo ps.
-  induction ps as [| p ps]; intros es Hmk; simpl in *; subst.
+  intros g nu fi fo Hnu Hfi Hfo xps.
+  induction xps as [| xp xps]; intros es Hmk; simpl in *; subst.
   - apply empty_entries_correct_wrt_empty_productions.
   - unfold entries_correct_wrt_productions.
-    intros x la gamma.
+    intros xp' la.
     split; [intros Hin | intros [Hin Hlf]].
     + apply in_app_or in Hin.
       destruct Hin.
       * split.
-        -- left.
-           destruct p as (x', gamma').
-           apply entriesForProd_preserves_prod in H; auto.
+        -- left; apply entriesForProd_preserves_prod in H; auto.
         -- eapply entriesForProd_sound; eauto.
-      * specialize IHps with
-          (es := mkEntries' nu fi fo ps).
-        unfold entries_correct_wrt_productions in IHps.
-        apply IHps in H; auto.
+      * specialize IHxps with
+          (es := mkEntries' nu fi fo xps).
+        unfold entries_correct_wrt_productions in IHxps.
+        apply IHxps in H; auto.
         destruct H as [Hin Hlf].
         split; auto.
         right; auto.
@@ -449,9 +442,9 @@ Proof.
       * left.
         eapply entriesForProd_complete; eauto.
       * right.
-        specialize (IHps (mkEntries' nu fi fo ps)).
-        unfold entries_correct_wrt_productions in IHps.
-        apply IHps; auto.
+        specialize (IHxps (mkEntries' nu fi fo xps)).
+        unfold entries_correct_wrt_productions in IHxps.
+        apply IHxps; auto.
 Qed.
   
 Theorem mkEntries_correct :
@@ -473,3 +466,4 @@ Proof.
 Qed.
 
 End EntryProofsFn.
+
