@@ -128,14 +128,6 @@ Module GeneratorFn (Export G : Grammar.T).
   Next Obligation.
     apply nullablePass_neq_candidates_lt; auto.
   Defined.
-
-  Definition prodOf (xp : xprod) : production :=
-    match xp with
-      existT _ p _ => p
-    end.
-
-  Definition prodsOf (g : grammar) : list production :=
-    List.map prodOf g.(prods).
   
   Definition mkNullableSet (g : grammar) : NtSet.t :=
     mkNullableSet' (prodsOf g) NtSet.empty.
@@ -2115,17 +2107,21 @@ Module GeneratorFn (Export G : Grammar.T).
   
   Definition empty_table := ParseTable.empty xprod.
 
-  Definition addEntry (p : table_entry) (o : option parse_table) :=
+  Definition addEntry (e : table_entry) (o : option parse_table) :=
     match o with
-    | None => None
+    | None     => None
     | Some tbl =>
-      match p with
-        (xp, la) =>
-        let x := lhs xp in
+      let (xp, la) := e in
+      match xp with
+      | existT _ (x, gamma) _ =>
         match pt_lookup x la tbl with
         | None => Some (pt_add x la xp tbl)
-          (* the cell already contains an entry *)
-        | Some _  => None
+        (* the cell already contains an entry *)
+        | Some (existT _ (x', gamma') _) =>
+          if production_eq_dec (x, gamma) (x', gamma') then
+            Some tbl
+          else
+            None
         end
       end
     end.

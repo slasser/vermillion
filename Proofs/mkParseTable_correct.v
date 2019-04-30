@@ -50,7 +50,7 @@ Proof.
       apply Hcom; auto.
 Qed.
 
-(* tableFromEntries soundness *)
+(* mkParseTable soundness *)
 
 Lemma addEntry_outer_Some_inner_Some :
   forall e o tbl,
@@ -133,45 +133,87 @@ Proof.
         apply Htc; auto.
 Qed.
 
-(* stopping here for now, because I'm going to change addEntry *)
+(* THIS IS NEW *)
+Definition unique_productions g : Prop :=
+  NoDup (prodsOf g).
+
+Definition unique_action_per_prod (es : list table_entry) : Prop :=
+  forall p f f' la,
+    In (existT _ p f, la) es
+    -> In (existT _ p f', la) es
+    -> f = f'.
+
+Lemma xp_in_xps_impl_p_in_prodOf_xps :
+  forall p f xps,
+    In (existT _ p f) xps -> In p (map prodOf xps).
+Proof.
+  intros p f xps.
+  induction xps as [| (p', f') xps IH]; intros Hin; simpl in *; tc.
+  destruct Hin as [Heq | Hin]; auto.
+  apply EqdepFacts.eq_sigT_fst in Heq; auto.
+Qed.
+
+Lemma unique_productions_unique_action_per_prod' :
+  forall (xps : list xprod)
+         (p : production)
+         (f f' : action_ty p),
+    NoDup (map prodOf xps)
+    -> In (existT _ p f)  xps
+    -> In (existT _ p f') xps
+    -> f = f'.
+Proof.
+  intros xps.
+  induction xps as [| xp xps IH]; intros p f f' Hnd Hin Hin'; simpl in *.
+  - inv Hin.
+  - inv Hnd.
+    destruct Hin as [Heq | Hin]; destruct Hin' as [Heq' | Hin']; subst; simpl in *; auto.
+    + apply Eqdep_dec.inj_pair2_eq_dec; auto.
+      apply production_eq_dec.
+    + apply xp_in_xps_impl_p_in_prodOf_xps in Hin'; tc.
+    + apply xp_in_xps_impl_p_in_prodOf_xps in Hin ; tc.
+Qed.
+
+Lemma unique_productions_unique_action_per_prod :
+  forall g es,
+    unique_productions g
+    -> entries_correct es g
+    -> unique_action_per_prod es.
+Proof.
+  intros g es Hu Hc.
+  unfold unique_action_per_prod.
+  intros p f f' la Hin Hin'.
+  apply Hc in Hin ; destruct Hin  as [Hin _].
+  apply Hc in Hin'; destruct Hin' as [Hin' _].
+  eapply unique_productions_unique_action_per_prod'; eauto.
+Qed.
+
 Lemma addEntry_preserves_invariant :
   forall (e : table_entry)
          (es : list table_entry)
          (tbl' tbl : parse_table),
     table_correct_wrt_entries tbl' es
     -> addEntry e (Some tbl') = Some tbl
+    -> unique_action_per_prod (e :: es)
     -> table_correct_wrt_entries tbl (e :: es).
 Proof.
-  intros (xp, la) es tbl' tbl Htc Hadd.
+  intros e es tbl' tbl Htc Hadd Hu.
+  destruct e as (xp, la) eqn:He.
   unfold addEntry in Hadd.
-  destruct (pt_lookup x la tbl') as [gamma' |] eqn:Hlk.
-  - destruct (list_eq_dec symbol_eq_dec gamma gamma').
-    + inv e.
-      inv Hadd.
-      apply duplicate_preserves_invariant; auto.
+  destruct xp as [(x, gamma) f].
+  destruct (pt_lookup x la tbl') as [[(x', gamma') f'] |] eqn:Hlk.
+  - destruct (Gen.L.production_eq_dec (x, gamma) (x', gamma')) as [Heq | Hneq].
+    + inv Heq; inv Hadd.
+      assert (f = f').
+      { eapply Hu.
+        - left; eauto.
+        - apply Htc in Hlk; destruct Hlk as [Heq Hin].
+          right; auto. }
+      subst.
+      eapply duplicate_preserves_invariant; eauto.
     + inv Hadd.
   - inv Hadd.
-    apply new_entry_preserves_invariant; auto.
-Qed.
-
-Lemma addEntry_preserves_invariant :
-  forall (p : table_entry)
-         (ps : list table_entry)
-         (tbl' tbl : parse_table),
-    table_correct_wrt_entries tbl' ps
-    -> addEntry p (Some tbl') = Some tbl
-    -> table_correct_wrt_entries tbl (p :: ps).
-Proof.
-  intros ((x, la), gamma) es tbl' tbl Htc Hadd.
-  unfold addEntry in Hadd.
-  destruct (pt_lookup x la tbl') as [gamma' |] eqn:Hlk.
-  - destruct (list_eq_dec symbol_eq_dec gamma gamma').
-    + inv e.
-      inv Hadd.
-      apply duplicate_preserves_invariant; auto.
-    + inv Hadd.
-  - inv Hadd.
-    apply new_entry_preserves_invariant; auto.
+    apply new_entry_preserves_invariant with
+        (xp := existT _ (x, gamma) f); auto.
 Qed.
 
 Lemma empty_table_correct_wrt_empty_entries :
@@ -183,23 +225,36 @@ Proof.
   - intros Hlk.
     unfold pt_lookup in Hlk.
     rewrite ParseTableFacts.empty_o in Hlk; inv Hlk.
-  - intros Hin; inv Hin.
+  - intros [Heq Hin]; inv Hin.
+Qed.
+
+Lemma unique_action_per_prod_tl :
+  forall e es,
+    unique_action_per_prod (e :: es)
+    -> unique_action_per_prod es.
+Proof.
+  intros e es Hu.
+  unfold unique_action_per_prod.
+  intros p f f' la Hin Hin'.
+  eapply Hu; right; eauto.
 Qed.
 
 Lemma mkParseTable_sound_wrt_invariant :
   forall (es  : list table_entry)
          (tbl : parse_table),
-    mkParseTable es = Some tbl
+    unique_action_per_prod es
+    -> mkParseTable es = Some tbl
     -> table_correct_wrt_entries tbl es.
 Proof.
   intros es.
-  induction es as [| p ps]; intros tbl Hmk; simpl in *.
+  induction es as [| e es]; intros tbl Hu Hmk; simpl in *.
   - inv Hmk.
     apply empty_table_correct_wrt_empty_entries.
   - pose proof Hmk as Hmk'.
     apply addEntry_outer_Some_inner_Some in Hmk.
     destruct Hmk as [tbl' Hmk].
     rewrite Hmk in Hmk'.
+    pose proof Hu as Hu'; apply unique_action_per_prod_tl in Hu.
     eapply addEntry_preserves_invariant; eauto.
 Qed.
 
@@ -207,16 +262,17 @@ Lemma mkParseTable_sound :
   forall (es  : list table_entry)
          (g   : grammar)
          (tbl : parse_table),
-    entries_correct es g
+    unique_action_per_prod es
+    -> entries_correct es g
     -> mkParseTable es = Some tbl
     -> parse_table_correct tbl g.
 Proof.
-  intros es g tbl Hwf Hmk.
+  intros es g tbl Hua Hwf Hmk.
   eapply invariant_iff_parse_table_correct; eauto.
   apply mkParseTable_sound_wrt_invariant; auto.
 Qed.
 
-(* tableFromEntries completeness *)
+(* mkParseTable completeness *)
 
 Lemma table_correct_wrt_empty_entries_eq_empty_table :
   forall tbl,
