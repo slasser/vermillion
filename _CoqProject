@@ -10,7 +10,7 @@ Proofs/mkNullableSet_correct.v
 Proofs/mkFirstMap_correct.v
 Proofs/mkFollowMap_correct.v
 Proofs/mkEntries_correct.v
-#Proofs/mkParseTable_correct.v
+Proofs/mkParseTable_correct.v
 
 Proofs/Parser_sound.v
 Proofs/Parser_safe.v

@@ -1,15 +1,14 @@
 Require Import String.
 Require Import Grammar.
 Require Import Tactics.
-(*Require Import mkParseTable_correct.*)
+Require Import mkParseTable_correct.
 Require Import Parser_complete.
 
 Module Make (Import G : Grammar.T).
 
-(*  Module Import GeneratorAndProofs := GeneratorProofsFn G. *)
+  Module Import GeneratorAndProofs := GeneratorProofsFn G.
   Module Import ParserAndProofs    := ParserProofsFn G.
 
-  (*
   Definition parseTableOf (g : grammar) : option parse_table :=
     let nu    := mkNullableSet g in
     let nu_pf := (mkNullableSet_correct g) in
@@ -20,11 +19,12 @@ Module Make (Import G : Grammar.T).
     mkParseTable es.
 
   Theorem parseTableOf_sound : 
-    forall (g : grammar) (tbl : parse_table), 
-      parseTableOf g = Some tbl
+    forall (g : grammar) (tbl : parse_table),
+      unique_productions g
+      -> parseTableOf g = Some tbl
       -> parse_table_correct tbl g.
   Proof.
-    intros g tbl Hf.
+    intros g tbl Hu Hf.
     eapply mkParseTable_sound; eauto.
     eapply mkEntries_correct; eauto.
     - apply mkNullableSet_correct; auto.
@@ -36,11 +36,12 @@ Module Make (Import G : Grammar.T).
 
   Theorem parseTableOf_complete :
     forall (g : grammar) (tbl : parse_table),
-      parse_table_correct tbl g 
+      unique_productions g
+      -> parse_table_correct tbl g 
       -> exists (tbl' : parse_table),
         ParseTable.Equal tbl tbl' /\ parseTableOf g = Some tbl'.
   Proof.
-    intros g tbl Hpt.
+    intros g tbl Hu Ht.
     eapply mkParseTable_complete; eauto.
     eapply mkEntries_correct; eauto.
     - apply mkNullableSet_correct; auto.
@@ -49,8 +50,6 @@ Module Make (Import G : Grammar.T).
     - apply mkFollowMap_correct; auto.
       apply mkNullableSet_correct; auto.
   Qed.
-
-*)
 
   Definition parse (tbl : parse_table)
                    (s   : symbol)

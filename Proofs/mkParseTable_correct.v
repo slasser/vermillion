@@ -260,14 +260,15 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     forall (es  : list table_entry)
            (g   : grammar)
            (tbl : parse_table),
-      unique_action_per_prod es
+      unique_productions g
       -> entries_correct es g
       -> mkParseTable es = Some tbl
       -> parse_table_correct tbl g.
   Proof.
-    intros es g tbl Hua Hwf Hmk.
+    intros es g tbl Hu Hwf Hmk.
     eapply invariant_iff_parse_table_correct; eauto.
     apply mkParseTable_sound_wrt_invariant; auto.
+    eapply unique_productions_unique_action_per_prod; eauto.
   Qed.
 
   (* mkParseTable completeness *)
