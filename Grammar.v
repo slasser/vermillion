@@ -421,6 +421,7 @@ Module Type T.
   Export Defs.
 End T.
 
+(*
 (* Simple example of how to build a concrete grammar. *)
 
 (* First, we provide the types of grammar symbols 
@@ -453,4 +454,4 @@ Definition g : grammar :=
                          | (s, (n, _)) => 5
                          end)]
   |}.
-
+*)
