@@ -421,37 +421,3 @@ Module Type T.
   Export Defs.
 End T.
 
-(*
-(* Simple example of how to build a concrete grammar. *)
-
-(* First, we provide the types of grammar symbols 
-   and their decidable equalities. *)
-Module NatStringTypes <: SYMBOL_TYPES.
-    Definition terminal := string.
-    Definition nonterminal := nat.
-    Definition literal := string.
-    Definition t_eq_dec := string_dec.
-    Definition nt_eq_dec := Nat.eq_dec.
-    Definition t_semty (a : terminal) := string.
-    Definition nt_semty (x : nonterminal) := nat.
-End NatStringTypes.
-
-(* Next, we generate grammar definitions for those types. *)
-Module Export NatStringGrammar <: T.
-  Module Export SymTy := NatStringTypes.
-  Module Export Defs  := DefsFn SymTy.
-End NatStringGrammar.
-
-(* Now we can define a grammar as a record containing a start symbol
-   and a list of productions. *)
-Open Scope string_scope.
-Definition g : grammar :=
-  {| start := 0;
-     prods := [existT action_ty
-                      (0, [T "hello"; NT 0]) (* production *)
-                      (fun tup =>            (* action     *)
-                         match tup with
-                         | (s, (n, _)) => 5
-                         end)]
-  |}.
-*)

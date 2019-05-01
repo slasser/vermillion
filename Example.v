@@ -45,11 +45,11 @@ Module G311_Types <: SYMBOL_TYPES.
   
   Lemma t_eq_dec : forall (t t' : terminal),
       {t = t'} + {t <> t'}.
-  Proof. decide equality. Qed.
+  Proof. decide equality. Defined.
   
   Lemma nt_eq_dec : forall (nt nt' : nonterminal),
       {nt = nt'} + {nt <> nt'}.
-  Proof. decide equality. Qed.
+  Proof. decide equality. Defined.
 
   (* A Num token carries a natural number -- no other token
      carries a meaningful semantic value. *)
@@ -153,6 +153,7 @@ Definition example_prog : list token :=
 
 (* Now we can generate an LL(1) parse table for the grammar
    and use it to parse the example input. *)
+Open Scope string_scope.
 Compute (match parseTableOf g311 with
          | Some tbl => inr (parse tbl (NT S) example_prog)
          | None => inl "no correct LL(1) parse table"
