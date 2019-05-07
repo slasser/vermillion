@@ -1,5 +1,6 @@
 Require Import String.
 Require Import Grammar.
+Require Import NoDupDec.
 Require Import Tactics.
 Require Import mkParseTable_correct.
 Require Import Parser_complete.
@@ -10,21 +11,25 @@ Module Make (Import G : Grammar.T).
   Module Import ParserAndProofs    := ParserProofsFn G.
 
   Definition parseTableOf (g : grammar) : option parse_table :=
-    let nu    := mkNullableSet g in
-    let nu_pf := (mkNullableSet_correct g) in
-    let fi    := mkFirstMap g nu in
-    let fi_pf := (mkFirstMap_correct g nu nu_pf) in
-    let fo    := mkFollowMap g nu fi fi_pf in
-    let es    := mkEntries nu fi fo g in
-    mkParseTable es.
+    if unique _ production_eq_dec (prodsOf g) then
+      let nu    := mkNullableSet g in
+      let nu_pf := (mkNullableSet_correct g) in
+      let fi    := mkFirstMap g nu in
+      let fi_pf := (mkFirstMap_correct g nu nu_pf) in
+      let fo    := mkFollowMap g nu fi fi_pf in
+      let es    := mkEntries nu fi fo g in
+      mkParseTable es
+    else
+      None.
 
   Theorem parseTableOf_sound : 
     forall (g : grammar) (tbl : parse_table),
-      unique_productions g
-      -> parseTableOf g = Some tbl
+      parseTableOf g = Some tbl
       -> parse_table_correct tbl g.
   Proof.
-    intros g tbl Hu Hf.
+    intros g tbl Hf; unfold parseTableOf in Hf.
+    step_eq Hu; tc.
+    apply NoDup_unique_true_iff in Hu.
     eapply mkParseTable_sound; eauto.
     eapply mkEntries_correct; eauto.
     - apply mkNullableSet_correct; auto.
@@ -42,6 +47,8 @@ Module Make (Import G : Grammar.T).
         ParseTable.Equal tbl tbl' /\ parseTableOf g = Some tbl'.
   Proof.
     intros g tbl Hu Ht.
+    unfold unique_productions in Hu; unfold parseTableOf.
+    pose proof Hu as Hu'; eapply NoDup_unique_true_iff in Hu'; rewrite Hu'.
     eapply mkParseTable_complete; eauto.
     eapply mkEntries_correct; eauto.
     - apply mkNullableSet_correct; auto.

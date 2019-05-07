@@ -539,7 +539,7 @@ Defined.
       {p = p'} + {p <> p'}.
   Proof.
     repeat decide equality.
-  Qed.
+  Defined.
 
   Lemma in_xprods_in_prodsOf :
     forall g p f,
