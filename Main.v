@@ -11,16 +11,17 @@ Module Make (Import G : Grammar.T).
   Module Import ParserAndProofs    := ParserProofsFn G.
 
   Definition parseTableOf (g : grammar) : option parse_table :=
-    if unique _ production_eq_dec (prodsOf g) then
+    match findDup _ production_eq_dec (prodsOf g) with
+    | Some p => None
+    | None   => 
       let nu    := mkNullableSet g in
-      let nu_pf := (mkNullableSet_correct g) in
+      let nu_pf := mkNullableSet_correct g in
       let fi    := mkFirstMap g nu in
-      let fi_pf := (mkFirstMap_correct g nu nu_pf) in
+      let fi_pf := mkFirstMap_correct g nu nu_pf in
       let fo    := mkFollowMap g nu fi fi_pf in
       let es    := mkEntries nu fi fo g in
       mkParseTable es
-    else
-      None.
+    end.
 
   Theorem parseTableOf_sound : 
     forall (g : grammar) (tbl : parse_table),
@@ -29,7 +30,7 @@ Module Make (Import G : Grammar.T).
   Proof.
     intros g tbl Hf; unfold parseTableOf in Hf.
     step_eq Hu; tc.
-    apply NoDup_unique_true_iff in Hu.
+    apply NoDup_findDup_None_iff in Hu.
     eapply mkParseTable_sound; eauto.
     eapply mkEntries_correct; eauto.
     - apply mkNullableSet_correct; auto.
@@ -48,7 +49,7 @@ Module Make (Import G : Grammar.T).
   Proof.
     intros g tbl Hu Ht.
     unfold unique_productions in Hu; unfold parseTableOf.
-    pose proof Hu as Hu'; eapply NoDup_unique_true_iff in Hu'; rewrite Hu'.
+    pose proof Hu as Hu'; eapply NoDup_findDup_None_iff in Hu'; rewrite Hu'.
     eapply mkParseTable_complete; eauto.
     eapply mkEntries_correct; eauto.
     - apply mkNullableSet_correct; auto.
