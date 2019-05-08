@@ -1,6 +1,7 @@
 Require Import String.
 Require Import Grammar.
 Require Import Main.
+Open Scope string_scope.
 
 (* This file gives an example of how to use Vermillion.
 
@@ -171,7 +172,6 @@ Definition example_prog : list token :=
 
 (* Now we can generate an LL(1) parse table for the grammar
    and use it to parse the example input. *)
-Open Scope string_scope.
 Compute (match parseTableOf g311 with
          | Some tbl => inr (parse tbl (NT S) example_prog)
          | None => inl "no correct LL(1) parse table"

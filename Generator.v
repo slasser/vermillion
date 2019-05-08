@@ -1,12 +1,14 @@
 Require Import List.
 Require Import MSets.
 Require Import Program.Wf.
+Require Import String.
 
 Require Import Vermillion.Grammar.
 Require Import Vermillion.Lemmas.
 Require Import Vermillion.Tactics.
 
 Import ListNotations.
+Open Scope string_scope.
 
 Module GeneratorFn (Export G : Grammar.T).
 
@@ -2104,30 +2106,52 @@ Module GeneratorFn (Export G : Grammar.T).
     mkEntries' nu fi fo g.(prods).
 
   (* Step 5 : build a parse table from a (correct) list of parse table entries *)
+
+  Definition ambigMessage
+             (la : lookahead)
+             (x : nonterminal)
+             (gamma gamma' : list symbol) : string :=
+    "The grammar is not LL(1); " ++ show_lookahead la ++ " is a lookahead token
+     for the following two productions with the same left-hand side and
+     different right-hand sides:\n\n"
+     ++ show_prod (x, gamma)
+     ++ "\n"
+     ++ show_prod (x, gamma').
   
   Definition empty_table := ParseTable.empty xprod.
 
-  Definition addEntry (e : table_entry) (o : option parse_table) :=
-    match o with
-    | None     => None
-    | Some tbl =>
+  Definition addEntry (e : table_entry) (s : Datatypes.sum string parse_table) :
+    Datatypes.sum string parse_table :=
+    match s with
+    | inl msg => inl msg
+    | inr tbl =>
       let (xp, la) := e in
       match xp with
       | existT _ (x, gamma) _ =>
         match pt_lookup x la tbl with
-        | None => Some (pt_add x la xp tbl)
+        | None => inr (pt_add x la xp tbl)
         (* the cell already contains an entry *)
         | Some (existT _ (x', gamma') _) =>
           if production_eq_dec (x, gamma) (x', gamma') then
-            Some tbl
+            inr tbl
           else
-            None
+            inl (ambigMessage la x gamma gamma')
         end
       end
     end.
   
-  Definition mkParseTable (ps : list table_entry) : option parse_table :=
-    fold_right addEntry (Some empty_table) ps.
+  Definition mkParseTable (ps : list table_entry) :
+    Datatypes.sum string parse_table :=
+    fold_right addEntry (inr empty_table) ps.
+
+  (* Create the message that the generator returns in the case of a grammar
+     with duplicate productions. *)
+  Definition dupMessage (p : production) : string :=
+    "The following production appears multiple times in the grammar:\n\n"
+    ++ (show_prod p)
+    ++ "\n\nThe grammar is either ambiguous (if the production appears with 
+        different actions), or redundant (if it appears multiple times with
+        the same action).".
   
 End GeneratorFn.
 

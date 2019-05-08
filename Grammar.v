@@ -143,6 +143,12 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     | LA  : terminal -> lookahead
     | EOF : lookahead.
 
+    Definition show_lookahead (la : lookahead) : string :=
+      match la with
+      | LA a => show_t a
+      | EOF  => "EOF"
+      end.
+
     Inductive nullable_sym (g : grammar) : symbol -> Prop :=
     | NullableSym : forall x ys f,
         In (existT _ (x, ys) f) g.(prods)
