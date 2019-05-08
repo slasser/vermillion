@@ -57,7 +57,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     end.
 
   Definition show_rhs (gamma : list symbol) : string :=
-    intersperse " " (map show_symbol gamma).
+    intersperse ", " (map show_symbol gamma).
 
   Definition show_prod (p : production) : string :=
     let (x, gamma) := p in

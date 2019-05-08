@@ -173,7 +173,85 @@ Definition example_prog : list token :=
 (* Now we can generate an LL(1) parse table for the grammar
    and use it to parse the example input. *)
 Compute (match parseTableOf g311 with
-         | Some tbl => inr (parse tbl (NT S) example_prog)
-         | None => inl "no correct LL(1) parse table"
+         | inl msg => inl msg
+         | inr tbl => inr (parse tbl (NT S) example_prog)
+         end).
+
+(* Malformed input -- missing an equals sign operand *)
+Definition buggy_prog : list token :=
+  [tok If tt; tok Num 2; tok Eq tt; tok Num 5; tok Then tt;
+     tok Print tt; tok Num 2; tok Eq tt;
+   tok Else tt;
+     tok Print tt; tok Num 42; tok Eq tt; tok Num 42].
+
+Compute (match parseTableOf g311 with
+         | inl msg => inl msg
+         | inr tbl => inr (parse tbl (NT S) buggy_prog)
+         end).
+
+Definition duplicate_redundant_grammar : grammar :=
+  {| start := S ;
+     prods := [existT action_ty
+                      (S, [T Print; NT E])
+                      (fun tup =>
+                         match tup with
+                         | (_, (e, _)) =>
+                           Print_stmt e
+                         end);
+
+               (* This production appears twice,
+                  with the same semantic action *)
+               existT action_ty
+                      (E, [T Num; T Eq; T Num])
+                      (fun tup =>
+                         match tup with
+                         | (n1, (_, (n2, _))) =>
+                           Cmp_exp n1 n2
+                         end);
+
+               existT action_ty
+                      (E, [T Num; T Eq; T Num])
+                      (fun tup =>
+                         match tup with
+                         | (n1, (_, (n2, _))) =>
+                           Cmp_exp n1 n2
+                         end)]
+  |}.
+
+Compute (match parseTableOf duplicate_redundant_grammar with
+         | inl msg => inl msg
+         | inr tbl => inr (parse tbl (NT S) example_prog)
+         end).
+
+Definition non_LL1_grammar : grammar :=
+  {| start := S ;
+     prods := [existT action_ty
+                      (S, [T Print; NT E])
+                      (fun tup =>
+                         match tup with
+                         | (_, (e, _)) =>
+                           Print_stmt e
+                         end);
+
+               existT action_ty
+                      (S, [T Print; NT E; T Semi])
+                      (fun tup =>
+                         match tup with
+                         | (_, (e, (s, _))) =>
+                           Print_stmt e
+                         end);
+               
+               existT action_ty
+                      (E, [T Num; T Eq; T Num])
+                      (fun tup =>
+                         match tup with
+                         | (n1, (_, (n2, _))) =>
+                           Cmp_exp n1 n2
+                         end)]
+  |}.
+
+Compute (match parseTableOf non_LL1_grammar with
+         | inl msg => inl msg
+         | inr tbl => inr (parse tbl (NT S) example_prog)
          end).
 

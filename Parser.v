@@ -231,6 +231,9 @@ Module ParserFn (Import G : Grammar.T).
     left; omega.
   Defined.
 
+  Definition mismatchMessage (a a' : terminal) : string :=
+    "Token mismatch; expected " ++ show_t a ++ ", saw " ++ show_t a'.
+  
   Fixpoint parseTree
            (tbl : parse_table)
            (sym : symbol)
@@ -251,7 +254,7 @@ Module ParserFn (Import G : Grammar.T).
                      let v := eq_rect _ _ v' _ Heq in
                      inr (v, existT _ ts' (length_lt_eq_cons _ _ _ _ Hts))
                    | right _ =>
-                     inl (Reject "token mismatch" ts)
+                     inl (Reject (mismatchMessage a a') ts)
                    end
       end eq_refl
     | NT x =>

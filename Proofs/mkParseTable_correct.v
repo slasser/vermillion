@@ -52,16 +52,15 @@ Module GeneratorProofsFn (Import G : Grammar.T).
 
   (* mkParseTable soundness *)
 
-  Lemma addEntry_outer_Some_inner_Some :
-    forall e o tbl,
-      addEntry e o = Some tbl
+    Lemma addEntry_outer_right_inner_right :
+    forall e s tbl,
+      addEntry e s = inr tbl
       -> exists tbl',
-        o = Some tbl'.
+        s = inr tbl'.
   Proof.
-    intros e o tbl Hadd.
+    intros e s tbl Hadd.
     unfold addEntry in Hadd.
-    destruct o as [tbl' |] eqn:Ho; tc; subst.
-    dm; dm; tc.
+    destruct s as [msg | tbl'] eqn:Hs; tc; subst.
     inv Hadd; eauto.
   Qed.
 
@@ -133,7 +132,6 @@ Module GeneratorProofsFn (Import G : Grammar.T).
           apply Htc; auto.
   Qed.
 
-  (* THIS IS NEW *)
   Definition unique_productions g : Prop :=
     NoDup (prodsOf g).
 
@@ -185,12 +183,12 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     eapply unique_productions_unique_action_per_prod'; eauto.
   Qed.
 
-  Lemma addEntry_preserves_invariant :
+    Lemma addEntry_preserves_invariant :
     forall (e : table_entry)
            (es : list table_entry)
            (tbl' tbl : parse_table),
       table_correct_wrt_entries tbl' es
-      -> addEntry e (Some tbl') = Some tbl
+      -> addEntry e (inr tbl') = inr tbl
       -> unique_action_per_prod (e :: es)
       -> table_correct_wrt_entries tbl (e :: es).
   Proof.
@@ -241,7 +239,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     forall (es  : list table_entry)
            (tbl : parse_table),
       unique_action_per_prod es
-      -> mkParseTable es = Some tbl
+      -> mkParseTable es = inr tbl
       -> table_correct_wrt_entries tbl es.
   Proof.
     intros es.
@@ -249,7 +247,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     - inv Hmk.
       apply empty_table_correct_wrt_empty_entries.
     - pose proof Hmk as Hmk'.
-      apply addEntry_outer_Some_inner_Some in Hmk.
+      apply addEntry_outer_right_inner_right in Hmk.
       destruct Hmk as [tbl' Hmk].
       rewrite Hmk in Hmk'.
       pose proof Hu as Hu'; apply unique_action_per_prod_tl in Hu.
@@ -262,7 +260,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
            (tbl : parse_table),
       unique_productions g
       -> entries_correct es g
-      -> mkParseTable es = Some tbl
+      -> mkParseTable es = inr tbl
       -> parse_table_correct tbl g.
   Proof.
     intros es g tbl Hu Hwf Hmk.
@@ -342,8 +340,6 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       by (simpl; auto).
     apply Htc in H; apply Htc in H'; tc.
   Qed.
-
-  Definition actionOf (xp : xprod) := projT2 xp.
 
   Lemma lhs_rhs_eq_uapp_xprods_eq :
     forall xp xp' la es,
@@ -553,7 +549,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     forall tbl es xp la,
       table_correct_wrt_entries tbl es
       -> In (xp, la) es
-      -> addEntry (xp, la) (Some tbl) = Some tbl.
+      -> addEntry (xp, la) (inr tbl) = inr tbl.
   Proof.
     intros tbl es xp la Htc Hin.
     unfold addEntry.
@@ -591,7 +587,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       -> table_correct_wrt_entries tbl es
       -> table_correct_wrt_entries tbl' ((xp, la) :: es)
       -> ~ In (xp, la) es
-      -> addEntry (xp, la) (Some tbl) = Some (pt_add (lhs xp) la xp tbl).
+      -> addEntry (xp, la) (inr tbl) = inr (pt_add (lhs xp) la xp tbl).
   Proof.
     intros tbl tbl' es xp la Hu Htc Htc' Hin.
     destruct (pt_lookup (lhs xp) la tbl) as [xp' |] eqn:Hlk.
@@ -618,7 +614,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       -> table_correct_wrt_entries tbl es
       -> exists tbl',
           ParseTable.Equal tbl tbl'
-          /\ mkParseTable es = Some tbl'.
+          /\ mkParseTable es = inr tbl'.
   Proof.
     intros es.
     induction es as [| (xp, la) es]; intros post_tbl Hu Htc.
@@ -679,7 +675,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       -> parse_table_correct tbl g
       -> exists tbl',
           ParseTable.Equal tbl tbl'
-          /\ mkParseTable es = Some tbl'.
+          /\ mkParseTable es = inr tbl'.
   Proof.
     intros es g tbl Hup Hwf Hpt.
     apply mkParseTable_complete_wrt_invariant.

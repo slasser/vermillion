@@ -12,7 +12,7 @@ Module Make (Import G : Grammar.T).
 
   Definition parseTableOf (g : grammar) : Datatypes.sum string parse_table :=
     match findDup _ production_eq_dec (prodsOf g) with
-    | Some p => inl (duplicateMesage p)
+    | Some p => inl (dupMessage p)
     | None   => 
       let nu    := mkNullableSet g in
       let nu_pf := mkNullableSet_correct g in
@@ -25,7 +25,7 @@ Module Make (Import G : Grammar.T).
 
   Theorem parseTableOf_sound : 
     forall (g : grammar) (tbl : parse_table),
-      parseTableOf g = Some tbl
+      parseTableOf g = inr tbl
       -> parse_table_correct tbl g.
   Proof.
     intros g tbl Hf; unfold parseTableOf in Hf.
@@ -45,7 +45,7 @@ Module Make (Import G : Grammar.T).
       unique_productions g
       -> parse_table_correct tbl g 
       -> exists (tbl' : parse_table),
-        ParseTable.Equal tbl tbl' /\ parseTableOf g = Some tbl'.
+        ParseTable.Equal tbl tbl' /\ parseTableOf g = inr tbl'.
   Proof.
     intros g tbl Hu Ht.
     unfold unique_productions in Hu; unfold parseTableOf.
