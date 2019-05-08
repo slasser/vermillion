@@ -40,9 +40,7 @@ Module G311_Types <: SYMBOL_TYPES.
   | S | L | E.
   
   Definition nonterminal := nonterminal'.
-  
-  Definition literal := string.
-  
+
   Lemma t_eq_dec : forall (t t' : terminal),
       {t = t'} + {t <> t'}.
   Proof. decide equality. Defined.
@@ -51,6 +49,26 @@ Module G311_Types <: SYMBOL_TYPES.
       {nt = nt'} + {nt <> nt'}.
   Proof. decide equality. Defined.
 
+  Definition show_t (a : terminal) : string :=
+    match a with
+    | If    => "If"
+    | Then  => "Then"
+    | Else  => "Else"
+    | Begin => "Begin"
+    | Print => "Print"
+    | End   => "End"
+    | Semi  => ";"
+    | Num   => "Num"
+    | Eq    => "="
+    end.
+
+  Definition show_nt (x : nonterminal) : string :=
+    match x with
+    | S => "S"
+    | L => "L"
+    | E => "E"
+    end.
+  
   (* A Num token carries a natural number -- no other token
      carries a meaningful semantic value. *)
   Definition t_semty (a : terminal) : Type :=
