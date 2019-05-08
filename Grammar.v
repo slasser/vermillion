@@ -1,8 +1,9 @@
 Require Import List PeanoNat String.
 Require Import FMaps MSets.
 Export ListNotations.
+Open Scope string_scope.
 
-(* Types of grammar symbols and their decidable equality *)
+(* Types of grammar symbols *)
 Module Type SYMBOL_TYPES.
   Parameters terminal nonterminal : Type.
   
@@ -11,6 +12,9 @@ Module Type SYMBOL_TYPES.
   
   Hypothesis nt_eq_dec : forall x x' : nonterminal,
       {x = x'} + {x <> x'}.
+
+  Parameter show_t  : terminal    -> string.
+  Parameter show_nt : nonterminal -> string.
 
   Parameter t_semty  : terminal    -> Type.
   Parameter nt_semty : nonterminal -> Type.
@@ -24,12 +28,41 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
   | T  : terminal -> symbol
   | NT : nonterminal -> symbol.
 
+  Definition production := (nonterminal * list symbol)%type.
+
   Hint Resolve Ty.t_eq_dec Ty.nt_eq_dec.
   
   Lemma symbol_eq_dec : forall s s' : symbol,
       {s = s'} + {s <> s'}.
   Proof. decide equality. Defined.
 
+  Definition show_symbol (sym : symbol) : string :=
+    match sym with
+    | T a  => "T "  ++ show_t a
+    | NT x => "NT " ++ show_nt x
+    end.
+
+  (* to do : these are copied from the Haskell list library --
+     move them to a separate location *)
+  Fixpoint prependToAll (sep : string) (ss : list string) : string :=
+    match ss with
+    | [] => ""
+    | s :: ss' => sep ++ s ++ prependToAll sep ss'
+    end.
+
+  Definition intersperse (sep : string) (ss : list string) : string :=
+    match ss with
+    | [] => ""
+    | s :: ss' => s ++ prependToAll sep ss'
+    end.
+
+  Definition show_rhs (gamma : list symbol) : string :=
+    intersperse " " (map show_symbol gamma).
+
+  Definition show_prod (p : production) : string :=
+    let (x, gamma) := p in
+    show_nt x ++ " --> " ++ show_rhs gamma.
+  
   Definition symbol_semty (sym : symbol) : Type :=
     match sym with
     | T a  => t_semty  a
@@ -44,8 +77,6 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
   
   Definition rhs_semty (gamma : list symbol) : Type :=
     tuple (List.map symbol_semty gamma).
-
-  Definition production := (nonterminal * list symbol)%type.
   
   Definition action_ty (p : production) : Type :=
     let (x, gamma) := p in rhs_semty gamma -> nt_semty x.
