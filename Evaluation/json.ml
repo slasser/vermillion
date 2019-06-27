@@ -9,7 +9,7 @@ type value = [
   ]
 
 (*open Core*)
-open Out_channel
+(*open Out_channel
 let rec output_value outc = function
   | `Assoc obj  -> print_assoc outc obj
   | `List l     -> print_list outc l
@@ -35,3 +35,4 @@ and print_list outc arr =
         output_string outc ", ";
       output_value outc v) arr;
   output_string outc "]"
+*)

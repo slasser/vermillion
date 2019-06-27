@@ -123,6 +123,9 @@ Module Export G <: Grammar.T.
   Module Export Defs  := DefsFn SymTy.
 End G.
 
+(* The parser generator itself. *)
+Module Export PG := Make G.
+
 (* Now we can define a grammar as a record 
    containing a start symbol and a list of productions. *)
 Definition jsonGrammar : grammar :=
@@ -227,35 +230,35 @@ Definition jsonGrammar : grammar :=
               ]
   |}.
 
-(*Definition g : grammar :=
-  {| start := value
-  ; prods :=
-      [ (value, [T "{"; NT pairs; T "}"])
-      ; (value, [T "["; NT elts; T "]"])
-      ; (value, [T "STRING"])
-      ; (value, [T "INT"])
-      ; (value, [T "FLOAT"])
-      ; (value, [T "TRUE"])
-      ; (value, [T "FALSE"])
-      ; (value, [T "NULL"])
-          
-      ; (pairs, [])
-      ; (pairs, [NT pair; NT pairs'])
-          
-      ; (pairs', [])
-      ; (pairs', [T ","; NT pair; NT pairs'])
+(* Non-dependent token representation for converting between Menhir and Vermillion tokens *)
+Inductive simply_typed_token :=
+  | StInt   : nat    -> simply_typed_token
+  | StFloat : nat    -> simply_typed_token
+  | StStr   : string -> simply_typed_token
+  | StTru
+  | StFls 
+  | StNull 
+  | StLeftBrace 
+  | StRightBrace 
+  | StLeftBrack
+  | StRightBrack
+  | StColon
+  | StComma.
 
-      ; (pair, [T "STRING"; T ":"; NT value])
+Definition depTokenOfSimplyTypedToken (stt : simply_typed_token) : token :=
+  match stt with
+  | StInt n      => existT _ Int n
+  | StFloat n    => existT _ Float n
+  | StStr s      => existT _ Str s
+  | StTru        => existT _ Tru tt
+  | StFls        => existT _ Fls tt
+  | StNull       => existT _ Null tt
+  | StLeftBrace  => existT _ LeftBrace tt
+  | StRightBrace => existT _ RightBrace tt
+  | StLeftBrack  => existT _ LeftBrack tt
+  | StRightBrack => existT _ RightBrack tt
+  | StColon      => existT _ Colon tt
+  | StComma      => existT _ Comma tt
+  end.
 
-      ; (elts, [])
-      ; (elts, [NT value; NT elts'])
-
-      ; (elts', [])
-      ; (elts', [T ","; NT value; NT elts'])
-      ]
-  |}.*)
-
-(* The parser generator itself. *)
-Module Export PG := Make G.
-
-(*Extraction "vermillion_defs.ml" g parseTableOf parse.*)
+Extraction "vermillionJsonParser.ml" jsonGrammar parseTableOf parse depTokenOfSimplyTypedToken.

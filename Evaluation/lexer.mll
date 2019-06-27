@@ -1,7 +1,7 @@
 {
 open Lexing
 open Token
-open Core
+(*open Core*)
 
 exception SyntaxError of string
 
