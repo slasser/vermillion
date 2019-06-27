@@ -1,3 +1,0 @@
-<token.mlypack>: only_tokens
-<jsonParser.mlypack>: external_tokens(Token)
-<jsonTokenizer.mlypack>: external_tokens(Token)
