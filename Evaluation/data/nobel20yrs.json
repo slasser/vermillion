@@ -1,0 +1,1212 @@
+{
+    "prizes": [
+        {
+            "year": "1920",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "25",
+                    "firstname": "Charles Edouard",
+                    "surname": "Guillaume",
+                    "motivation": "\"in recognition of the service he has rendered to precision measurements in Physics by his discovery of anomalies in nickel steel alloys\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1920",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "178",
+                    "firstname": "Walther Hermann",
+                    "surname": "Nernst",
+                    "motivation": "\"in recognition of his work in thermochemistry\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1920",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "310",
+                    "firstname": "Schack August Steenberg",
+                    "surname": "Krogh",
+                    "motivation": "\"for his discovery of the capillary motor regulating mechanism\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1920",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "589",
+                    "firstname": "Knut Pedersen",
+                    "surname": "Hamsun",
+                    "motivation": "\"for his monumental work, <I>Growth of the Soil</I>\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1920",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "484",
+                    "firstname": "Léon Victor Auguste",
+                    "surname": "Bourgeois",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1919",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "24",
+                    "firstname": "Johannes",
+                    "surname": "Stark",
+                    "motivation": "\"for his discovery of the Doppler effect in canal rays and the splitting of spectral lines in electric fields\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1919",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "309",
+                    "firstname": "Jules",
+                    "surname": "Bordet",
+                    "motivation": "\"for his discoveries relating to immunity\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1919",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "588",
+                    "firstname": "Carl Friedrich Georg",
+                    "surname": "Spitteler",
+                    "motivation": "\"in special appreciation of his epic, <I>Olympian Spring</I>\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1919",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "483",
+                    "firstname": "Thomas Woodrow",
+                    "surname": "Wilson",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1918",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "23",
+                    "firstname": "Max Karl Ernst Ludwig",
+                    "surname": "Planck",
+                    "motivation": "\"in recognition of the services he rendered to the advancement of Physics by his discovery of energy quanta\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1918",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "177",
+                    "firstname": "Fritz",
+                    "surname": "Haber",
+                    "motivation": "\"for the synthesis of ammonia from its elements\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1917",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "22",
+                    "firstname": "Charles Glover",
+                    "surname": "Barkla",
+                    "motivation": "\"for his discovery of the characteristic R&ouml;ntgen radiation of the elements\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1917",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "586",
+                    "firstname": "Karl Adolph",
+                    "surname": "Gjellerup",
+                    "motivation": "\"for his varied and rich poetry, which is inspired by lofty ideals\"",
+                    "share": "2"
+                },
+                {
+                    "id": "587",
+                    "firstname": "Henrik",
+                    "surname": "Pontoppidan",
+                    "motivation": "\"for his authentic descriptions of present-day life in Denmark\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1917",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "482",
+                    "firstname": "Comité international de la Croix Rouge (International Committee of the Red Cross)",
+                    "share": "1",
+                    "surname": ""
+                }
+            ]
+        },
+        {
+            "year": "1916",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "585",
+                    "firstname": "Carl Gustaf Verner",
+                    "surname": "von Heidenstam",
+                    "motivation": "\"in recognition of his significance as the leading representative of a new era in our literature\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1915",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "20",
+                    "firstname": "Sir William Henry",
+                    "surname": "Bragg",
+                    "motivation": "\"for their services in the analysis of crystal structure by means of X-rays\"",
+                    "share": "2"
+                },
+                {
+                    "id": "21",
+                    "firstname": "William Lawrence",
+                    "surname": "Bragg",
+                    "motivation": "\"for their services in the analysis of crystal structure by means of X-rays\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1915",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "176",
+                    "firstname": "Richard Martin",
+                    "surname": "Willstätter",
+                    "motivation": "\"for his researches on plant pigments, especially chlorophyll\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1915",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "584",
+                    "firstname": "Romain",
+                    "surname": "Rolland",
+                    "motivation": "\"as a tribute to the lofty idealism of his literary production and to the sympathy and love of truth with which he has described different types of human beings\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1914",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "19",
+                    "firstname": "Max",
+                    "surname": "von Laue",
+                    "motivation": "\"for his discovery of the diffraction of X-rays by crystals\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1914",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "175",
+                    "firstname": "Theodore William",
+                    "surname": "Richards",
+                    "motivation": "\"in recognition of his accurate determinations of the atomic weight of a large number of chemical elements\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1914",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "308",
+                    "firstname": "Robert",
+                    "surname": "Bárány",
+                    "motivation": "\"for his work on the physiology and pathology of the vestibular apparatus\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1913",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "18",
+                    "firstname": "Heike",
+                    "surname": "Kamerlingh Onnes",
+                    "motivation": "\"for his investigations on the properties of matter at low temperatures which led, inter alia, to the production of liquid helium\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1913",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "174",
+                    "firstname": "Alfred",
+                    "surname": "Werner",
+                    "motivation": "\"in recognition of his work on the linkage of atoms in molecules by which he has thrown new light on earlier investigations and opened up new fields of research especially in inorganic chemistry\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1913",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "307",
+                    "firstname": "Charles Robert",
+                    "surname": "Richet",
+                    "motivation": "\"in recognition of his work on anaphylaxis\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1913",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "583",
+                    "firstname": "Rabindranath",
+                    "surname": "Tagore",
+                    "motivation": "\"because of his profoundly sensitive, fresh and beautiful verse, by which, with consummate skill, he has made his poetic thought, expressed in his own English words, a part of the literature of the West\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1913",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "481",
+                    "firstname": "Henri",
+                    "surname": "La Fontaine",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1912",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "17",
+                    "firstname": "Nils Gustaf",
+                    "surname": "Dalén",
+                    "motivation": "\"for his invention of automatic regulators for use in conjunction with gas accumulators for illuminating lighthouses and buoys\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1912",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "172",
+                    "firstname": "Victor",
+                    "surname": "Grignard",
+                    "motivation": "\"for the discovery of the so-called Grignard reagent, which in recent years has greatly advanced the progress of organic chemistry\"",
+                    "share": "2"
+                },
+                {
+                    "id": "173",
+                    "firstname": "Paul",
+                    "surname": "Sabatier",
+                    "motivation": "\"for his method of hydrogenating organic compounds in the presence of finely disintegrated metals whereby the progress of organic chemistry has been greatly advanced in recent years\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1912",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "306",
+                    "firstname": "Alexis",
+                    "surname": "Carrel",
+                    "motivation": "\"in recognition of his work on vascular suture and the transplantation of blood vessels and organs\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1912",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "582",
+                    "firstname": "Gerhart Johann Robert",
+                    "surname": "Hauptmann",
+                    "motivation": "\"primarily in recognition of his fruitful, varied and outstanding production in the realm of dramatic art\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1912",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "480",
+                    "firstname": "Elihu",
+                    "surname": "Root",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1911",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "16",
+                    "firstname": "Wilhelm",
+                    "surname": "Wien",
+                    "motivation": "\"for his discoveries regarding the laws governing the radiation of heat\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1911",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "6",
+                    "firstname": "Marie",
+                    "surname": "Curie, née Sklodowska",
+                    "motivation": "\"in recognition of her services to the advancement of chemistry by the discovery of the elements radium and polonium, by the isolation of radium and the study of the nature and compounds of this remarkable element\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1911",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "305",
+                    "firstname": "Allvar",
+                    "surname": "Gullstrand",
+                    "motivation": "\"for his work on the dioptrics of the eye\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1911",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "581",
+                    "firstname": "Count Maurice (Mooris) Polidore Marie Bernhard",
+                    "surname": "Maeterlinck",
+                    "motivation": "\"in appreciation of his many-sided literary activities, and especially of his dramatic works, which are distinguished by a wealth of imagination and by a poetic fancy, which reveals, sometimes in the guise of a fairy tale, a deep inspiration, while in a mysterious way they appeal to the readers' own feelings and stimulate their imaginations\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1911",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "478",
+                    "firstname": "Tobias Michael Carel",
+                    "surname": "Asser",
+                    "share": "2"
+                },
+                {
+                    "id": "479",
+                    "firstname": "Alfred Hermann",
+                    "surname": "Fried",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1910",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "15",
+                    "firstname": "Johannes Diderik",
+                    "surname": "van der Waals",
+                    "motivation": "\"for his work on the equation of state for gases and liquids\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1910",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "169",
+                    "firstname": "Otto",
+                    "surname": "Wallach",
+                    "motivation": "\"in recognition of his services to organic chemistry and the chemical industry by his pioneer work in the field of alicyclic compounds\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1910",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "304",
+                    "firstname": "Albrecht",
+                    "surname": "Kossel",
+                    "motivation": "\"in recognition of the contributions to our knowledge of cell chemistry made through his work on proteins, including the nucleic substances\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1910",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "580",
+                    "firstname": "Paul Johann Ludwig",
+                    "surname": "Heyse",
+                    "motivation": "\"as a tribute to the consummate artistry, permeated with idealism, which he has demonstrated during his long productive career as a lyric poet, dramatist, novelist and writer of world-renowned short stories\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1910",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "477",
+                    "firstname": "Bureau international permanent de la Paix (Permanent International Peace Bureau)",
+                    "share": "1",
+                    "surname": ""
+                }
+            ]
+        },
+        {
+            "year": "1909",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "13",
+                    "firstname": "Guglielmo",
+                    "surname": "Marconi",
+                    "motivation": "\"in recognition of their contributions to the development of wireless telegraphy\"",
+                    "share": "2"
+                },
+                {
+                    "id": "14",
+                    "firstname": "Karl Ferdinand",
+                    "surname": "Braun",
+                    "motivation": "\"in recognition of their contributions to the development of wireless telegraphy\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1909",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "168",
+                    "firstname": "Wilhelm",
+                    "surname": "Ostwald",
+                    "motivation": "\"in recognition of his work on catalysis and for his investigations into the fundamental principles governing chemical equilibria and rates of reaction\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1909",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "303",
+                    "firstname": "Emil Theodor",
+                    "surname": "Kocher",
+                    "motivation": "\"for his work on the physiology, pathology and surgery of the thyroid gland\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1909",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "579",
+                    "firstname": "Selma Ottilia Lovisa",
+                    "surname": "Lagerlöf",
+                    "motivation": "\"in appreciation of the lofty idealism, vivid imagination and spiritual perception that characterize her writings\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1909",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "475",
+                    "firstname": "Auguste Marie François",
+                    "surname": "Beernaert",
+                    "share": "2"
+                },
+                {
+                    "id": "476",
+                    "firstname": "Paul Henri Benjamin Balluet",
+                    "surname": "d'Estournelles de Constant, Baron de Constant de Rebecque",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1908",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "12",
+                    "firstname": "Gabriel",
+                    "surname": "Lippmann",
+                    "motivation": "\"for his method of reproducing colours photographically based on the phenomenon of interference\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1908",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "167",
+                    "firstname": "Ernest",
+                    "surname": "Rutherford",
+                    "motivation": "\"for his investigations into the disintegration of the elements, and the chemistry of radioactive substances\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1908",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "301",
+                    "firstname": "Ilya Ilyich",
+                    "surname": "Mechnikov",
+                    "motivation": "\"in recognition of their work on immunity\"",
+                    "share": "2"
+                },
+                {
+                    "id": "302",
+                    "firstname": "Paul",
+                    "surname": "Ehrlich",
+                    "motivation": "\"in recognition of their work on immunity\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1908",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "578",
+                    "firstname": "Rudolf Christoph",
+                    "surname": "Eucken",
+                    "motivation": "\"in recognition of his earnest search for truth, his penetrating power of thought, his wide range of vision, and the warmth and strength in presentation with which in his numerous works he has vindicated and developed an idealistic philosophy of life\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1908",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "473",
+                    "firstname": "Klas Pontus",
+                    "surname": "Arnoldson",
+                    "share": "2"
+                },
+                {
+                    "id": "474",
+                    "firstname": "Fredrik",
+                    "surname": "Bajer",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1907",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "11",
+                    "firstname": "Albert Abraham",
+                    "surname": "Michelson",
+                    "motivation": "\"for his optical precision instruments and the spectroscopic and metrological investigations carried out with their aid\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1907",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "166",
+                    "firstname": "Eduard",
+                    "surname": "Buchner",
+                    "motivation": "\"for his biochemical researches and his discovery of cell-free fermentation\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1907",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "300",
+                    "firstname": "Charles Louis Alphonse",
+                    "surname": "Laveran",
+                    "motivation": "\"in recognition of his work on the role played by protozoa in causing diseases\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1907",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "577",
+                    "firstname": "Rudyard",
+                    "surname": "Kipling",
+                    "motivation": "\"in consideration of the power of observation, originality of imagination, virility of ideas and remarkable talent for narration which characterize the creations of this world-famous author\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1907",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "471",
+                    "firstname": "Ernesto Teodoro",
+                    "surname": "Moneta",
+                    "share": "2"
+                },
+                {
+                    "id": "472",
+                    "firstname": "Louis",
+                    "surname": "Renault",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1906",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "10",
+                    "firstname": "Joseph John",
+                    "surname": "Thomson",
+                    "motivation": "\"in recognition of the great merits of his theoretical and experimental investigations on the conduction of electricity by gases\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1906",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "165",
+                    "firstname": "Henri",
+                    "surname": "Moissan",
+                    "motivation": "\"in recognition of the great services rendered by him in his investigation and isolation of the element fluorine, and for the adoption in the service of science of the electric furnace called after him\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1906",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "298",
+                    "firstname": "Camillo",
+                    "surname": "Golgi",
+                    "motivation": "\"in recognition of their work on the structure of the nervous system\"",
+                    "share": "2"
+                },
+                {
+                    "id": "299",
+                    "firstname": "Santiago",
+                    "surname": "Ramón y Cajal",
+                    "motivation": "\"in recognition of their work on the structure of the nervous system\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1906",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "576",
+                    "firstname": "Giosuè",
+                    "surname": "Carducci",
+                    "motivation": "\"not only in consideration of his deep learning and critical research, but above all as a tribute to the creative energy, freshness of style, and lyrical force which characterize his poetic masterpieces\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1906",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "470",
+                    "firstname": "Theodore",
+                    "surname": "Roosevelt",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1905",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "9",
+                    "firstname": "Philipp Eduard Anton",
+                    "surname": "von Lenard",
+                    "motivation": "\"for his work on cathode rays\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1905",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "164",
+                    "firstname": "Johann Friedrich Wilhelm Adolf",
+                    "surname": "von Baeyer",
+                    "motivation": "\"in recognition of his services in the advancement of organic chemistry and the chemical industry, through his work on organic dyes and hydroaromatic compounds\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1905",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "297",
+                    "firstname": "Robert",
+                    "surname": "Koch",
+                    "motivation": "\"for his investigations and discoveries in relation to tuberculosis\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1905",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "575",
+                    "firstname": "Henryk",
+                    "surname": "Sienkiewicz",
+                    "motivation": "\"because of his outstanding merits as an epic writer\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1905",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "468",
+                    "firstname": "Baroness Bertha Sophie Felicita",
+                    "surname": "von Suttner, née Countess Kinsky von Chinic und Tettau",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1904",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "8",
+                    "firstname": "Lord Rayleigh",
+                    "surname": "(John William Strutt)",
+                    "motivation": "\"for his investigations of the densities of the most important gases and for his discovery of argon in connection with these studies\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1904",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "163",
+                    "firstname": "Sir William",
+                    "surname": "Ramsay",
+                    "motivation": "\"in recognition of his services in the discovery of the inert gaseous elements in air, and his determination of their place in the periodic system\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1904",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "296",
+                    "firstname": "Ivan Petrovich",
+                    "surname": "Pavlov",
+                    "motivation": "\"in recognition of his work on the physiology of digestion, through which knowledge on vital aspects of the subject has been transformed and enlarged\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1904",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "573",
+                    "firstname": "Frédéric",
+                    "surname": "Mistral",
+                    "motivation": "\"in recognition of the fresh originality and true inspiration of his poetic production, which faithfully reflects the natural scenery and native spirit of his people, and, in addition, his significant work as a Proven&ccedil;al philologist\"",
+                    "share": "2"
+                },
+                {
+                    "id": "574",
+                    "firstname": "José",
+                    "surname": "Echegaray y Eizaguirre",
+                    "motivation": "\"in recognition of the numerous and brilliant compositions which, in an individual and original manner, have revived the great traditions of the Spanish drama\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1904",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "467",
+                    "firstname": "Institut de droit international (Institute of International Law)",
+                    "share": "1",
+                    "surname": ""
+                }
+            ]
+        },
+        {
+            "year": "1903",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "4",
+                    "firstname": "Antoine Henri",
+                    "surname": "Becquerel",
+                    "motivation": "\"in recognition of the extraordinary services he has rendered by his discovery of spontaneous radioactivity\"",
+                    "share": "2"
+                },
+                {
+                    "id": "5",
+                    "firstname": "Pierre",
+                    "surname": "Curie",
+                    "motivation": "\"in recognition of the extraordinary services they have rendered by their joint researches on the radiation phenomena discovered by Professor Henri Becquerel\"",
+                    "share": "4"
+                },
+                {
+                    "id": "6",
+                    "firstname": "Marie",
+                    "surname": "Curie, née Sklodowska",
+                    "motivation": "\"in recognition of the extraordinary services they have rendered by their joint researches on the radiation phenomena discovered by Professor Henri Becquerel\"",
+                    "share": "4"
+                }
+            ]
+        },
+        {
+            "year": "1903",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "162",
+                    "firstname": "Svante August",
+                    "surname": "Arrhenius",
+                    "motivation": "\"in recognition of the extraordinary services he has rendered to the advancement of chemistry by his electrolytic theory of dissociation\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1903",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "295",
+                    "firstname": "Niels Ryberg",
+                    "surname": "Finsen",
+                    "motivation": "\"in recognition of his contribution to the treatment of diseases, especially lupus vulgaris, with concentrated light radiation, whereby he has opened a new avenue for medical science\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1903",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "572",
+                    "firstname": "Bjørnstjerne Martinus",
+                    "surname": "Bjørnson",
+                    "motivation": "\"as a tribute to his noble, magnificent and versatile poetry, which has always been distinguished by both the freshness of its inspiration and the rare purity of its spirit\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1903",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "466",
+                    "firstname": "William Randal",
+                    "surname": "Cremer",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1902",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "2",
+                    "firstname": "Hendrik Antoon",
+                    "surname": "Lorentz",
+                    "motivation": "\"in recognition of the extraordinary service they rendered by their researches into the influence of magnetism upon radiation phenomena\"",
+                    "share": "2"
+                },
+                {
+                    "id": "3",
+                    "firstname": "Pieter",
+                    "surname": "Zeeman",
+                    "motivation": "\"in recognition of the extraordinary service they rendered by their researches into the influence of magnetism upon radiation phenomena\"",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1902",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "161",
+                    "firstname": "Hermann Emil",
+                    "surname": "Fischer",
+                    "motivation": "\"in recognition of the extraordinary services he has rendered by his work on sugar and purine syntheses\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1902",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "294",
+                    "firstname": "Ronald",
+                    "surname": "Ross",
+                    "motivation": "\"for his work on malaria, by which he has shown how it enters the organism and thereby has laid the foundation for successful research on this disease and methods of combating it\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1902",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "571",
+                    "firstname": "Christian Matthias Theodor",
+                    "surname": "Mommsen",
+                    "motivation": "\"the greatest living master of the art of historical writing, with special reference to his monumental work, <I>A history of Rome</I>\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1902",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "464",
+                    "firstname": "Élie",
+                    "surname": "Ducommun",
+                    "share": "2"
+                },
+                {
+                    "id": "465",
+                    "firstname": "Charles Albert",
+                    "surname": "Gobat",
+                    "share": "2"
+                }
+            ]
+        },
+        {
+            "year": "1901",
+            "category": "physics",
+            "laureates": [
+                {
+                    "id": "1",
+                    "firstname": "Wilhelm Conrad",
+                    "surname": "Röntgen",
+                    "motivation": "\"in recognition of the extraordinary services he has rendered by the discovery of the remarkable rays subsequently named after him\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1901",
+            "category": "chemistry",
+            "laureates": [
+                {
+                    "id": "160",
+                    "firstname": "Jacobus Henricus",
+                    "surname": "van 't Hoff",
+                    "motivation": "\"in recognition of the extraordinary services he has rendered by the discovery of the laws of chemical dynamics and osmotic pressure in solutions\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1901",
+            "category": "medicine",
+            "laureates": [
+                {
+                    "id": "293",
+                    "firstname": "Emil Adolf",
+                    "surname": "von Behring",
+                    "motivation": "\"for his work on serum therapy, especially its application against diphtheria, by which he has opened a new road in the domain of medical science and thereby placed in the hands of the physician a victorious weapon against illness and deaths\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1901",
+            "category": "literature",
+            "laureates": [
+                {
+                    "id": "569",
+                    "firstname": "Sully",
+                    "surname": "Prudhomme",
+                    "motivation": "\"in special recognition of his poetic composition, which gives evidence of lofty idealism, artistic perfection and a rare combination of the qualities of both heart and intellect\"",
+                    "share": "1"
+                }
+            ]
+        },
+        {
+            "year": "1901",
+            "category": "peace",
+            "laureates": [
+                {
+                    "id": "462",
+                    "firstname": "Jean Henry",
+                    "surname": "Dunant",
+                    "share": "2"
+                },
+                {
+                    "id": "463",
+                    "firstname": "Frédéric",
+                    "surname": "Passy",
+                    "share": "2"
+                }
+            ]
+        }
+    ]
+}
