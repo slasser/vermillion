@@ -1,6 +1,7 @@
 {
 open Lexing
-open Token
+open JsonTokenizer
+(*open Token *)
 (*open Core*)
 
 exception SyntaxError of string
@@ -28,10 +29,10 @@ let newline = '\r' | '\n' | "\r\n"
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 (* part 4 *)
-rule read =
+rule vread =
   parse
-  | white    { read lexbuf }
-  | newline  { next_line lexbuf; read lexbuf }
+  | white    { vread lexbuf }
+  | newline  { next_line lexbuf; vread lexbuf }
   | int      { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | float    { FLOAT (float_of_string (Lexing.lexeme lexbuf)) }
   | "true"   { TRUE }

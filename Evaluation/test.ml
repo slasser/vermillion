@@ -1,6 +1,5 @@
 open Lexing
 open Printf
-open Token
 open VermillionJsonParser
 
 let char_list_of_string (s : string) : char list =
@@ -38,7 +37,7 @@ let filenames_in_dir (dirname : string) : string list =
 let file_sizes (fnames : string list) : int list =
   List.map (fun fname -> (Unix.stat fname).st_size) fnames
 
-let simplyTypedTokenOfMenhirToken (t : Token.token) : simply_typed_token =
+let simplyTypedTokenOfMenhirToken (t : JsonTokenizer.token) : simply_typed_token =
   match t with
   | INT i       -> StInt (nat_of_int i)
   | FLOAT f     -> StFloat (nat_of_float f)
@@ -54,23 +53,6 @@ let simplyTypedTokenOfMenhirToken (t : Token.token) : simply_typed_token =
   | COMMA       -> StComma
   | EOF         -> failwith "Vermillion doesn't treat EOF as a token"
 
-(*let strOf (t : token) : string =
-  match t with
-  | INT i -> "INT"
-  | FLOAT f -> "FLOAT"
-  | STRING s -> "STRING"
-  | TRUE -> "TRUE"
-  | FALSE -> "FALSE"
-  | NULL -> "NULL"
-  | LEFT_BRACE -> "{"
-  | RIGHT_BRACE -> "}"
-  | LEFT_BRACK -> "["
-  | RIGHT_BRACK -> "]"
-  | COLON -> ":"
-  | COMMA -> ","
-  | EOF -> "EOF"
-*)
-
 let benchmark (f : 'a -> 'b) (x : 'a) : float * 'b =
   let start = Unix.gettimeofday () in
   let res = f x in
@@ -79,7 +61,7 @@ let benchmark (f : 'a -> 'b) (x : 'a) : float * 'b =
   in (time, res)
 
 let run_menhir_parser lexbuf =
-  benchmark (JsonParser.top Lexer.read) lexbuf
+  benchmark (JsonParser.top Mlexer.mread) lexbuf
           
 let record_menhir_parser_times (fnames : string list) =
   let parse_file fname =
@@ -101,13 +83,13 @@ let record_menhir_parser_times (fnames : string list) =
   in
   List.map (avg_trials 10) fnames
 
-let vtoken_of_mtoken (t : Token.token) =
+let vtoken_of_mtoken t =
   depTokenOfSimplyTypedToken (simplyTypedTokenOfMenhirToken t)
 
 let run_menhir_tokenizer_and_vermillion_parser lexbuf =
   match PG.parseTableOf jsonGrammar with
   | Inr tbl ->
-     let (lextime, ts) = benchmark (JsonTokenizer.top Lexer.read) lexbuf in
+     let (lextime, ts) = benchmark (JsonTokenizer.top Vlexer.vread) lexbuf in
      let ts' = List.map vtoken_of_mtoken ts                              in
      let (parsetime, vres) = benchmark (PG.parse tbl (NT jsonGrammar.start)) ts'   in
      (lextime, parsetime, vres)
