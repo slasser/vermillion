@@ -141,5 +141,5 @@ let main (data_dir : string) (out_f : string) : unit =
   let out_c = open_out out_f                      in
   output_string out_c json_str
                
-let () = main "data" "benchmark_results.json"
+let () = main Sys.argv.(1) Sys.argv.(2)
 
