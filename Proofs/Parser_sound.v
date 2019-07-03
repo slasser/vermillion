@@ -16,14 +16,14 @@ Module ParserSoundnessFn (Import G : Grammar.T).
     repeat match goal with
            | H : context[match ?X with _ => _ end] |- _ =>
              match X with
-             | parseTree _ _ _ _ _ => idtac
-             | parseForest _ _ _ _ _ => idtac
+             | parseSymbol _ _ _ _ _ => idtac
+             | parseGamma _ _ _ _ _ => idtac
              | _ => dm
              end
            | |- context[match ?X with _ => _ end] =>
              match X with
-             | parseTree _ _ _ _ _ => idtac
-             | parseForest _ _ _ _ _ => idtac
+             | parseSymbol _ _ _ _ _ => idtac
+             | parseGamma _ _ _ _ _ => idtac
              | _ => dm
              end
            end.
@@ -58,7 +58,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
     unfold not; intros A x xs Heq; induction xs as [| x' xs IHxs]; try inv Heq; auto.
   Qed.
   
-  Lemma parseTree_sound' :
+  Lemma parseSymbol_sound' :
     forall g tbl,
       parse_table_correct tbl g
       -> forall (ts    : list token)
@@ -70,7 +70,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
                  (v   : symbol_semty sym)
                  (r   : list token)
                  (Hle : length_lt_eq _ r ts),
-            parseTree tbl sym ts vis a = inr (v, existT _ r Hle)
+            parseSymbol tbl sym ts vis a = inr (v, existT _ r Hle)
             -> exists word,
               word ++ r = ts
               /\ sym_derives_prefix g sym word v r
@@ -79,7 +79,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
                  (vs  : rhs_semty gamma)
                  (r   : list token)
                  (Hle : length_lt_eq _ r ts),
-            parseForest tbl gamma ts vis a = inr (vs, existT _ r Hle)
+            parseGamma tbl gamma ts vis a = inr (vs, existT _ r Hle)
             -> exists word,
               word ++ r = ts
               /\ gamma_derives_prefix g gamma word vs r
@@ -126,7 +126,7 @@ Module ParserSoundnessFn (Import G : Grammar.T).
           exists ([] ++ wsuf); split; auto.
   Qed.
 
-  Lemma parseTree_sound :
+  Lemma parseSymbol_sound :
     forall (g    : grammar)
            (tbl  : parse_table)
            (s    : symbol)
@@ -137,13 +137,13 @@ Module ParserSoundnessFn (Import G : Grammar.T).
            (r    : list token)
            (Hle  : length_lt_eq _ r ts),
       parse_table_correct tbl g
-      -> parseTree tbl s ts vis Hacc = inr (v, existT _ r Hle)
+      -> parseSymbol tbl s ts vis Hacc = inr (v, existT _ r Hle)
       -> exists w,  
           w ++ r = ts
           /\ sym_derives_prefix g s w v r.
   Proof.
     intros g tbl s ts r vis a v Hle Htbl Hp.
-    eapply parseTree_sound' with (sa := F_arg s) in Hp; eauto.
+    eapply parseSymbol_sound' with (sa := F_arg s) in Hp; eauto.
   Qed.
 
 End ParserSoundnessFn.

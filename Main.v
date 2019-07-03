@@ -64,7 +64,7 @@ Module Make (Import G : Grammar.T).
                    (s   : symbol)
                    (ts  : list token) :
     Datatypes.sum parse_failure (symbol_semty s * list token) :=
-    match parseTree tbl s ts NtSet.empty (triple_lt_wf _) with
+    match parseSymbol tbl s ts NtSet.empty (triple_lt_wf _) with
     | inl failure => inl failure
     | inr (v, existT _ ts' _) => inr (v, ts')
     end.
@@ -83,7 +83,7 @@ Module Make (Import G : Grammar.T).
     unfold parse in Hp.
     step_eq Hp'; tc.
     dms; invh.
-    eapply parseTree_sound in Hp'; eauto.
+    eapply parseSymbol_sound in Hp'; eauto.
     destruct Hp' as [w' [Happ Hder]].
     apply app_inv_tail in Happ; subst; auto.
   Qed.
@@ -119,7 +119,7 @@ Module Make (Import G : Grammar.T).
       -> parse tbl s (w ++ r) = inr (v, r).
   Proof.
     intros g tbl s w r v Ht Hd.
-    eapply parseTree_complete_or_error in Hd; eauto.
+    eapply parseSymbol_complete_or_error in Hd; eauto.
     destruct Hd as [Herr | Hp].
     - exfalso.
       destruct Herr as [m [x [ts' Hp]]].

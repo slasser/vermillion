@@ -234,7 +234,7 @@ Module ParserFn (Import G : Grammar.T).
   Definition mismatchMessage (a a' : terminal) : string :=
     "Token mismatch; expected " ++ show_t a ++ ", saw " ++ show_t a'.
   
-  Fixpoint parseTree
+  Fixpoint parseSymbol
            (tbl : parse_table)
            (sym : symbol)
            (ts  : list token)
@@ -266,7 +266,7 @@ Module ParserFn (Import G : Grammar.T).
         | inr (exist _ (existT _ (x', gamma) f) Hlk) =>
           match nt_eq_dec x' x with
           | left Heq =>
-            match parseForest tbl gamma ts (NtSet.add x vis)
+            match parseGamma tbl gamma ts (NtSet.add x vis)
                               (hole1 _ _ _ _ _ _ _ a Hlk Hnin)
             with
             | inl pfail => inl pfail
@@ -280,7 +280,7 @@ Module ParserFn (Import G : Grammar.T).
         end
       end
     end
-  with parseForest (tbl   : parse_table)
+  with parseGamma (tbl   : parse_table)
                    (gamma : list symbol)
                    (ts    : list token)
                    (vis   : NtSet.t)
@@ -297,12 +297,12 @@ Module ParserFn (Import G : Grammar.T).
                              (length_lt_eq_refl _ _))
          | sym :: gamma' =>
            fun Hg => 
-             match parseTree tbl sym ts vis (hole2 _ _ _ _ _ a) with
+             match parseSymbol tbl sym ts vis (hole2 _ _ _ _ _ a) with
              | inl pfail => inl pfail
              | inr (lSib, existT _ ts' Hle) =>
                match Hle with
                | left Hlt =>
-                 match parseForest tbl gamma' ts' NtSet.empty
+                 match parseGamma tbl gamma' ts' NtSet.empty
                                    (hole3 _ _ _ _ _ _ _ a Hlt)
                  with
                  | inl pfail => inl pfail
@@ -311,7 +311,7 @@ Module ParserFn (Import G : Grammar.T).
                    inr (vs, existT _ ts'' (length_lt_eq_trans _ _ _ _ Hle'' Hle))
                  end
                | right Heq =>
-                 match parseForest tbl gamma' ts vis
+                 match parseGamma tbl gamma' ts vis
                                    (hole4 _ _ _ _ _ _ a Hg)
                  with
                  | inl pfail => inl pfail

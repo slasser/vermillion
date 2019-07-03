@@ -32,7 +32,7 @@ Module ParserProofsFn (Import G : Grammar.T).
     erewrite Eqdep_dec.eq_rect_eq_dec; eauto.
   Qed.
   
-  Theorem parseTree_complete_or_error :
+  Theorem parseSymbol_complete_or_error :
     forall (g : grammar)
            (tbl : parse_table)
            (s : symbol)
@@ -42,25 +42,25 @@ Module ParserProofsFn (Import G : Grammar.T).
       -> sym_derives_prefix g s w v r
       -> forall vis a,
           (exists m x ts',
-              parseTree tbl s (w ++ r) vis a = inl (Error m x ts'))
+              parseSymbol tbl s (w ++ r) vis a = inl (Error m x ts'))
           \/ (exists Hle,
-                 parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)).
+                 parseSymbol tbl s (w ++ r) vis a = inr (v, existT _ r Hle)).
   Proof.
     intros g tbl s w v r Htbl Hd.
     induction Hd using sdp_mutual_ind with
         (P := fun s w v r (H : sym_derives_prefix g s w v r) =>
                 forall vis a,
                   (exists m x ts',
-                      parseTree tbl s (w ++ r) vis a = inl (Error m x ts'))
+                      parseSymbol tbl s (w ++ r) vis a = inl (Error m x ts'))
                   \/ (exists Hle,
-                         parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)))
+                         parseSymbol tbl s (w ++ r) vis a = inr (v, existT _ r Hle)))
         
         (P0 := fun gamma w vs r (H : gamma_derives_prefix g gamma w vs r) =>
                  forall vis a,
                    (exists m x ts',
-                       parseForest tbl gamma (w ++ r) vis a = inl (Error m x ts'))
+                       parseGamma tbl gamma (w ++ r) vis a = inl (Error m x ts'))
                    \/ (exists Hle,
-                          parseForest tbl gamma (w ++ r) vis a = inr (vs, existT _ r Hle))); intros vis a'.
+                          parseGamma tbl gamma (w ++ r) vis a = inr (vs, existT _ r Hle))); intros vis a'.
     - right; eexists.
       destruct a'; simpl in *; dm; tc.
       rewrite eq_rect_terminal_eq; auto.

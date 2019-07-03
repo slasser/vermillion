@@ -392,12 +392,12 @@ Module ParserSafetyFn (Import G : Grammar.T).
         match sa with
         | F_arg s =>
           forall a v r Hle,
-            parseTree tbl s ts vis a = inr (v, existT _ r Hle)
+            parseSymbol tbl s ts vis a = inr (v, existT _ r Hle)
             -> List.length r < List.length ts
                \/ nullable_sym g s
         | G_arg gamma =>
           forall a vs r Hle,
-            parseForest tbl gamma ts vis a = inr (vs, existT _ r Hle)
+            parseGamma tbl gamma ts vis a = inr (vs, existT _ r Hle)
             -> List.length r < List.length ts
                \/ nullable_gamma g gamma
         end.
@@ -438,7 +438,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
            (v   : symbol_semty s)
            Hle,
         parse_table_correct tbl g
-        -> parseTree tbl s ts vis a = inr (v, existT _ ts Hle)
+        -> parseSymbol tbl s ts vis a = inr (v, existT _ ts Hle)
         -> nullable_sym g s.
   Proof.
     intros g tbl s ts vis a v Hle Htbl Hp.
@@ -455,14 +455,14 @@ Module ParserSafetyFn (Import G : Grammar.T).
         match sa with
         | F_arg s =>
           forall a m x ts',
-            parseTree tbl s ts vis a = inl (Error m x ts')
+            parseSymbol tbl s ts vis a = inl (Error m x ts')
             -> (NtSet.In x vis
                 /\ (s = NT x
                     \/ nullable_path g (peek ts) s (NT x)))
                \/ exists la, left_recursive g (NT x) la
         | G_arg gamma =>
           forall a m x ts',
-            parseForest tbl gamma ts vis a = inl (Error m x ts')
+            parseGamma tbl gamma ts vis a = inl (Error m x ts')
             -> (exists pre s suf,
                    gamma = pre ++ s :: suf
                    /\ nullable_gamma g pre
