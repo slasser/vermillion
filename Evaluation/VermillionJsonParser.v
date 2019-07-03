@@ -9,19 +9,6 @@ Require Import Main.
 
 Open Scope string_scope.
 
-(*
-
-type value = [
-  | `Assoc of (string * value) list
-  | `Bool of bool
-  | `Float of float
-  | `Int of int
-  | `List of value list
-  | `Null
-  | `String of string
-  ]
-*)
-
 Inductive jvalue :=
 | JAssoc  : list (string * jvalue) -> jvalue
 | JBool   : bool -> jvalue

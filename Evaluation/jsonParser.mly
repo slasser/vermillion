@@ -20,20 +20,30 @@ top:
   | EOF       { None   } ;
 
 value:
-  | LEFT_BRACE; obj = obj_fields; RIGHT_BRACE { `Assoc obj  }
-  | LEFT_BRACK; vl = list_fields; RIGHT_BRACK { `List vl    }
+  | LEFT_BRACE; prs = pairs; RIGHT_BRACE      { `Assoc prs  }
+  | LEFT_BRACK; es  = elts;  RIGHT_BRACK      { `List es    }
   | s = STRING                                { `String s   }
-  | i = INT                                   { `Int i      }
+  | n = INT                                   { `Int n      }
   | x = FLOAT                                 { `Float x    }
   | TRUE                                      { `Bool true  }
   | FALSE                                     { `Bool false }
   | NULL                                      { `Null       } ;
 
-obj_fields:
-    obj = separated_list(COMMA, obj_field)    { obj } ;
+pairs:
+  |                                           { []          }
+  | pr = pair; prs = pairs_tl                 { pr :: prs   } ;
 
-obj_field:
-    k = STRING; COLON; v = value              { (k, v) } ;
+pairs_tl:
+  |                                           { []          }
+  | COMMA; pr = pair; prs = pairs_tl          { pr :: prs   } ;
 
-list_fields:
-vl = separated_list(COMMA, value) { vl } ;
+pair:
+    s = STRING; COLON; v = value              { (s, v)      } ;
+
+elts:
+  |                                           { []          }
+  | v = value; vs = elts_tl                   { v :: vs     } ;
+
+elts_tl:
+  |                                           { []          } 
+  | COMMA; v = value; vs = elts_tl            { v :: vs     } ;
