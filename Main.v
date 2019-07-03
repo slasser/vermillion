@@ -1,3 +1,4 @@
+Require Import List.
 Require Import String.
 Require Import Grammar.
 Require Import NoDupDec.
@@ -80,12 +81,14 @@ Module Make (Import G : Grammar.T).
   Proof.
     intros g tbl s w r v Ht Hp.
     unfold parse in Hp.
-    step_eq Hp; tc.
+    step_eq Hp'; tc.
     dms; invh.
-    eapply parseTree_sound; eauto.
+    eapply parseTree_sound in Hp'; eauto.
+    destruct Hp' as [w' [Happ Hder]].
+    apply app_inv_tail in Happ; subst; auto.
   Qed.
 
-  Theorem parse_safe :
+  Theorem parse_terminates_without_error :
     forall (g      : grammar)
            (tbl    : parse_table)
            (s      : symbol)
@@ -120,7 +123,7 @@ Module Make (Import G : Grammar.T).
     destruct Hd as [Herr | Hp].
     - exfalso.
       destruct Herr as [m [x [ts' Hp]]].
-      eapply parse_safe; eauto.
+      eapply parse_terminates_without_error; eauto.
       unfold parse.
       rewrite Hp; auto.
     - destruct Hp as [Hle Hp].

@@ -123,6 +123,41 @@ let record_menhir_tokenizer_and_vermillion_parser_times fnames =
   in
   List.map (avg_trials 10) fnames
 
+let rec beq_values (v : Json.value) (jv : VermillionJsonParser.jvalue) : bool =
+  match (v, jv) with
+  | (`Bool b, JBool b') -> b = b'
+  | (`Float f, JFloat n) -> (nat_of_float f) = n
+  | (`Int i, JInt n) -> (nat_of_int i) = n
+  | (`Null, JNull) -> true
+  | (`String s, JString s') -> char_list_of_string s = s'
+  | (`List l, JList l') -> List.for_all (fun (v, jv) -> beq_values v jv) 
+                                        (List.combine l l')
+  | (`Assoc l, JAssoc l') -> List.for_all (fun ((s, v), (s', jv)) -> char_list_of_string s = s' && beq_values v jv)
+                                          (List.combine l l')
+  | _ -> false
+
+let mparse (fname : string) : Json.value =
+  let lexbuf = Lexing.from_channel (open_in fname) in
+  match JsonParser.top Mlexer.mread lexbuf with
+  | Some v -> v
+  | None   -> failwith "menhir parse failure"
+
+let vparse (fname : string) : VermillionJsonParser.jvalue =
+  match PG.parseTableOf jsonGrammar with
+  | Inl _ -> failwith "no parse table"
+  | Inr tbl -> 
+     let lexbuf = Lexing.from_channel (open_in fname) in
+     let ts     = JsonTokenizer.top Vlexer.vread lexbuf in
+     let ts'    = List.map vtoken_of_mtoken ts in
+     match PG.parse tbl (NT jsonGrammar.start) ts' with
+     | Inl _ -> failwith "vermillion parse failure"
+     | Inr (v, _) -> Obj.magic v
+
+let compare_semantic_values (fname : string) : unit =
+  let mv = mparse fname in
+  let vv = vparse fname in
+  print_string (string_of_bool (beq_values mv vv))
+
 let main (data_dir : string) (out_f : string) : unit =
   (* First, collect the results *)
   let fnames = filenames_in_dir data_dir                           in
@@ -139,7 +174,8 @@ let main (data_dir : string) (out_f : string) : unit =
   (* Finally, write the results file *)
   let () = print_string json_str                  in
   let out_c = open_out out_f                      in
-  output_string out_c json_str
+  let () = output_string out_c json_str           in
+  compare_semantic_values "more_data/gendata/nobel_05000.json"
                
 let () = main Sys.argv.(1) Sys.argv.(2)
 

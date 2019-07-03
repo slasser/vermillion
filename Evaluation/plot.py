@@ -39,4 +39,4 @@ plt.legend((p1[0], p2[0], p3[0]), ("Menhir Parser", "Menhir Tokenizer", "Vermill
 """plt.yticks(np.arange(0, 81, 10))
 plt.legend((p1[0], p2[0]), ('Men', 'Women'))
 """
-plt.savefig("JSON_parser_evaluation.png")
+plt.savefig("JSON_parser_evaluation.eps", format="eps", dpi=1000)

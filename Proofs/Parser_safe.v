@@ -15,7 +15,7 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Module Export ParserSoundness := ParserSoundnessFn G.
   Module Import L := LemmasFn G.
 
-  Inductive nullable_path g (la : lookahead) :
+  Inductive nullable_path (g : grammar) (la : lookahead) :
     symbol -> symbol -> Prop :=
   | DirectPath : forall x z gamma f pre suf,
       In (existT _ (x, gamma) f) g.(prods)
@@ -350,11 +350,12 @@ Module ParserSafetyFn (Import G : Grammar.T).
   Qed.
 
   Lemma LL1_parse_table_impl_no_left_recursion :
-    forall g t la x,
-      parse_table_correct t g
+    forall (g : grammar) (tbl : parse_table) 
+           (x : nonterminal) (la : lookahead),
+      parse_table_correct tbl g
       -> ~ left_recursive g (NT x) la.
   Proof.
-    intros g t la x Ht; unfold not; intros Hlr; red in Hlr.
+    intros g t x la Ht; unfold not; intros Hlr; red in Hlr.
     assert (Hex : exists gamma f,
                In (existT _ (x, gamma) f) g.(prods)
                /\ lookahead_for la x gamma g).

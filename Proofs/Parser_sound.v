@@ -127,23 +127,23 @@ Module ParserSoundnessFn (Import G : Grammar.T).
   Qed.
 
   Lemma parseTree_sound :
-    forall (g   : grammar)
-           (tbl : parse_table)
-           (s   : symbol)
-           (w r : list token)
-           (vis : NtSet.t)
-           (a   : Acc triple_lt (meas tbl (w ++ r) vis (F_arg s)))
-           (v   : symbol_semty s)
-           (Hle : length_lt_eq _ r (w ++ r)),
+    forall (g    : grammar)
+           (tbl  : parse_table)
+           (s    : symbol)
+           (ts   : list token)
+           (vis  : NtSet.t)
+           (Hacc : Acc triple_lt (meas tbl ts vis (F_arg s)))
+           (v    : symbol_semty s)
+           (r    : list token)
+           (Hle  : length_lt_eq _ r ts),
       parse_table_correct tbl g
-      -> parseTree tbl s (w ++ r) vis a = inr (v, existT _ r Hle)
-      -> sym_derives_prefix g s w v r.
+      -> parseTree tbl s ts vis Hacc = inr (v, existT _ r Hle)
+      -> exists w,  
+          w ++ r = ts
+          /\ sym_derives_prefix g s w v r.
   Proof.
-    intros g tbl s w r vis a v Hle Htbl Hp.
-    pose proof Hp as Hp'.
+    intros g tbl s ts r vis a v Hle Htbl Hp.
     eapply parseTree_sound' with (sa := F_arg s) in Hp; eauto.
-    destruct Hp as [word' [Happ Hder]].
-    apply app_inv_tail in Happ; subst; auto.
   Qed.
 
 End ParserSoundnessFn.
