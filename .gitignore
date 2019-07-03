@@ -7,3 +7,5 @@
 *.d
 *.cmi
 *.cmo
+*.json
+*.eps
