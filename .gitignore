@@ -5,3 +5,5 @@
 *.bak
 *.conf
 *.d
+*.cmi
+*.cmo
