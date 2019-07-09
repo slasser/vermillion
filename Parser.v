@@ -232,7 +232,7 @@ Module ParserFn (Import G : Grammar.T).
   Defined.
 
   Definition mismatchMessage (a a' : terminal) : string :=
-    "Token mismatch; expected " ++ show_t a ++ ", saw " ++ show_t a'.
+    "Token mismatch; expected " ++ showT a ++ ", saw " ++ showT a'.
   
   Fixpoint parseSymbol
            (tbl : parse_table)
