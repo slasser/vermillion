@@ -73,11 +73,11 @@ Module NullableProofsFn (Import G : Grammar.T).
            (nu : NtSet.t),
       nullable_set_sound nu g
       -> forall suf pre : list production,
-        pre ++ suf = (prodsOf g)
+        pre ++ suf = g.(prods)
         -> nullable_set_sound (nullablePass suf nu) g.
   Proof. 
     intros g nu Hsou suf.
-    induction suf as [| (x, gamma) suf]; intros pre Happ; simpl; auto.
+    induction suf as [| [(x, gamma) f] suf]; intros pre Happ; simpl; auto.
     pose proof Happ as Happ'.
     rewrite cons_app_singleton in Happ.
     rewrite app_assoc in Happ.
@@ -86,10 +86,8 @@ Module NullableProofsFn (Import G : Grammar.T).
     unfold nullable_set_sound.
     intros x' Hin.
     destruct (NtSetFacts.eq_dec x x'); subst.
-    - assert (Hin' : In (x', gamma) (prodsOf g)).
+    - assert (Hin' : In (existT _ (x', gamma) f) g.(prods)).
       { rewrite <- Happ'; apply in_app_cons. }
-      apply in_prodsOf_exists_in_xprods in Hin'.
-      destruct Hin' as [f Hin']. 
       econstructor; eauto.
       eapply nu_sound_nullableGamma_sound; eauto.
     - apply NtSetFacts.add_3 in Hin; auto.
@@ -99,7 +97,7 @@ Module NullableProofsFn (Import G : Grammar.T).
     forall (g  : grammar)
            (nu : NtSet.t),
       nullable_set_sound nu g
-      -> nullable_set_sound (nullablePass (prodsOf g) nu) g.
+      -> nullable_set_sound (nullablePass g.(prods) nu) g.
   Proof.
     intros g nu Hsou.
     apply nullablePass_preserves_soundness' with (pre := []); auto.
@@ -109,15 +107,15 @@ Module NullableProofsFn (Import G : Grammar.T).
     forall (g  : grammar)
            (nu : NtSet.t),
       nullable_set_sound nu g
-      -> nullable_set_sound (mkNullableSet' (prodsOf g) nu) g.
+      -> nullable_set_sound (mkNullableSet' g.(prods) nu) g.
   Proof.
     intros g nu.
-    remember (countNullableCandidates (prodsOf g) nu) as card.
+    remember (countNullCands g.(prods) nu) as card.
     generalize dependent nu.
     induction card using lt_wf_ind.
     intros nu Hcard Hsou; subst.
     rewrite mkNullableSet'_eq_body; simpl.
-    destruct (NtSet.eq_dec nu (nullablePass (prodsOf g) nu)) as [Heq | Hneq]; auto.
+    destruct (NtSet.eq_dec nu (nullablePass g.(prods) nu)) as [Heq | Hneq]; auto.
     eapply H; clear H; eauto.
     - apply nullablePass_neq_candidates_lt; auto. 
     - apply nullablePass_preserves_soundness; auto.
@@ -148,7 +146,7 @@ Module NullableProofsFn (Import G : Grammar.T).
       -> NtSet.Equal (nullablePass ps nu) (NtSet.add x (nullablePass ps nu)).
   Proof.
     intros ps.
-    induction ps as [| (x', ys) ps]; intros x nu Hin; simpl in *.
+    induction ps as [| [(x', ys) f] ps]; intros x nu Hin; simpl in *.
     - ND.fsetdec.
     - destruct (nullableGamma ys (nullablePass ps nu)); auto.
       apply IHps in Hin; ND.fsetdec.
@@ -196,17 +194,18 @@ Module NullableProofsFn (Import G : Grammar.T).
     forall (g  : grammar)
            (x  : nonterminal)
            (ys : list symbol)
+           (f  : action_ty (x, ys))
            (suf pre : list production),
-      pre ++ suf = (prodsOf g)
-      -> In (x, ys) suf
+      pre ++ suf = g.(prods)
+      -> In (existT _ (x, ys) f) suf
       -> nullable_gamma g ys
       -> forall nu,
           NtSet.Equal nu (nullablePass suf nu)
           -> (forall x, In (NT x) ys -> NtSet.In x nu)
           -> NtSet.In x nu.
   Proof.
-    intros g x ys suf.
-    induction suf as [| (x', ys') suf]; intros pre Happ Hin Hng nu Heq Hall.
+    intros g x ys f suf.
+    induction suf as [| [(x', ys') f'] suf]; intros pre Happ Hin Hng nu Heq Hall.
     - inv Hin.
     - destruct Hin.
       + inv H; simpl in *.
@@ -216,14 +215,13 @@ Module NullableProofsFn (Import G : Grammar.T).
           eapply nullable_gamma_nullableGamma_true in Hng; eauto.
           erewrite nu_equal_nullableGamma_eq in Hng; eauto.
           congruence.
-      + apply IHsuf with (pre := pre ++ [(x', ys')]); auto.
-        * rewrite <- app_assoc; auto. 
-        * simpl in *. 
-          destruct (nullableGamma ys' (nullablePass suf nu)).
-          -- assert (NtSet.In x' nu) by ND.fsetdec. 
-             apply nullablePass_add_equal with (ps := suf) in H0.
-             ND.fsetdec.
-          -- auto.
+      + specialize IHsuf with (pre := pre ++ [existT _ (x', ys') f']).
+        rewrite <- app_assoc in IHsuf; simpl in IHsuf.
+        apply IHsuf; auto.
+        simpl in *. 
+        destruct (nullableGamma ys' (nullablePass suf nu)); auto.
+        assert (NtSet.In x' nu) by ND.fsetdec. 
+        apply nullablePass_add_equal with (ps := suf) in H0; ND.fsetdec.
   Qed.
 
 (* Slight rephrasing of nullable_set_complete so that it's 
@@ -250,7 +248,7 @@ Qed.
    the resulting  NULLABLE set is complete *)
 Lemma nullablePass_equal_complete' :
   forall g nu,
-    NtSet.Equal nu (nullablePass (prodsOf g) nu)
+    NtSet.Equal nu (nullablePass g.(prods) nu)
     -> nullable_set_complete' nu g.
 Proof.
   intros g nu Heq.
@@ -266,7 +264,6 @@ Proof.
     inv Heq'.
     eapply nullablePass_right_in_left_in with 
         (pre := nil); simpl; eauto.
-    eapply in_xprods_in_prodsOf; eauto.
   - intros x Hin.
     inv Hin.
   - intros x Hin.
@@ -278,7 +275,7 @@ Qed.
 
 Lemma nullablePass_equal_complete :
   forall g nu,
-    NtSet.Equal nu (nullablePass (prodsOf g) nu)
+    NtSet.Equal nu (nullablePass g.(prods) nu)
     -> nullable_set_complete nu g.
 Proof.
   intros.
@@ -288,15 +285,15 @@ Qed.
 
 Lemma mkNullableSet'_complete :
   forall g nu,
-    nullable_set_complete (mkNullableSet' (prodsOf g) nu) g.
+    nullable_set_complete (mkNullableSet' g.(prods) nu) g.
 Proof.
   intros g nu.
-  remember (countNullableCandidates (prodsOf g) nu) as card.
+  remember (countNullCands g.(prods) nu) as card.
   generalize dependent nu.
   induction card using lt_wf_ind.
   intros nu Hcard; subst.
   rewrite mkNullableSet'_eq_body; simpl.
-  destruct (NtSet.eq_dec nu (nullablePass (prodsOf g) nu)) as [Heq | Hneq].
+  destruct (NtSet.eq_dec nu (nullablePass g.(prods) nu)) as [Heq | Hneq].
   - apply nullablePass_equal_complete; auto.
   - eapply H; clear H; eauto.
     apply nullablePass_neq_candidates_lt; auto.
