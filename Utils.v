@@ -13,3 +13,9 @@ Definition intersperse (sep : string) (ss : list string) : string :=
   | [] => ""
   | s :: ss' => s ++ prependToAll sep ss'
   end.
+
+Fixpoint tuple (xs : list Type) : Type :=
+  match xs with
+  | [] => unit
+  | x :: xs' => prod x (tuple xs')
+  end.

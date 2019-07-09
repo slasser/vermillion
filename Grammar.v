@@ -23,16 +23,52 @@ End SYMBOL_TYPES.
 
 (* Accompanying definitions for a grammar. *)
 Module DefsFn (Import Ty : SYMBOL_TYPES).
-  
-  Inductive symbol :=
-  | T  : terminal -> symbol
-  | NT : nonterminal -> symbol.
 
-  Hint Resolve Ty.t_eq_dec Ty.nt_eq_dec.
+  Module Export CoreDefs.
   
-  Lemma symbol_eq_dec : forall s s' : symbol,
-      {s = s'} + {s <> s'}.
-  Proof. decide equality. Defined.
+    Inductive symbol :=
+    | T  : terminal -> symbol
+    | NT : nonterminal -> symbol.
+    
+    Hint Resolve Ty.t_eq_dec Ty.nt_eq_dec.
+    
+    Lemma symbol_eq_dec : forall s s' : symbol,
+        {s = s'} + {s <> s'}.
+    Proof. decide equality. Defined.
+
+    (* The semantic type for symbol s *)  
+    Definition symbol_semty (s : symbol) : Type :=
+      match s with
+      | T a  => t_semty  a
+      | NT x => nt_semty x
+      end.
+
+    (* The semantic type for a list of symbols *)
+    Definition rhs_semty (gamma : list symbol) : Type :=
+      tuple (List.map symbol_semty gamma).
+
+    (* The non-dependent component of a production, consisting of a left-hand
+     nonterminal and a right-hand sentential form *)
+    Definition base_production := (nonterminal * list symbol)%type.
+
+    (* The type of a semantic action for a base production *)
+    Definition action_ty (b : base_production) : Type :=
+      let (x, gamma) := b in rhs_semty gamma -> nt_semty x.
+    
+    (* A base production extended with a semantic action *)
+    Definition production := {b : base_production & action_ty b}.
+
+    Definition token := {t : terminal & t_semty t}.
+
+    (* We represent a grammar as a record so that functions 
+     can consume the start symbol and productions easily. *)
+    Record grammar := mkGrammar { start : nonterminal
+                                  ; prods : list production }.
+
+  End CoreDefs.
+
+  (* String representations of core types for debugging purposes *)
+  Module Formatting.
 
   Definition show_symbol (sym : symbol) : string :=
     match sym with
@@ -43,40 +79,13 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
   Definition show_rhs (gamma : list symbol) : string :=
     intersperse ", " (map show_symbol gamma).
 
-  (* The non-dependent component of a production, consisting of a left-hand
-     nonterminal and a right-hand sentential form *)
-  Definition base_production := (nonterminal * list symbol)%type.
-
   Definition show_prod (p : production) : string :=
-    let (x, gamma) := p in
-    show_nt x ++ " --> " ++ show_rhs gamma.
-  
-  Definition symbol_semty (sym : symbol) : Type :=
-    match sym with
-    | T a  => t_semty  a
-    | NT x => nt_semty x
+    match p with
+    | existT _ (x, gamma) _ =>
+      show_nt x ++ " --> " ++ show_rhs gamma
     end.
 
-  Fixpoint tuple (xs : list Type) : Type :=
-    match xs with
-    | [] => unit
-    | x :: xs' => prod x (tuple xs')
-    end.
-  
-  Definition rhs_semty (gamma : list symbol) : Type :=
-    tuple (List.map symbol_semty gamma).
-  
-  Definition action_ty (p : production) : Type :=
-    let (x, gamma) := p in rhs_semty gamma -> nt_semty x.
-
-  Definition xprod := {p : production & action_ty p}.
-
-  Definition token := {t : terminal & t_semty t}.
-
-  (* We represent a grammar as a record so that functions 
-     can consume the start symbol and productions easily. *)
-  Record grammar := mkGrammar {start : nonterminal ;
-                               prods : list xprod }.
+  End Formatting.
   
   (* Derivation trees *)
   Module Export Tree.
@@ -243,7 +252,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     
     Definition first_map   := NtMap.t LaSet.t.
     Definition follow_map  := NtMap.t LaSet.t.
-    Definition parse_table := ParseTable.t xprod.               
+    Definition parse_table := ParseTable.t production.
   End Collections.
 
   (* Lemmas about finite collections *)  
@@ -328,28 +337,28 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
       | _   => false
       end.
     
-    Definition lhs (xp : xprod) : nonterminal :=
-      match xp with existT _ (x, _) _ => x end.
+    Definition lhs (p : production) : nonterminal :=
+      match p with existT _ (x, _) _ => x end.
 
-    Definition rhs (xp : xprod) : list symbol :=
-      match xp with existT _ (_, gamma) _ => gamma end.
+    Definition rhs (p : production) : list symbol :=
+      match p with existT _ (_, gamma) _ => gamma end.
 
-    Definition prodOf (xp : xprod) : production :=
-      match xp with existT _ p _ => p end.
+    Definition baseProduction (p : production) : base_production :=
+      match p with existT _ b _ => b end.
     
-    Definition prodsOf (g : grammar) : list production :=
-      List.map prodOf g.(prods).
+    Definition baseProductions (g : grammar) : list base_production :=
+      List.map baseProduction g.(prods).
     
     Definition pt_lookup
                (x   : nonterminal)
                (la  : lookahead)
-               (tbl : parse_table) : option xprod :=
+               (tbl : parse_table) : option production :=
       ParseTable.find (x, la) tbl.
     
     Definition pt_add
                (x   : nonterminal)
                (la  : lookahead)
-               (p   : xprod)
+               (p   : production)
                (tbl : parse_table) : parse_table :=
       ParseTable.add (x, la) p tbl.
       
@@ -433,6 +442,7 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
       pt_sound tbl g /\ pt_complete tbl g.
 
   End Specs.
+
 End DefsFn.
 
 Module Type DefsT (SymTy : SYMBOL_TYPES).
