@@ -1,8 +1,4 @@
-Require Import List.
-Require Import MSets.
-Require Import Program.Wf.
-Require Import String.
-
+Require Import List MSets Program.Wf String.
 Require Import Vermillion.Grammar.
 Require Import Vermillion.Lemmas.
 Require Import Vermillion.Tactics.
@@ -15,9 +11,9 @@ Module GeneratorFn (Export G : Grammar.T).
   Module Import L := LemmasFn G.
   
   (* Step 1 in the table generation pipeline: compute the NULLABLE set for a grammar *)
-  
+ 
   Definition lhSet (ps : list production) : NtSet.t :=
-    fromNtList (map fst ps).
+    fromNtList (map lhs ps).
   
   Fixpoint nullableGamma (gamma : list symbol) (nu : NtSet.t) : bool :=
     match gamma with 
@@ -27,11 +23,10 @@ Module GeneratorFn (Export G : Grammar.T).
     end.
   
   Definition updateNu (p : production) (nu : NtSet.t) : NtSet.t :=
-    let (x, gamma) := p in
-    if nullableGamma gamma nu then
-      NtSet.add x nu
-    else
-      nu.
+    match p with
+    | existT _ (x, gamma) _ =>
+      if nullableGamma gamma nu then NtSet.add x nu else nu
+    end.
 
   Definition nullablePass (ps : list production) (nu : NtSet.t) : NtSet.t :=
     fold_right updateNu nu ps.
@@ -50,15 +45,15 @@ Module GeneratorFn (Export G : Grammar.T).
   Proof.
     induction ps as [| p ps]; intros nu; simpl in *; try ND.fsetdec.
     unfold updateNu.
-    destruct p as (x, gamma).
+    destruct p as [(x, gamma) _].
     destruct (nullableGamma gamma (nullablePass ps nu)); auto.
     apply NtSetEqProps.MP.subset_add_2; auto.
   Defined.
   
   Lemma In_lhSet_cons :
-    forall x' ps x gamma,
+    forall x' ps x gamma f,
       NtSet.In x' (lhSet ps)
-      -> NtSet.In x' (lhSet ((x, gamma) :: ps)).
+      -> NtSet.In x' (lhSet (existT _ (x, gamma) f :: ps)).
   Proof.
     intros.
     unfold lhSet in *; simpl in *; ND.fsetdec.
@@ -72,7 +67,7 @@ Module GeneratorFn (Export G : Grammar.T).
         /\ ~NtSet.In x nu
         /\ NtSet.In x (nullablePass ps nu).
   Proof.
-    induction ps as [| (x, gamma) ps]; intros nu; simpl in *; try ND.fsetdec.
+    induction ps as [| [(x, gamma) f] ps]; intros nu; simpl in *; try ND.fsetdec.
     destruct (nullableGamma gamma (nullablePass ps nu)).
     - destruct (NtSetEqProps.MP.In_dec x nu).
       + destruct (IHps nu).
@@ -101,14 +96,14 @@ Module GeneratorFn (Export G : Grammar.T).
     destruct (nullablePass_eq_or_exists ps nu); congruence.
   Defined.
   
-  Definition countNullableCandidates (ps : list production) (nu : NtSet.t) : nat :=
+  Definition countNullCands (ps : list production) (nu : NtSet.t) : nat :=
     let candidates := lhSet ps in
     NtSet.cardinal (NtSet.diff candidates nu).
   
   Lemma nullablePass_neq_candidates_lt :
     forall ps nu,
       ~ NtSet.Equal nu (nullablePass ps nu)
-      -> countNullableCandidates ps (nullablePass ps nu) < countNullableCandidates ps nu.
+      -> countNullCands ps (nullablePass ps nu) < countNullCands ps nu.
   Proof.
     intros ps nu Hneq.
     apply nullablePass_neq_exists in Hneq.
@@ -121,7 +116,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Program Fixpoint mkNullableSet' 
           (ps : list production) 
           (nu : NtSet.t)
-          { measure (countNullableCandidates ps nu) }:=
+          { measure (countNullCands ps nu) }:=
     let nu' := nullablePass ps nu in
     if NtSet.eq_dec nu nu' then
       nu
@@ -132,7 +127,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
   
   Definition mkNullableSet (g : grammar) : NtSet.t :=
-    mkNullableSet' (prodsOf g) NtSet.empty.
+    mkNullableSet' g.(prods) NtSet.empty.
   
   (* Step 2 : compute the FIRST map for the grammar 
      using the (correct) NULLABLE set. *)
@@ -167,14 +162,13 @@ Module GeneratorFn (Export G : Grammar.T).
     end.
   
   Definition updateFi (nu : NtSet.t) (p : production) (fi : first_map) : first_map :=
-    let (x, gamma) := p in
-    let fg := firstGamma gamma nu fi in
-    let xFirst := findOrEmpty x fi in
-    let xFirst' := LaSet.union fg xFirst in
-    if LaSet.eq_dec xFirst xFirst' then (* necessary? *)
-      fi
-    else
-      NtMap.add x xFirst' fi.
+    match p with
+    | existT _ (x, gamma) _ =>
+      let fg := firstGamma gamma nu fi in
+      let xFirst := findOrEmpty x fi in
+      let xFirst' := LaSet.union fg xFirst in
+      if LaSet.eq_dec xFirst xFirst' then fi else NtMap.add x xFirst' fi
+    end.
 
   Definition firstPass (ps : list production) (nu : NtSet.t) (fi : first_map) : first_map :=
     fold_right (updateFi nu) fi ps.
@@ -247,13 +241,13 @@ Module GeneratorFn (Export G : Grammar.T).
                   end) LaSet.empty gammas.
   
   Definition leftmostLookaheads (ps : list production) :=
-    leftmostLookaheads' (map snd ps).
+    leftmostLookaheads' (map rhs ps).
   
   Definition product (n : NtSet.t) (l : LaSet.t) : PairSet.t :=
     let f := (fun x acc => PairSet.union (mkPairs x l) acc) in
     NtSet.fold f n PairSet.empty.
   
-  Definition numFirstCandidates (ps : list production) (fi : first_map) :=
+  Definition countFirstCands (ps : list production) (fi : first_map) :=
     let allCandidates := product (lhSet ps) (leftmostLookaheads ps) in
     PairSet.cardinal (PairSet.diff allCandidates (pairsOf fi)).
   
@@ -374,9 +368,9 @@ Module GeneratorFn (Export G : Grammar.T).
       LaSet.In la (leftmostLookaheads ps)
       -> LaSet.In la (leftmostLookaheads (p :: ps)).
   Proof.
-    intros la (x, gamma) ps Hin.
+    intros la [(x, gamma) f] ps Hin.
     unfold leftmostLookaheads in *.
-    induction ps as [| (x', gamma') ps]; simpl in *.
+    induction ps as [| [(x', gamma') f'] ps]; simpl in *.
     - inv Hin.
     - destruct (leftmostLookahead gamma) as [la' |]; 
         destruct (leftmostLookahead gamma') as [la'' |]; auto; LD.fsetdec.
@@ -387,7 +381,6 @@ Module GeneratorFn (Export G : Grammar.T).
       PairSet.In (x, la) (pairsOf fi)
       -> NtSet.In x (lhSet ps)
          /\ LaSet.In la (leftmostLookaheads ps).
- 
   
   Definition all_nt (gamma : list symbol) :=
     Forall (fun sym => isNT sym = true) gamma.
@@ -407,13 +400,13 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
 
   Lemma gpre_nullable_in_leftmost_lks :
-    forall x y gpre gsuf ps,
-      In (x, gpre ++ T y :: gsuf) ps
+    forall x y gpre gsuf f ps,
+      In (existT _ (x, gpre ++ T y :: gsuf) f) ps
       -> all_nt gpre
       -> LaSet.In (LA y) (leftmostLookaheads ps).
   Proof.
-    intros x y gpre gsuf ps Hin Han.
-    induction ps as [| (x', gamma) ps]; simpl in *.
+    intros x y gpre gsuf f ps Hin Han.
+    induction ps as [| [(x', gamma) f'] ps]; simpl in *.
     - inv Hin.
     - destruct Hin.
       + inv H.
@@ -468,15 +461,15 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
   
   Lemma in_firstGamma_in_leftmost_lks' :
-    forall nu ps la fi x gsuf gpre,
-      In (x, gpre ++ gsuf) ps
+    forall nu ps la fi x gsuf gpre f,
+      In (existT _ (x, gpre ++ gsuf) f) ps
       -> all_pairs_are_candidates fi ps
       -> all_nt gpre
       -> LaSet.In la (firstGamma gsuf nu fi)
       -> LaSet.In la (leftmostLookaheads ps).
   Proof.
     intros nu ps la fi x gsuf.
-    induction gsuf as [| sym gsuf]; intros gpre Hin Hapac Hfa Hin'; simpl in *.
+    induction gsuf as [| sym gsuf]; intros gpre f Hin Hapac Hfa Hin'; simpl in *.
     - inv Hin'.
     - destruct sym as [y | x']; simpl in *.
       + apply LaSet.singleton_spec in Hin'; subst.
@@ -490,9 +483,10 @@ Module GeneratorFn (Export G : Grammar.T).
                 apply find_in in Hf.
                 eapply in_A_in_B_in_pairsOf; eauto.
              ++ inv H.
-          -- apply IHgsuf with (gpre := gpre ++ [NT x']); auto.
-             ++ rewrite <- app_assoc; auto.
-             ++ apply Forall_app; auto.
+          -- specialize IHgsuf with (gpre := gpre ++ [NT x']).
+             rewrite <- app_assoc in IHgsuf; simpl in IHgsuf.
+             apply IHgsuf in Hin; auto.
+             apply Forall_app; auto.
         * unfold findOrEmpty in Hin'.
           destruct (NtMap.find x' fi) as [x'First |] eqn:Hf.
           ++ eapply Hapac.
@@ -502,8 +496,8 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
 
   Lemma in_firstGamma_in_leftmost_lks :
-    forall nu ps la fi x gamma,
-      In (x, gamma) ps
+    forall nu ps la fi x gamma f,
+      In (existT _ (x, gamma) f) ps
       -> all_pairs_are_candidates fi ps
       -> LaSet.In la (firstGamma gamma nu fi)
       -> LaSet.In la (leftmostLookaheads ps).
@@ -624,8 +618,8 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
   
   Lemma in_lhSet_app :
-    forall x gamma pre suf,
-      NtSet.In x (lhSet (pre ++ (x, gamma) :: suf)).
+    forall x gamma f pre suf,
+      NtSet.In x (lhSet (pre ++ existT _ (x, gamma) f :: suf)).
   Proof.
     intros.
     induction pre as [| (x', gamma')]; unfold lhSet; simpl in *.
@@ -1067,7 +1061,7 @@ Module GeneratorFn (Export G : Grammar.T).
           /\ PairSet.In (x, la) (pairsOf (firstPass suf nu fi)).
   Proof.
     intros nu ps suf.
-    induction suf as [| (x, gamma) suf]; intros pre fi Happ Hap.
+    induction suf as [| [(x, gamma) f] suf]; intros pre fi Happ Hap.
     - simpl in *. 
       left. (* LEMMA *)
       unfold NtMap.Equiv.
@@ -1079,7 +1073,7 @@ Module GeneratorFn (Export G : Grammar.T).
         assert (s = s') by congruence; subst.
         apply LP.equal_refl.
     - simpl in *.
-      destruct (IHsuf (pre ++ [(x, gamma)]) fi) as [Heq | Hex]; auto.
+      destruct (IHsuf (pre ++ [existT _ (x, gamma) f]) fi) as [Heq | Hex]; auto.
       + rewrite <- app_assoc.
         rewrite <- cons_app_singleton; auto.
       + match goal with 
@@ -1150,21 +1144,21 @@ Module GeneratorFn (Export G : Grammar.T).
       -> all_pairs_are_candidates (firstPass suf nu fi) ps.
   Proof.
     intros nu ps suf.
-    induction suf as [| (x, gamma) suf]; intros pre fi Heq Hap.
+    induction suf as [| [(x, gamma) f] suf]; intros pre fi Heq Hap.
     - simpl in *.
       auto.
     - simpl in *.
       match goal with
       | |- context[LaSet.eq_dec ?s1 ?s2] => destruct (LaSet.eq_dec s1 s2) as [Heq' | Hneq]
       end.
-      + apply IHsuf with (pre := pre ++ [(x, gamma)]); auto.
+      + apply IHsuf with (pre := pre ++ [existT _ (x, gamma) f]); auto.
         subst.
         rewrite <- app_assoc.
         auto.
-      + apply IHsuf with (pre := pre ++ [(x, gamma)]) in Hap; clear IHsuf.
+      + apply IHsuf with (pre := pre ++ [existT _ (x, gamma) f]) in Hap; clear IHsuf.
         * unfold all_pairs_are_candidates.
           intros x' la Hin.
-          assert (Hinps : In (x, gamma) ps) by (subst; apply in_app_cons).
+          assert (Hinps : In (existT _ (x, gamma) f) ps) by (subst; apply in_app_cons).
           destruct (NtSetFacts.eq_dec x' x); subst.
           -- split.
              ++ apply in_lhSet_app.
@@ -1205,7 +1199,7 @@ Module GeneratorFn (Export G : Grammar.T).
       PairSet.Subset (pairsOf fi) (pairsOf (firstPass ps nu fi)).
   Proof.
     intros nu ps.
-    induction ps as [| (x, gamma) ps]; intros fi; simpl in *.
+    induction ps as [| [(x, gamma) f] ps]; intros fi; simpl in *.
     - PD.fsetdec.
     - match goal with
       | |- context[LaSet.eq_dec ?s ?s'] => destruct (LaSet.eq_dec s s') as [Heq | Hneq]
@@ -1252,7 +1246,7 @@ Module GeneratorFn (Export G : Grammar.T).
     forall nu ps fi,
       all_pairs_are_candidates fi ps
       -> ~ NtMap.Equiv LaSet.Equal fi (firstPass ps nu fi)
-      -> numFirstCandidates ps (firstPass ps nu fi) < numFirstCandidates ps fi.
+      -> countFirstCands ps (firstPass ps nu fi) < countFirstCands ps fi.
   Proof.
     intros nu ps fi Hap Hneq.
     apply firstPass_not_equiv_exists in Hneq; auto.
@@ -1269,7 +1263,7 @@ Module GeneratorFn (Export G : Grammar.T).
           (nu : NtSet.t) 
           (fi : first_map)
           (pf : all_pairs_are_candidates fi ps)
-          {measure (numFirstCandidates ps fi) } :=
+          {measure (countFirstCands ps fi) } :=
     let fi' := firstPass ps nu fi in
     if first_map_equiv_dec fi fi' then
       fi
@@ -1292,8 +1286,7 @@ Module GeneratorFn (Export G : Grammar.T).
   Defined.
   
   Definition mkFirstMap (g : grammar) (nu : NtSet.t) :=
-    let ps := prodsOf g in
-    mkFirstMap' ps nu empty_fi (empty_fi_apac ps).
+    mkFirstMap' g.(prods) nu empty_fi (empty_fi_apac _).
   
   (* Step 3 : compute the FOLLOW map for the grammar using the (correct) NULLABLE set and FIRST map. *)
   

@@ -13,8 +13,8 @@ Module Type SYMBOL_TYPES.
   Hypothesis nt_eq_dec : forall x x' : nonterminal,
       {x = x'} + {x <> x'}.
 
-  Parameter show_t  : terminal    -> string.
-  Parameter show_nt : nonterminal -> string.
+  Parameter showT  : terminal    -> string.
+  Parameter showNT : nonterminal -> string.
 
   Parameter t_semty  : terminal    -> Type.
   Parameter nt_semty : nonterminal -> Type.
@@ -25,7 +25,7 @@ End SYMBOL_TYPES.
 Module DefsFn (Import Ty : SYMBOL_TYPES).
 
   Module Export CoreDefs.
-  
+    
     Inductive symbol :=
     | T  : terminal -> symbol
     | NT : nonterminal -> symbol.
@@ -63,29 +63,9 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     (* We represent a grammar as a record so that functions 
      can consume the start symbol and productions easily. *)
     Record grammar := mkGrammar { start : nonterminal
-                                  ; prods : list production }.
+                                ; prods : list production }.
 
   End CoreDefs.
-
-  (* String representations of core types for debugging purposes *)
-  Module Formatting.
-
-  Definition show_symbol (sym : symbol) : string :=
-    match sym with
-    | T a  => "T "  ++ show_t a
-    | NT x => "NT " ++ show_nt x
-    end.
-
-  Definition show_rhs (gamma : list symbol) : string :=
-    intersperse ", " (map show_symbol gamma).
-
-  Definition show_prod (p : production) : string :=
-    match p with
-    | existT _ (x, gamma) _ =>
-      show_nt x ++ " --> " ++ show_rhs gamma
-    end.
-
-  End Formatting.
   
   (* Derivation trees *)
   Module Export Tree.
@@ -140,9 +120,9 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     | LA  : terminal -> lookahead
     | EOF : lookahead.
 
-    Definition show_lookahead (la : lookahead) : string :=
+    Definition showLookahead (la : lookahead) : string :=
       match la with
-      | LA a => show_t a
+      | LA a => showT a
       | EOF  => "EOF"
       end.
 
@@ -210,6 +190,25 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
           /\ follow_sym g la (NT x)).
     
   End Lookahead.
+
+  (* String representations of core types for debugging purposes *) 
+  Module Formatting.
+    
+    Definition showSymbol (sym : symbol) : string := 
+      match sym with 
+      | T a => "T " ++ showT a 
+      | NT x => "NT " ++ showNT x 
+      end.
+
+    Definition showRhs (gamma : list symbol) : string := 
+      intersperse ", " (map showSymbol gamma).
+
+    Definition showProd (p : production) : string := 
+      match p with 
+      | existT _ (x, gamma) _ => showNT x ++ " --> " ++ showRhs gamma 
+      end.
+
+  End Formatting.
 
   (* Finite sets, maps, and tables *)
   Module Export Collections.
