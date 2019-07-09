@@ -191,25 +191,6 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     
   End Lookahead.
 
-  (* String representations of core types for debugging purposes *) 
-  Module Formatting.
-    
-    Definition showSymbol (sym : symbol) : string := 
-      match sym with 
-      | T a => "T " ++ showT a 
-      | NT x => "NT " ++ showNT x 
-      end.
-
-    Definition showRhs (gamma : list symbol) : string := 
-      intersperse ", " (map showSymbol gamma).
-
-    Definition showProd (p : production) : string := 
-      match p with 
-      | existT _ (x, gamma) _ => showNT x ++ " --> " ++ showRhs gamma 
-      end.
-
-  End Formatting.
-
   (* Finite sets, maps, and tables *)
   Module Export Collections.
 
@@ -365,6 +346,27 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
         fold_right NtSet.add NtSet.empty ls.
       
   End Utils.
+
+  (* String representations of core types for debugging purposes *) 
+  Module Export Formatting.
+    
+    Definition showSymbol (sym : symbol) : string := 
+      match sym with 
+      | T a => "T " ++ showT a 
+      | NT x => "NT " ++ showNT x 
+      end.
+    
+    Definition showRhs (gamma : list symbol) : string := 
+      intersperse ", " (map showSymbol gamma).
+
+    Definition showBaseProd (b : base_production) : string :=
+      let (x, gamma) := b in
+      showNT x ++ " --> " ++ showRhs gamma.
+      
+    Definition showProd (p : production) : string := 
+      showBaseProd (baseProduction p).
+
+  End Formatting.
 
   (* Definitions related to correctness specs *)
   Module Export Specs.
