@@ -534,32 +534,32 @@ Defined.
     intros; tc.
   Qed.
 
-  Lemma production_eq_dec :
-    forall (p p' : production),
-      {p = p'} + {p <> p'}.
+  Lemma base_production_eq_dec :
+    forall (b b' : base_production),
+      {b = b'} + {b <> b'}.
   Proof.
     repeat decide equality.
   Defined.
 
-  Lemma in_xprods_in_prodsOf :
-    forall g p f,
-      In (existT _ p f) g.(prods)
-      -> In p (prodsOf g).
+  Lemma in_productions_in_baseProductions :
+    forall g b f,
+      In (existT _ b f) g.(prods)
+      -> In b (baseProductions g).
   Proof.
-    intros g p f Hin.
-    unfold prodsOf. unfold prodOf.
-    induction g.(prods) as [| xp xps]; simpl in *; inv Hin; auto.
+    intros g b f Hin.
+    unfold baseProductions; unfold baseProduction.
+    induction g.(prods) as [| p ps]; simpl in *; inv Hin; auto.
   Qed.
 
-  Lemma in_prodsOf_exists_in_xprods :
-    forall g p,
-      In p (prodsOf g)
-      -> exists f, In (existT _ p f) g.(prods).
+  Lemma in_baseProductions_exists_in_productions :
+    forall g b,
+      In b (baseProductions g)
+      -> exists f, In (existT _ b f) g.(prods).
   Proof.
-    unfold prodsOf; unfold prodOf; intros g (x, gamma) Hin.
-    induction g.(prods) as [| [(x', gamma') f] xps]; simpl in *; inv Hin.
+    unfold baseProductions; unfold baseProduction; intros g (x, gamma) Hin.
+    induction g.(prods) as [| [(x', gamma') f] ps IH]; simpl in *; inv Hin.
     - inv H; eauto.
-    - apply IHxps in H; destruct H as [f' Hin]; eauto.
+    - apply IH in H; destruct H as [f' Hin]; eauto.
   Qed.
   
 End LemmasFn.
