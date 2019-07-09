@@ -1,5 +1,5 @@
-Require Import List PeanoNat String.
-Require Import FMaps MSets.
+Require Import List FMaps MSets PeanoNat String.
+Require Import Utils.
 Export ListNotations.
 Open Scope string_scope.
 
@@ -28,8 +28,6 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
   | T  : terminal -> symbol
   | NT : nonterminal -> symbol.
 
-  Definition production := (nonterminal * list symbol)%type.
-
   Hint Resolve Ty.t_eq_dec Ty.nt_eq_dec.
   
   Lemma symbol_eq_dec : forall s s' : symbol,
@@ -42,22 +40,12 @@ Module DefsFn (Import Ty : SYMBOL_TYPES).
     | NT x => "NT " ++ show_nt x
     end.
 
-  (* to do : these are copied from the Haskell list library --
-     move them to a separate location *)
-  Fixpoint prependToAll (sep : string) (ss : list string) : string :=
-    match ss with
-    | [] => ""
-    | s :: ss' => sep ++ s ++ prependToAll sep ss'
-    end.
-
-  Definition intersperse (sep : string) (ss : list string) : string :=
-    match ss with
-    | [] => ""
-    | s :: ss' => s ++ prependToAll sep ss'
-    end.
-
   Definition show_rhs (gamma : list symbol) : string :=
     intersperse ", " (map show_symbol gamma).
+
+  (* The non-dependent component of a production, consisting of a left-hand
+     nonterminal and a right-hand sentential form *)
+  Definition base_production := (nonterminal * list symbol)%type.
 
   Definition show_prod (p : production) : string :=
     let (x, gamma) := p in

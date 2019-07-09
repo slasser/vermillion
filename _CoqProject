@@ -1,5 +1,6 @@
 -R . Vermillion
 
+Utils.v
 NoDupDec.v
 Grammar.v
 Tactics.v
