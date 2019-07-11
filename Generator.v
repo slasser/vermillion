@@ -132,6 +132,9 @@ Module GeneratorFn (Export G : Grammar.T).
   (* Step 2 : compute the FIRST map for the grammar 
      using the (correct) NULLABLE set. *)
 
+  (* Consider going back to a version of updateFi that takes a
+     base_production instead of a production *)
+
   Definition nullableSym (sym : symbol) (nu : NtSet.t) := 
     match sym with
     | T _  => false

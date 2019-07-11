@@ -92,41 +92,40 @@ Lemma firstGamma_first_sym' :
   forall g nu fi la x,
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> forall gsuf gpre,
-        In (x, gpre ++ gsuf) (prodsOf g)
+    -> forall gsuf gpre f,
+        In (existT _ (x, gpre ++ gsuf) f) g.(prods)
         -> nullable_gamma g gpre
         -> LaSet.In la (firstGamma gsuf nu fi)
         -> first_sym g la (NT x).
 Proof.
   intros g nu fi la x Hns Hfm gsuf.
-  induction gsuf as [| sym syms]; intros gpre Hin Hng Hin'; simpl in *.
+  induction gsuf as [| sym syms]; intros gpre f Hin Hng Hin'; simpl in *.
   - inv Hin'.
   - destruct (nullableSym sym nu) eqn:Hsym.
     + destruct (LaSetFacts.union_1 Hin') as [Hfs | Hfg].
-      * apply in_prodsOf_exists_in_xprods in Hin.
-        destruct Hin as [f Hin]; econstructor; eauto.
+      * econstructor; eauto. 
         eapply firstSym_first_sym; eauto.
-      * eapply IHsyms with (gpre := gpre ++ [sym]); auto.
-        -- rewrite <- app_assoc; auto.
-        -- apply nullable_app; auto.
-           constructor; auto.
-           eapply nullableSym_nullable_sym; eauto.
-    + apply in_prodsOf_exists_in_xprods in Hin.
-      destruct Hin as [f Hin]; econstructor; eauto.
-      eapply firstSym_first_sym; eauto.
+      * specialize (IHsyms (gpre ++ [sym])). 
+        rewrite <- app_assoc in IHsyms; simpl in IHsyms.
+        eapply IHsyms; eauto.
+        apply nullable_app; auto.
+        constructor; auto.
+        eapply nullableSym_nullable_sym; eauto.
+    + econstructor; eauto.
+      eapply firstSym_first_sym; eauto. 
 Qed.
 
 Lemma firstGamma_first_sym :
-  forall g nu fi la x gamma,
+  forall g nu fi la x gamma f,
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> In (x, gamma) (prodsOf g)
+    -> In (existT _ (x, gamma) f) g.(prods)
     -> LaSet.In la (firstGamma gamma nu fi)
     -> first_sym g la (NT x).
 Proof.
   intros.
   eapply firstGamma_first_sym'; eauto.
-  simpl; auto.
+  simpl; eauto.
 Qed.
 
 Lemma firstPass_preserves_soundness' :
@@ -136,11 +135,11 @@ Lemma firstPass_preserves_soundness' :
     nullable_set_for nu g
     -> first_map_sound fi g
     -> forall suf pre : list production,
-      pre ++ suf = (prodsOf g)
+      pre ++ suf = g.(prods)
       -> first_map_sound (firstPass suf nu fi) g.
 Proof. 
   intros g nu fi Hnf Hfm.
-  induction suf as [| (x, gamma) suf]; intros pre Happ; simpl; auto.
+  induction suf as [| [(x, gamma) f] suf]; intros pre Happ; simpl; auto.
   (* todo: write a tactic for this *)
   pose proof Happ as Happ'.
   rewrite cons_app_singleton in Happ.
@@ -170,7 +169,7 @@ Lemma firstPass_preserves_soundness :
          (fi : first_map),
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> first_map_sound (firstPass (prodsOf g) nu fi) g.
+    -> first_map_sound (firstPass g.(prods) nu fi) g.
 Proof.
   intros g nu fi Hns Hfm.
   apply firstPass_preserves_soundness' with (pre := []); eauto.
@@ -180,13 +179,13 @@ Lemma mkFirstMap'_preserves_soundness :
   forall (g  : grammar)
          (nu : NtSet.t)
          (fi : first_map)
-         (pf : all_pairs_are_candidates fi (prodsOf g)),
+         (pf : all_pairs_are_candidates fi g.(prods)),
     nullable_set_for nu g
     -> first_map_sound fi g
-    -> first_map_sound (mkFirstMap' (prodsOf g) nu fi pf) g.
+    -> first_map_sound (mkFirstMap' g.(prods) nu fi pf) g.
 Proof.
   intros g nu fi pf Hns Hfm.
-  remember (numFirstCandidates (prodsOf g) fi) as card.
+  remember (countFirstCands g.(prods) fi) as card.
   generalize dependent fi.
   induction card using lt_wf_ind.
   intros fi pf Hfm Hc; subst.
@@ -343,7 +342,7 @@ Lemma firstPass_preserves_map_keys :
     -> NtMap.In x (firstPass ps nu fi).
 Proof.
   intros x nu fi ps Hin.
-  induction ps as [| (x', gamma) ps]; simpl in *; auto.
+  induction ps as [| [(x', gamma) f] ps]; simpl in *; auto.
   match goal with
   | |- context[LaSet.eq_dec ?s ?s'] =>
     destruct (LaSet.eq_dec s s') as [Heq' | Hneq]
@@ -361,7 +360,7 @@ Lemma value_subset_firstPass :
     -> LaSet.Subset xFirst xFirst'.
 Proof.
   intros x nu ps. 
-  induction ps as [| (x', gamma) ps]; intros fi xFirst xFirst' Hf Hf'; simpl in *.
+  induction ps as [| [(x', gamma) f] ps]; intros fi xFirst xFirst' Hf Hf'; simpl in *.
   - rewrite Hf in Hf'.
     inv Hf'.
     LD.fsetdec.
@@ -388,13 +387,13 @@ Proof.
 Qed.
   
 Lemma firstPass_equiv_cons_tl :
-  forall nu x gamma ps fi,
+  forall nu x gamma f ps fi,
     NtMap.Equiv LaSet.Equal fi
-                (firstPass ((x, gamma) :: ps) nu fi)
+                (firstPass (existT _ (x, gamma) f :: ps) nu fi)
     -> NtMap.Equiv LaSet.Equal fi
                    (firstPass ps nu fi).
 Proof.
-  intros nu x gamma suf fi Heq.
+  intros nu x gamma f suf fi Heq.
   simpl in *.
   match goal with
   | H : context[LaSet.eq_dec ?s ?s'] |- _ =>
@@ -417,19 +416,19 @@ Proof.
 Qed.
       
 Lemma firstPass_equiv_right_t' :
-  forall g nu lx y gpre gsuf fi psuf,
-    In (lx, gpre ++ T y :: gsuf) psuf
+  forall g nu lx y gpre gsuf f fi psuf,
+    In (existT _ (lx, gpre ++ T y :: gsuf) f) psuf
     -> nullable_set_for nu g
     -> nullable_gamma g gpre
     -> NtMap.Equiv LaSet.Equal fi (firstPass psuf nu fi)
     -> forall ppre, 
-        (prodsOf g) = ppre ++ psuf
+        g.(prods) = ppre ++ psuf
         -> exists lxFirst : LaSet.t,
             NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
             LaSet.In (LA y) lxFirst.
 Proof.
-  intros g nu lx y gpre gsuf fi psuf Hin Hns Hng Hequiv.
-  induction psuf as [| (lx', gamma) psuf]; intros ppre Happ; subst; simpl in *.
+  intros g nu lx y gpre gsuf f fi psuf Hin Hns Hng Hequiv.
+  induction psuf as [| [(lx', gamma) f'] psuf]; intros ppre Happ; subst; simpl in *.
   - inv Hin.
   - destruct Hin as [Heq | Hin].
     + clear IHpsuf.
@@ -450,17 +449,18 @@ Proof.
         apply Heq.
         apply LaSetFacts.union_2.
         eapply la_in_firstGamma_t; eauto.
-    + apply IHpsuf with (ppre := ppre ++ [(lx', gamma)]); auto.
-      * eapply firstPass_equiv_cons_tl; eauto.
-      * rewrite <- app_assoc; auto.
+    + specialize IHpsuf with (ppre := ppre ++ [existT _ (lx', gamma) f']). 
+      rewrite <- app_assoc in IHpsuf; simpl in IHpsuf. 
+      apply IHpsuf; eauto.
+      eapply firstPass_equiv_cons_tl with (f := f'); eauto.
 Qed.
 
 Lemma firstPass_equiv_right_t :
-  forall g nu lx y gpre gsuf fi,
-    In (lx, gpre ++ T y :: gsuf) (prodsOf g)
+  forall g nu lx y gpre gsuf f fi,
+    In (existT _ (lx, gpre ++ T y :: gsuf) f) g.(prods)
     -> nullable_set_for nu g
     -> nullable_gamma g gpre
-    -> NtMap.Equiv LaSet.Equal fi (firstPass (prodsOf g) nu fi)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
     -> exists lxFirst : LaSet.t,
         NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
         LaSet.In (LA y) lxFirst.
@@ -492,21 +492,21 @@ Proof.
 Qed.
 
 Lemma firstPass_equiv_right_nt' :
-  forall g nu lx rx rxFirst la gpre gsuf fi psuf,
-    In (lx, gpre ++ NT rx :: gsuf) psuf
+  forall g nu lx rx rxFirst la gpre gsuf f fi psuf,
+    In (existT _ (lx, gpre ++ NT rx :: gsuf) f) psuf
     -> nullable_set_for nu g
     -> nullable_gamma g gpre
     -> NtMap.Equiv LaSet.Equal fi (firstPass psuf nu fi)
     -> NtMap.find rx fi = Some rxFirst
     -> LaSet.In la rxFirst
     -> forall ppre, 
-        (prodsOf g) = ppre ++ psuf
+        g.(prods) = ppre ++ psuf
         -> exists lxFirst : LaSet.t,
             NtMap.find (elt:=LaSet.t) lx fi = Some lxFirst /\
             LaSet.In la lxFirst.
 Proof.
-  intros g nu lx rx rxFirst la gpre gsuf fi psuf Hin Hns Hng Hequiv Hf Hin'.
-  induction psuf as [| (lx', gamma) psuf]; intros ppre Happ; subst; simpl in *.
+  intros g nu lx rx rxFirst la gpre gsuf f fi psuf Hin Hns Hng Hequiv Hf Hin'.
+  induction psuf as [| [(lx', gamma) f'] psuf]; intros ppre Happ; subst; simpl in *.
   - inv Hin.
   - destruct Hin as [Heq | Hin].
     + clear IHpsuf.
@@ -548,16 +548,17 @@ Proof.
         rewrite NtMapFacts.find_mapsto_iff in Hmt.
         eapply la_in_firstGamma_nt; eauto.
         eapply value_subset_firstPass; eauto.
-    + apply IHpsuf with (ppre := ppre ++ [(lx', gamma)]); auto.
-      * eapply firstPass_equiv_cons_tl; eauto.
-      * rewrite <- app_assoc; auto.
+    + specialize IHpsuf with (ppre := ppre ++ [existT _ (lx', gamma) f']). 
+      rewrite <- app_assoc in IHpsuf; simpl in IHpsuf.
+      apply IHpsuf; auto.
+      eapply firstPass_equiv_cons_tl with (f := f'); eauto.
 Qed.
         
 Lemma firstPass_equiv_right_nt :
-  forall g nu fi lx rx gpre gsuf rxFirst la,
+  forall g nu fi lx rx gpre gsuf f rxFirst la,
     nullable_set_for nu g
-    -> NtMap.Equiv LaSet.Equal fi (firstPass (prodsOf g) nu fi)
-    -> In (lx, gpre ++ NT rx :: gsuf) (prodsOf g)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
+    -> In (existT _ (lx, gpre ++ NT rx :: gsuf) f) g.(prods)
     -> nullable_gamma g gpre
     -> NtMap.find rx fi = Some rxFirst
     -> LaSet.In la rxFirst
@@ -573,7 +574,7 @@ Qed.
 Lemma firstPass_equiv_complete :
   forall g nu fi,
     nullable_set_for nu g
-    -> NtMap.Equiv LaSet.Equal fi (firstPass (prodsOf g) nu fi)
+    -> NtMap.Equiv LaSet.Equal fi (firstPass g.(prods) nu fi)
     -> first_map_complete fi g.
 Proof.
   intros g nu fi Hns Hequiv.
@@ -581,7 +582,6 @@ Proof.
   intros la sym x Hfs.
   revert x.
   induction Hfs; intros lx Heq; inv Heq.
-  apply in_xprods_in_prodsOf in H.
   destruct s as [y | rx].
   + inv Hfs.
     clear IHHfs.
@@ -595,12 +595,12 @@ Lemma mkFirstMap'_complete :
   forall (g  : grammar)
          (nu : NtSet.t)
          (fi : first_map)
-         (pf : all_pairs_are_candidates fi (prodsOf g)),
+         (pf : all_pairs_are_candidates fi g.(prods)),
     nullable_set_for nu g
-    -> first_map_complete (mkFirstMap' (prodsOf g) nu fi pf) g.
+    -> first_map_complete (mkFirstMap' g.(prods) nu fi pf) g.
 Proof.
   intros g nu fi pf Hns.
-  remember (numFirstCandidates (prodsOf g) fi) as card.
+  remember (countFirstCands g.(prods) fi) as card.
   generalize dependent fi.
   induction card using lt_wf_ind.
   intros fi pf Hc; subst.
