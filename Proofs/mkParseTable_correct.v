@@ -12,9 +12,9 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Module Export EntryProofs := EntryProofsFn G.
 
   Definition table_correct_wrt_entries (tbl : parse_table) (es : list table_entry) :=
-    forall x la xp,
-      pt_lookup x la tbl = Some xp
-      <-> x = (lhs xp) /\ In (xp, la) es.
+    forall x la p,
+      pt_lookup x la tbl = Some p
+      <-> x = (lhs p) /\ In (p, la) es.
 
   Lemma invariant_iff_parse_table_correct :
     forall (g : grammar) (es : list table_entry) (tbl : parse_table),
@@ -65,14 +65,14 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma duplicate_preserves_invariant :
-    forall tbl es x la xp,
+    forall tbl es x la p,
       table_correct_wrt_entries tbl es
-      -> pt_lookup x la tbl = Some xp
-      -> table_correct_wrt_entries tbl ((xp, la) :: es).
+      -> pt_lookup x la tbl = Some p
+      -> table_correct_wrt_entries tbl ((p, la) :: es).
   Proof.
-    intros tbl es x la xp Htc Hlk.
+    intros tbl es x la p Htc Hlk.
     unfold table_correct_wrt_entries.
-    intros x' la' xp'.
+    intros x' la' p'.
     split.
     - intros Hlk'.
       unfold table_correct_wrt_entries in Htc.
@@ -88,12 +88,12 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma lookup_add_or :
-    forall x x' la la' xp xp' tbl,
-      pt_lookup x' la' (pt_add x la xp tbl) = Some xp'
-      -> (x = x' /\ la = la' /\ xp = xp')
-         \/ pt_lookup x' la' tbl = Some xp'.
+    forall x x' la la' p p' tbl,
+      pt_lookup x' la' (pt_add x la p tbl) = Some p'
+      -> (x = x' /\ la = la' /\ p = p')
+         \/ pt_lookup x' la' tbl = Some p'.
   Proof.
-    intros x x' la la' xp xp' tbl Hlk.
+    intros x x' la la' p p' tbl Hlk.
     unfold pt_lookup in Hlk; unfold pt_add in Hlk.
     rewrite ParseTableFacts.add_o in Hlk.
     destruct (ParseTableFacts.eq_dec (x, la) (x', la')); auto.
@@ -101,14 +101,14 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma new_entry_preserves_invariant :
-    forall tbl es xp la,
+    forall tbl es p la,
       table_correct_wrt_entries tbl es
-      -> pt_lookup (lhs xp) la tbl = None
-      -> table_correct_wrt_entries (pt_add (lhs xp) la xp tbl) ((xp, la) :: es).
+      -> pt_lookup (lhs p) la tbl = None
+      -> table_correct_wrt_entries (pt_add (lhs p) la p tbl) ((p, la) :: es).
   Proof.
-    intros tbl es xp la Htc Hlk.
+    intros tbl es p la Htc Hlk.
     unfold table_correct_wrt_entries.
-    intros x' la' xp'.
+    intros x' la' p'.
     split.
     - intros Hlk'.
       apply lookup_add_or in Hlk'.
@@ -122,9 +122,9 @@ Module GeneratorProofsFn (Import G : Grammar.T).
         unfold pt_lookup.
         unfold pt_add.
         apply ParseTableFacts.add_eq_o; auto.
-      + destruct (ParseTableFacts.eq_dec (lhs xp, la) (lhs xp', la')).
+      + destruct (ParseTableFacts.eq_dec (lhs p, la) (lhs p', la')).
         * inv e.
-          assert (Hand : lhs xp = lhs xp' /\ In (xp', la') es) by auto.
+          assert (Hand : lhs p = lhs p' /\ In (p', la') es) by auto.
           apply Htc in Hand; tc.
         * unfold pt_lookup.
           unfold pt_add.
@@ -133,7 +133,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Definition unique_productions g : Prop :=
-    NoDup (prodsOf g).
+    NoDup (baseProductions g).
 
   Definition unique_action_per_prod (es : list table_entry) : Prop :=
     forall p f f' la,
@@ -141,32 +141,32 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       -> In (existT _ p f', la) es
       -> f = f'.
 
-  Lemma xp_in_xps_impl_p_in_prodOf_xps :
-    forall p f xps,
-      In (existT _ p f) xps -> In p (map prodOf xps).
+  Lemma p_in_ps_impl_b_in_baseProductions :
+    forall b f ps,
+      In (existT _ b f) ps -> In b (map baseProduction ps).
   Proof.
-    intros p f xps Hin.
-    eapply in_map with (f := prodOf) in Hin; auto.
+    intros b f xps Hin.
+    eapply in_map with (f := baseProduction) in Hin; auto.
   Qed.
 
   Lemma unique_productions_unique_action_per_prod' :
-    forall (xps : list xprod)
-           (p : production)
-           (f f' : action_ty p),
-      NoDup (map prodOf xps)
-      -> In (existT _ p f)  xps
-      -> In (existT _ p f') xps
+    forall (ps : list production)
+           (b : base_production)
+           (f f' : action_ty b),
+      NoDup (map baseProduction ps)
+      -> In (existT _ b f)  ps
+      -> In (existT _ b f') ps
       -> f = f'.
   Proof.
-    intros xps.
-    induction xps as [| xp xps IH]; intros p f f' Hnd Hin Hin'; simpl in *.
+    intros ps.
+    induction ps as [| p ps IH]; intros b f f' Hnd Hin Hin'; simpl in *.
     - inv Hin.
     - inv Hnd.
       destruct Hin as [Heq | Hin]; destruct Hin' as [Heq' | Hin']; subst; simpl in *; auto.
       + apply Eqdep_dec.inj_pair2_eq_dec; auto.
-        apply production_eq_dec.
-      + apply xp_in_xps_impl_p_in_prodOf_xps in Hin'; tc.
-      + apply xp_in_xps_impl_p_in_prodOf_xps in Hin ; tc.
+        apply base_production_eq_dec.
+      + apply p_in_ps_impl_b_in_baseProductions in Hin'; tc.
+      + apply p_in_ps_impl_b_in_baseProductions in Hin; tc.
   Qed.
 
   Lemma unique_productions_unique_action_per_prod :
@@ -193,11 +193,11 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       -> table_correct_wrt_entries tbl (e :: es).
   Proof.
     intros e es tbl' tbl Htc Hadd Hu.
-    destruct e as (xp, la) eqn:He.
+    destruct e as (p, la) eqn:He.
     unfold addEntry in Hadd.
-    destruct xp as [(x, gamma) f].
+    destruct p as [(x, gamma) f].
     destruct (pt_lookup x la tbl') as [[(x', gamma') f'] |] eqn:Hlk.
-    - destruct (Gen.L.production_eq_dec (x, gamma) (x', gamma')) as [Heq | Hneq].
+    - destruct (Gen.L.base_production_eq_dec (x, gamma) (x', gamma')) as [Heq | Hneq].
       + inv Heq; inv Hadd.
         assert (f = f').
         { eapply Hu.
@@ -209,7 +209,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       + inv Hadd.
     - inv Hadd.
       apply new_entry_preserves_invariant with
-          (xp := existT _ (x, gamma) f); auto.
+          (p := existT _ (x, gamma) f); auto.
   Qed.
 
   Lemma empty_table_correct_wrt_empty_entries :
@@ -287,14 +287,14 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma invariant_cons_duplicate_invariant_tail :
-    forall tbl xp la es,
-      table_correct_wrt_entries tbl ((xp, la) :: es)
-      -> In (xp, la) es
+    forall tbl p la es,
+      table_correct_wrt_entries tbl ((p, la) :: es)
+      -> In (p, la) es
       -> table_correct_wrt_entries tbl es.
   Proof.
-    intros tbl xp la es Htc Hin.
+    intros tbl p la es Htc Hin.
     unfold table_correct_wrt_entries.
-    intros x la' xp'.
+    intros x la' p'.
     split.
     - intros Hlk.
       apply Htc in Hlk; destruct Hlk as [Heq Hin']; subst.
@@ -307,48 +307,48 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma eq_keys_eq_gammas :
-    forall tbl es xp xp' la,
+    forall tbl es p p' la,
       table_correct_wrt_entries tbl es
-      -> In (xp, la) es
-      -> In (xp', la) es
-      -> lhs xp = lhs xp'
-      -> rhs xp = rhs xp'.
+      -> In (p, la) es
+      -> In (p', la) es
+      -> lhs p = lhs p'
+      -> rhs p = rhs p'.
   Proof.
-    intros tbl es xp xp' la Htc Hin Hin' Hl.
+    intros tbl es p p' la Htc Hin Hin' Hl.
     unfold table_correct_wrt_entries in Htc.
-    assert (Hand : lhs xp = lhs xp
-                   /\ In (xp, la) es) by auto.
-    assert (Hand' : lhs xp = lhs xp'
-                    /\ In (xp', la) es) by auto.
+    assert (Hand : lhs p = lhs p
+                   /\ In (p, la) es) by auto.
+    assert (Hand' : lhs p = lhs p'
+                    /\ In (p', la) es) by auto.
     apply Htc in Hand; apply Htc in Hand'; tc.
   Qed.
 
   Lemma invariant_cons_eq_gammas :
-    forall tbl xp xp' la es,
-      table_correct_wrt_entries tbl ((xp, la) :: es)
-      -> In (xp', la) es
-      -> lhs xp = lhs xp'
-      -> rhs xp = rhs xp'.
+    forall tbl p p' la es,
+      table_correct_wrt_entries tbl ((p, la) :: es)
+      -> In (p', la) es
+      -> lhs p = lhs p'
+      -> rhs p = rhs p'.
   Proof.
-    intros tbl xp xp' la es Htc Hin Hl.
+    intros tbl p p' la es Htc Hin Hl.
     unfold table_correct_wrt_entries in Htc.
-    assert (H : lhs xp = lhs xp
-                /\ In (xp, la) ((xp, la) :: es))
+    assert (H : lhs p = lhs p
+                /\ In (p, la) ((p, la) :: es))
       by (simpl; auto).
-    assert (H' : lhs xp = lhs xp'
-                 /\ In (xp', la) ((xp, la) :: es))
+    assert (H' : lhs p = lhs p'
+                 /\ In (p', la) ((p, la) :: es))
       by (simpl; auto).
     apply Htc in H; apply Htc in H'; tc.
   Qed.
 
-  Lemma lhs_rhs_eq_uapp_xprods_eq :
-    forall xp xp' la es,
-      lhs xp = lhs xp'
-      -> rhs xp = rhs xp'
-      -> In (xp, la) es
-      -> In (xp', la) es
+  Lemma lhs_rhs_eq_uapp_prods_eq :
+    forall p p' la es,
+      lhs p = lhs p'
+      -> rhs p = rhs p'
+      -> In (p, la) es
+      -> In (p', la) es
       -> unique_action_per_prod es
-      -> xp = xp'.
+      -> p = p'.
   Proof.
     intros [(x, gamma) f] [(x', gamma') g] la es Hl Hr Hi Hi' Hu; simpl in *; subst.
     eapply Hu in Hi; eauto.
@@ -357,18 +357,18 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   
   (* BUG : originally had this as add instead of remove *)
   Lemma invariant_cons_new_entry_invariant_remove :
-    forall tbl xp la es,
-      unique_action_per_prod ((xp, la) :: es)
-      -> table_correct_wrt_entries tbl ((xp, la) :: es)
-      -> ~In (xp, la) es
-      -> table_correct_wrt_entries (ParseTable.remove (lhs xp, la) tbl) es.
+    forall tbl p la es,
+      unique_action_per_prod ((p, la) :: es)
+      -> table_correct_wrt_entries tbl ((p, la) :: es)
+      -> ~In (p, la) es
+      -> table_correct_wrt_entries (ParseTable.remove (lhs p, la) tbl) es.
   Proof.
-    intros tbl xp la es Hu Htc Hin.
+    intros tbl p la es Hu Htc Hin.
     unfold table_correct_wrt_entries.
-    intros x' la' xp'.
+    intros x' la' p'.
     split.
     - intros Hlk.
-      destruct (ParseTableFacts.eq_dec (lhs xp, la) (x', la')).
+      destruct (ParseTableFacts.eq_dec (lhs p, la) (x', la')).
       + inv e.
         unfold pt_lookup in Hlk.
         rewrite ParseTableFacts.remove_eq_o in Hlk; inv Hlk; auto.
@@ -379,12 +379,12 @@ Module GeneratorProofsFn (Import G : Grammar.T).
         split; auto.
         inv Hin'; tc.
     - intros [Heq Hin']; subst.
-      destruct (ParseTableFacts.eq_dec (lhs xp, la) (lhs xp', la')).
+      destruct (ParseTableFacts.eq_dec (lhs p, la) (lhs p', la')).
       + inv e.
-        assert (xp = xp').
-        { eapply lhs_rhs_eq_uapp_xprods_eq with
+        assert (p = p').
+        { eapply lhs_rhs_eq_uapp_prods_eq with
               (la := la')
-              (es := ((xp, la') :: es)); eauto.
+              (es := ((p, la') :: es)); eauto.
           - eapply invariant_cons_eq_gammas in Htc; eauto.
           - left; auto.
           - right; auto. }
@@ -394,7 +394,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
         apply Htc; split; auto; right; auto.
   Qed.
 
-  Definition pl_pair := (production * lookahead)%type.
+  Definition pl_pair := (base_production * lookahead)%type.
 
   Definition plPairOf (e : table_entry) :=
     match e with
@@ -424,7 +424,6 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     destruct e as [(x, gamma) f]; simpl in *.
     inv Heq; eauto.
   Qed.
-
 
   Lemma not_in_plPairsOf_not_in_entries :
     forall p f la es,
@@ -469,20 +468,20 @@ Module GeneratorProofsFn (Import G : Grammar.T).
     intros tbl tbl' es Hu Htc Htc'.
     unfold ParseTable.Equal.
     intros (x, la).
-    destruct (ParseTable.find (x, la) tbl) as [xp |] eqn:Hf.
-    - destruct (ParseTable.find (x, la) tbl') as [xp' |] eqn:Hf'.
+    destruct (ParseTable.find (x, la) tbl) as [p |] eqn:Hf.
+    - destruct (ParseTable.find (x, la) tbl') as [p' |] eqn:Hf'.
       + apply Htc in Hf; destruct Hf as [Heq Hin]; subst.
         apply Htc' in Hf'; destruct Hf' as [Heq Hin']; subst.
-        assert (xp = xp').
-        { eapply lhs_rhs_eq_uapp_xprods_eq; eauto.
+        assert (p = p').
+        { eapply lhs_rhs_eq_uapp_prods_eq; eauto.
           eapply eq_keys_eq_gammas; eauto. }
         subst; auto.
       + apply Htc in Hf; destruct Hf as [Heq Hin]; subst.
         unfold table_correct_wrt_entries in Htc'.
-        assert (H : lhs xp = lhs xp /\ In (xp, la) es) by auto.
+        assert (H : lhs p = lhs p /\ In (p, la) es) by auto.
         apply Htc' in H.
         unfold pt_lookup in H; tc.
-    - destruct (ParseTable.find (x, la) tbl') as [xp' |] eqn:Hf'.
+    - destruct (ParseTable.find (x, la) tbl') as [p' |] eqn:Hf'.
       + apply Htc' in Hf'.
         apply Htc in Hf'.
         unfold pt_lookup in Hf'; congruence.
@@ -490,19 +489,19 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma invariant_not_in_add :
-    forall tbl tbl' es xp la,
-      unique_action_per_prod ((xp, la) :: es)
+    forall tbl tbl' es p la,
+      unique_action_per_prod ((p, la) :: es)
       -> table_correct_wrt_entries tbl es
-      -> table_correct_wrt_entries tbl' ((xp, la) :: es)
-      -> ~In (xp, la) es
-      -> table_correct_wrt_entries (pt_add (lhs xp) la xp tbl) ((xp, la) :: es).
+      -> table_correct_wrt_entries tbl' ((p, la) :: es)
+      -> ~In (p, la) es
+      -> table_correct_wrt_entries (pt_add (lhs p) la p tbl) ((p, la) :: es).
   Proof.
-    intros tbl tbl' es xp la Hu Htc Htc' Hin.
-    intros x' la' xp'.
+    intros tbl tbl' es p la Hu Htc Htc' Hin.
+    intros x' la' p'.
     split.
     - intros Hlk.
       unfold pt_lookup, pt_add in Hlk.
-      destruct (ParseTableFacts.eq_dec (lhs xp, la) (x', la')).
+      destruct (ParseTableFacts.eq_dec (lhs p, la) (x', la')).
       + inv e.
         rewrite ParseTableFacts.add_eq_o in Hlk; auto.
         inv Hlk; split; auto; left; auto.
@@ -514,28 +513,28 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       inv Hin'.
       + inv H.
         rewrite ParseTableFacts.add_eq_o; auto.
-      + destruct (ParseTableFacts.eq_dec (lhs xp, la) (lhs xp', la')).
+      + destruct (ParseTableFacts.eq_dec (lhs p, la) (lhs p', la')).
         * inv e.
-          assert (xp = xp').
-          { eapply lhs_rhs_eq_uapp_xprods_eq with
-                (es := (xp, la') :: es); eauto.
+          assert (p = p').
+          { eapply lhs_rhs_eq_uapp_prods_eq with
+                (es := (p, la') :: es); eauto.
             - eapply eq_keys_eq_gammas; eauto.
               + left; auto.
               + right; auto.
             - left; auto.
             - right; auto. }
           subst.
-          apply invariant_cons_eq_gammas with (xp' := xp') in Htc'; auto; tc.
+          apply invariant_cons_eq_gammas with (p' := p') in Htc'; auto; tc.
         * rewrite ParseTableFacts.add_neq_o; auto.
           apply Htc; auto.
   Qed.
 
   Lemma add_preserves_equal :
-    forall tbl tbl' x la xp,
+    forall tbl tbl' x la p,
       ParseTable.Equal tbl tbl'
-      -> ParseTable.Equal (pt_add x la xp tbl) (pt_add x la xp tbl').
+      -> ParseTable.Equal (pt_add x la p tbl) (pt_add x la p tbl').
   Proof.
-    intros tbl tbl' x la xp Heq.
+    intros tbl tbl' x la p Heq.
     unfold ParseTable.Equal.
     intros (x', la').
     unfold pt_add.
@@ -546,19 +545,19 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma addEntry_duplicate_doesn't_change_table :
-    forall tbl es xp la,
+    forall tbl es p la,
       table_correct_wrt_entries tbl es
-      -> In (xp, la) es
-      -> addEntry (xp, la) (inr tbl) = inr tbl.
+      -> In (p, la) es
+      -> addEntry (p, la) (inr tbl) = inr tbl.
   Proof.
-    intros tbl es xp la Htc Hin.
+    intros tbl es p la Htc Hin.
     unfold addEntry.
-    destruct xp as [(x, gamma) f].
+    destruct p as [(x, gamma) f].
     assert (H : x = lhs (existT _ (x, gamma) f)
                 /\ In (existT _ (x, gamma) f, la) es) by auto.
     apply Htc in H.
     rewrite H.
-    destruct (Gen.L.production_eq_dec (x, gamma) (x, gamma)); [auto | congruence].
+    destruct (Gen.L.base_production_eq_dec (x, gamma) (x, gamma)); [auto | congruence].
   Qed.
 
   Lemma equal_preserves_invariant :
@@ -582,21 +581,21 @@ Module GeneratorProofsFn (Import G : Grammar.T).
   Qed.
 
   Lemma addEntry_new_entry_pt_add :
-    forall tbl tbl' es xp la,
-      unique_action_per_prod ((xp, la) :: es)
+    forall tbl tbl' es p la,
+      unique_action_per_prod ((p, la) :: es)
       -> table_correct_wrt_entries tbl es
-      -> table_correct_wrt_entries tbl' ((xp, la) :: es)
-      -> ~ In (xp, la) es
-      -> addEntry (xp, la) (inr tbl) = inr (pt_add (lhs xp) la xp tbl).
+      -> table_correct_wrt_entries tbl' ((p, la) :: es)
+      -> ~ In (p, la) es
+      -> addEntry (p, la) (inr tbl) = inr (pt_add (lhs p) la p tbl).
   Proof.
-    intros tbl tbl' es xp la Hu Htc Htc' Hin.
-    destruct (pt_lookup (lhs xp) la tbl) as [xp' |] eqn:Hlk.
-    - assert (xp = xp').
+    intros tbl tbl' es p la Hu Htc Htc' Hin.
+    destruct (pt_lookup (lhs p) la tbl) as [p' |] eqn:Hlk.
+    - assert (p = p').
       (* lemma *)
-      { apply Htc with (x := lhs xp) in Hlk.
+      { apply Htc with (x := lhs p) in Hlk.
         destruct Hlk as [Heq Hin']; subst.
-        eapply lhs_rhs_eq_uapp_xprods_eq with
-            (es := (xp, la) :: es); eauto.
+        eapply lhs_rhs_eq_uapp_prods_eq with
+            (es := (p, la) :: es); eauto.
         - eapply eq_keys_eq_gammas; eauto.
           + left; auto.
           + right; auto.
@@ -604,7 +603,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
         - right; auto. }
       subst.
       eapply Htc in Hlk; destruct Hlk as [Heq Hin']; subst; tc.
-    - destruct xp as [(x, gamma) f]; simpl in *.
+    - destruct p as [(x, gamma) f]; simpl in *.
       rewrite Hlk; auto.
   Qed.
 
@@ -617,7 +616,7 @@ Module GeneratorProofsFn (Import G : Grammar.T).
           /\ mkParseTable es = inr tbl'.
   Proof.
     intros es.
-    induction es as [| (xp, la) es]; intros post_tbl Hu Htc.
+    induction es as [| (p, la) es]; intros post_tbl Hu Htc.
     - apply table_correct_wrt_empty_entries_eq_empty_table in Htc.
       exists empty_table; auto.
     - pose proof Htc as Htc'.
@@ -626,8 +625,8 @@ Module GeneratorProofsFn (Import G : Grammar.T).
       pose proof Htc as Htc''.
       apply IHes in Htc.
       destruct Htc as [pre_tbl' [Hpreq Hpremk]].
-      destruct (in_dec pl_pair_eq_dec (plPairOf (xp, la)) (plPairsOf es)).
-      + destruct xp as [(x, gamma) f]; simpl in *.
+      destruct (in_dec pl_pair_eq_dec (plPairOf (p, la)) (plPairsOf es)).
+      + destruct p as [(x, gamma) f]; simpl in *.
         apply in_plPairsOf_ex_in_entries in i.
         destruct i as [f' Hin].
         assert (f = f').
@@ -645,22 +644,22 @@ Module GeneratorProofsFn (Import G : Grammar.T).
           rewrite Hpremk.
           eapply addEntry_duplicate_doesn't_change_table; eauto.
           eapply equal_preserves_invariant; eauto.
-      + exists (pt_add (lhs xp) la xp pre_tbl'); split.
+      + exists (pt_add (lhs p) la p pre_tbl'); split.
         * eapply invariant_not_in_add in Htc''; eauto.
           -- apply add_preserves_equal with 
-                 (x  := lhs xp)
+                 (x  := lhs p)
                  (la := la)
-                 (xp := xp) in Hpreq; eauto.
+                 (p := p) in Hpreq; eauto.
              apply invariant_tables_eq with (tbl := post_tbl) in Htc''; auto.
              apply ParseTableFacts.Equal_trans with
-                 (m' := pt_add (lhs xp) la xp pre_tbl); auto.
-          -- destruct xp as [(x, gamma) f]; simpl in *.
+                 (m' := pt_add (lhs p) la p pre_tbl); auto.
+          -- destruct p as [(x, gamma) f]; simpl in *.
              apply not_in_plPairsOf_not_in_entries; auto.
         * simpl.
           rewrite Hpremk.
           eapply addEntry_new_entry_pt_add; eauto.
           -- eapply equal_preserves_invariant; eauto.
-          -- destruct xp as [(x, gamma) f]; simpl in *.
+          -- destruct p as [(x, gamma) f]; simpl in *.
              apply not_in_plPairsOf_not_in_entries; auto.
       + eapply unique_action_per_prod_tl; eauto.
       + auto.
