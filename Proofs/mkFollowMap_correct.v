@@ -17,7 +17,7 @@ Module FollowProofsFn (G : Grammar.T).
 Lemma mkFollowMap'_eq_body :
   forall g nu fi fi_pf fo fo_pf,
   mkFollowMap' g nu fi fi_pf fo fo_pf =
-  let fo' := followPass (prodsOf g) nu fi fo in
+  let fo' := followPass (baseProductions g) nu fi fo in
   if follow_map_equiv_dec fo fo' then
     fo
   else
@@ -39,7 +39,7 @@ Qed.
 Lemma nullableGamma_nullable_gamma :
   forall g nu x gsuf gpre,
     nullable_set_for nu g
-    -> In (x, gpre ++ gsuf) (prodsOf g)
+    -> In (x, gpre ++ gsuf) (baseProductions g)
     -> nullableGamma gsuf nu = true
     -> nullable_gamma g gsuf.
 Proof.
@@ -156,13 +156,13 @@ Lemma updateFo_preserves_soundness' :
     -> first_map_for fi g
     -> follow_map_sound fo g
     -> forall gsuf gpre,
-        In (lx, gpre ++ gsuf) (prodsOf g)
+        In (lx, gpre ++ gsuf) (baseProductions g)
     -> follow_map_sound (updateFo' nu fi lx gsuf fo) g.
 Proof.
   intros g nu fi lx fo Hnu Hfi Hfo gsuf.
   induction gsuf as [| sym gsuf]; intros gpre Hin; simpl in *; auto.
   pose proof Hin as Hin'.
-  apply in_prodsOf_exists_in_xprods in Hin'.
+  apply in_baseProductions_exists_in_productions in Hin'.
   destruct Hin' as [f Hin'].
   pose proof Hin as Hprod.
   rewrite cons_app_singleton in Hin.
@@ -229,7 +229,7 @@ Lemma updateFo_preserves_soundness :
   forall g nu fi lx gamma fo,
     nullable_set_for nu g
     -> first_map_for fi g
-    -> In (lx, gamma) (prodsOf g)
+    -> In (lx, gamma) (baseProductions g)
     -> follow_map_sound fo g
     -> follow_map_sound (updateFo' nu fi lx gamma fo) g.
 Proof.
@@ -246,8 +246,8 @@ Lemma followPass_preserves_soundness' :
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_sound fo g
-    -> forall suf pre : list production,
-        pre ++ suf = (prodsOf g)
+    -> forall suf pre : list base_production,
+        pre ++ suf = (baseProductions g)
         -> follow_map_sound (followPass suf nu fi fo) g.
 Proof. 
   intros g nu fi fo Hnu Hfi Hfo suf.
@@ -266,7 +266,7 @@ Lemma followPass_preserves_soundness :
     nullable_set_for nu g
     -> first_map_for fi g
     -> follow_map_sound fo g
-    ->  follow_map_sound (followPass (prodsOf g) nu fi fo) g.
+    ->  follow_map_sound (followPass (baseProductions g) nu fi fo) g.
 Proof.
   intros.
   eapply followPass_preserves_soundness'; eauto.
@@ -285,7 +285,7 @@ Lemma mkFollowMap'_preserves_soundness :
     -> follow_map_sound (mkFollowMap' g nu fi fi_pf fo fo_pf) g.
 Proof.
   intros g nu Hnu fi Hfi fo Hfo Hsou.
-  remember (numFollowCandidates g fo) as card.
+  remember (countFollowCands g fo) as card.
   generalize dependent fo.
   induction card using lt_wf_ind.
   intros fo Hfo Hsou Hc; subst.
@@ -689,21 +689,21 @@ Lemma followPass_equiv_right :
            (lx rx     : nonterminal)
            (gpre gsuf : list symbol)
            (la        : lookahead),
-      NtMap.Equiv LaSet.Equal fo (followPass (prodsOf g) nu fi fo)
-      -> In (lx, gpre ++ NT rx :: gsuf) (prodsOf g)
+      NtMap.Equiv LaSet.Equal fo (followPass (baseProductions g) nu fi fo)
+      -> In (lx, gpre ++ NT rx :: gsuf) (baseProductions g)
       -> first_gamma g la gsuf
       -> exists rxFollow : LaSet.t,
           NtMap.find (elt:=LaSet.t) rx fo = Some rxFollow /\
           LaSet.In la rxFollow.
 Proof.
-  unfold prodsOf; intros g nu Hnu fi Hfi fo lx rx gpre gsuf la Heq Hin Hfg.
+  unfold baseProductions; intros g nu Hnu fi Hfi fo lx rx gpre gsuf la Heq Hin Hfg.
   induction g.(prods) as [| [(x, gamma) f] ps]; simpl in *.
   - inv Hin.
   - destruct Hin; subst.
     + inv H; clear IHps.
       destruct Heq as [Hkeys Hmt].
       pose proof (exists_follow_set_containing_first_gamma
-                    g nu fi (followPass (map prodOf ps) nu fi fo) lx rx gpre gsuf la) as Hex.
+                    g nu fi (followPass (map baseProduction ps) nu fi fo) lx rx gpre gsuf la) as Hex.
       destruct Hex as [rxFollow [Hf Hin]]; auto.
       pose proof Hf as Hf'.
       apply ntmap_find_in in Hf'.
@@ -844,8 +844,8 @@ Lemma followPass_equiv_left :
              (gpre gsuf : list symbol)
              (la : lookahead)
              (lxFollow : LaSet.t),
-        NtMap.Equiv LaSet.Equal fo (followPass (prodsOf g) nu fi fo)
-        -> In (lx, gpre ++ NT rx :: gsuf) (prodsOf g)
+        NtMap.Equiv LaSet.Equal fo (followPass (baseProductions g) nu fi fo)
+        -> In (lx, gpre ++ NT rx :: gsuf) (baseProductions g)
         -> nullable_gamma g gsuf
         -> NtMap.find (elt:=LaSet.t) lx fo = Some lxFollow
         -> LaSet.In la lxFollow
@@ -853,7 +853,7 @@ Lemma followPass_equiv_left :
             NtMap.find (elt:=LaSet.t) rx fo = Some rxFollow
             /\ LaSet.In la rxFollow.
 Proof.
-  unfold prodsOf;
+  unfold baseProductions;
   intros g nu Hnu fi Hfi fo lx rx gpre gsuf la lxFollow Heq Hin Hng Hf_l Hin_l.
   induction g.(prods) as [| [(x, gamma) f] ps]; simpl in *.
   - inv Hin.
@@ -862,7 +862,7 @@ Proof.
       inv Hhd.
       pose proof Heq as Heq'.
       apply followPass_equiv_cons_tl in Heq'.
-      assert (Hf2 : exists lxFollow2, NtMap.find lx (followPass (map prodOf ps) nu fi fo) = Some lxFollow2 /\ LaSet.In la lxFollow2).
+      assert (Hf2 : exists lxFollow2, NtMap.find lx (followPass (map baseProduction ps) nu fi fo) = Some lxFollow2 /\ LaSet.In la lxFollow2).
       
       { pose proof Hf_l as Hf_l'.
         apply ntmap_find_in in Hf_l'.
@@ -877,9 +877,9 @@ Proof.
         apply Hmt2; auto. }
 
       destruct Hf2 as [lxf2 [Hf_2 Hin_2]].
-      assert (Hf3 : exists lxFollow3, NtMap.find lx (updateFo' nu fi lx (gpre ++ NT rx :: gsuf) (followPass (map prodOf ps) nu fi fo)) = Some lxFollow3 /\ LaSet.In la lxFollow3).
+      assert (Hf3 : exists lxFollow3, NtMap.find lx (updateFo' nu fi lx (gpre ++ NT rx :: gsuf) (followPass (map baseProduction ps) nu fi fo)) = Some lxFollow3 /\ LaSet.In la lxFollow3).
       
-      { assert (Heq23 : NtMap.Equiv LaSet.Equal (followPass (map prodOf ps) nu fi fo) (updateFo' nu fi lx (gpre ++ NT rx :: gsuf) (followPass (map prodOf ps) nu fi fo))).
+      { assert (Heq23 : NtMap.Equiv LaSet.Equal (followPass (map baseProduction ps) nu fi fo) (updateFo' nu fi lx (gpre ++ NT rx :: gsuf) (followPass (map baseProduction ps) nu fi fo))).
         { eapply ntmap_equiv_trans; eauto.
           apply maps_equiv_sym; auto. }
         pose proof Hf_2 as Hf_2'.
@@ -896,7 +896,7 @@ Proof.
 
       destruct Hf3 as [lxf3 [Hf_3 Hin_3]].
       pose proof exists_follow_set_containing_follow_left as Hex.
-      destruct (Hex g nu fi (followPass (map prodOf ps) nu fi fo) lx lxf2 rx gpre gsuf la) as [rxFollow3 [Hr3 Hrin3]]; clear Hex; eauto.
+      destruct (Hex g nu fi (followPass (map baseProduction ps) nu fi fo) lx lxf2 rx gpre gsuf la) as [rxFollow3 [Hr3 Hrin3]]; clear Hex; eauto.
       pose proof Hr3 as Hr3'.
       apply ntmap_find_in in Hr3'.
       apply Heq in Hr3'.
@@ -918,7 +918,7 @@ Lemma followPass_equiv_complete :
          (Hfi : first_map_for fi g)
          (fo : follow_map),
     PairSet.In (start g, EOF) (pairsOf fo)
-    -> NtMap.Equiv LaSet.Equal fo (followPass (prodsOf g) nu fi fo)
+    -> NtMap.Equiv LaSet.Equal fo (followPass (baseProductions g) nu fi fo)
     -> follow_map_complete fo g.
 Proof.
   intros g nu Hnu fi Hfi fo Hstart Heq.
@@ -929,9 +929,9 @@ Proof.
   - apply in_pairsOf_exists in Hstart.
     destruct Hstart as [s [Hmt Hin]].
     rewrite NtMapFacts.find_mapsto_iff in Hmt; eauto.
-  - apply in_xprods_in_prodsOf in H.
+  - apply in_productions_in_baseProductions in H.
     eapply followPass_equiv_right; eauto.
-  - apply in_xprods_in_prodsOf in H.
+  - apply in_productions_in_baseProductions in H.
     destruct (IHHfs x1) as [lxFollow [Hf_lx Hin_lx]]; clear IHHfs; auto.
     eapply followPass_equiv_left; eauto.
 Qed.
@@ -948,7 +948,7 @@ Lemma mkFollowMap'_complete :
     -> follow_map_complete (mkFollowMap' g nu fi fi_pf fo fo_pf) g.
 Proof.
   intros g nu Hnu fi Hfi fo Hfo Hstart.
-  remember (numFollowCandidates g fo) as card.
+  remember (countFollowCands g fo) as card.
   generalize dependent fo.
   induction card using lt_wf_ind.
   intros fo Hfo Hstart Hc; subst.
