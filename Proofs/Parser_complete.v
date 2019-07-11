@@ -71,7 +71,7 @@ Module ParserProofsFn (Import G : Grammar.T).
       rewrite Hlk in l; inv l.
       assert (f' = f).
       { apply Eqdep_dec.inj_pair2_eq_dec; auto.
-        apply production_eq_dec. }
+        apply base_production_eq_dec. }
         subst; dms; tc.
         edestruct IHHd with (vis := NtSet.add x vis).
         * destruct H as [m [x' [ts' Hpf]]].
