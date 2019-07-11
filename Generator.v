@@ -2142,9 +2142,9 @@ Module GeneratorFn (Export G : Grammar.T).
 
   (* Create the message that the generator returns in the case of a grammar
      with duplicate productions. *)
-  Definition dupMessage (p : production) : string :=
+  Definition dupMessage (b : base_production) : string :=
     "The following production appears multiple times in the grammar:\n\n"
-    ++ (showProd p)
+    ++ (showBaseProd b)
     ++ "\n\nThe grammar is either ambiguous (if the production appears with 
         different actions), or redundant (if it appears multiple times with
         the same action).".

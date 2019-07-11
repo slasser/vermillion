@@ -12,8 +12,8 @@ Module Make (Import G : Grammar.T).
   Module Import ParserAndProofs    := ParserProofsFn G.
 
   Definition parseTableOf (g : grammar) : Datatypes.sum string parse_table :=
-    match findDup _ production_eq_dec (prodsOf g) with
-    | Some p => inl (dupMessage p)
+    match findDup _ base_production_eq_dec (baseProductions g) with
+    | Some b => inl (dupMessage b)
     | None   => 
       let nu    := mkNullableSet g in
       let nu_pf := mkNullableSet_correct g in

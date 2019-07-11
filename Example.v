@@ -50,7 +50,7 @@ Module G311_Types <: SYMBOL_TYPES.
       {nt = nt'} + {nt <> nt'}.
   Proof. decide equality. Defined.
 
-  Definition show_t (a : terminal) : string :=
+  Definition showT (a : terminal) : string :=
     match a with
     | If    => "If"
     | Then  => "Then"
@@ -63,7 +63,7 @@ Module G311_Types <: SYMBOL_TYPES.
     | Eq    => "="
     end.
 
-  Definition show_nt (x : nonterminal) : string :=
+  Definition showNT (x : nonterminal) : string :=
     match x with
     | S => "S"
     | L => "L"
