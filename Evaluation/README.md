@@ -1,13 +1,17 @@
 To run the evaluation experiment:
 
-1. `./build.sh`
+1. `make nc`
 
 (This compiles the OCaml code extracted from Coq, the experiment code in `test.ml`, etc.)
 
-2. `./test.native`
+2. `./test <JSON_test_data_directory> <benchmark_results_file>`
 
-(This runs the evaluation and writes the results to `benchmark_results.json`.)
+(This runs the evaluation and writes the results to `benchmark_results_file`.)
 
-3. `python plot.py`
+Example: ./test nobel_data benchmark_results.json
 
-(This plots the results in a .png file. The Python script requires the numpy and matplotlib libraries to be installed.)
+3. `python plot.py <benchmark_results_file> <plot_file>`
+
+(This plots the results in a .eps file. The Python script requires the numpy and matplotlib libraries to be installed.)
+
+Example: python plot.py benchmark_results.json benchmark_results.eps
