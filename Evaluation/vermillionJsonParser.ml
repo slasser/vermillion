@@ -39,7 +39,8 @@ let rec app l m =
   | [] -> m
   | a :: l1 -> a :: (app l1 m)
 
-type 'a sig0 = 'a
+type 'a sig0 =
+  'a
   (* singleton inductive, whose constructor was exist *)
 
 type ('a, 'p) sigT =
@@ -101,11 +102,13 @@ module Make_UDT =
     M.eq_dec
  end
 
-(** val in_dec : ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> bool **)
+(** val in_dec :
+    ('a1 -> 'a1 -> bool) -> 'a1 -> 'a1 list -> bool **)
 
 let rec in_dec h a = function
 | [] -> false
-| y :: l0 -> let s = h y a in if s then true else in_dec h a l0
+| y :: l0 ->
+  let s = h y a in if s then true else in_dec h a l0
 
 (** val rev : 'a1 list -> 'a1 list **)
 
@@ -119,20 +122,23 @@ let rec map f = function
 | [] -> []
 | a :: t0 -> (f a) :: (map f t0)
 
-(** val flat_map : ('a1 -> 'a2 list) -> 'a1 list -> 'a2 list **)
+(** val flat_map :
+    ('a1 -> 'a2 list) -> 'a1 list -> 'a2 list **)
 
 let rec flat_map f = function
 | [] -> []
 | x :: t0 -> app (f x) (flat_map f t0)
 
-(** val fold_left : ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1 **)
+(** val fold_left :
+    ('a1 -> 'a2 -> 'a1) -> 'a2 list -> 'a1 -> 'a1 **)
 
 let rec fold_left f l a0 =
   match l with
   | [] -> a0
   | b :: t0 -> fold_left f t0 (f a0 b)
 
-(** val fold_right : ('a2 -> 'a1 -> 'a1) -> 'a1 -> 'a2 list -> 'a1 **)
+(** val fold_right :
+    ('a2 -> 'a1 -> 'a1) -> 'a1 -> 'a2 list -> 'a1 **)
 
 let rec fold_right f a0 = function
 | [] -> a0
@@ -176,7 +182,9 @@ module WFacts_fun =
 
   val mapi : (key -> 'a1 -> 'a2) -> 'a1 t -> 'a2 t
 
-  val map2 : ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t -> 'a3 t
+  val map2 :
+    ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2
+    t -> 'a3 t
 
   val elements : 'a1 t -> (key * 'a1) list
 
@@ -222,41 +230,48 @@ module Raw =
 
   let rec mem k = function
   | [] -> false
-  | p :: l -> let (k', _) = p in if X.eq_dec k k' then true else mem k l
+  | p :: l ->
+    let (k', _) = p in if X.eq_dec k k' then true else mem k l
 
   type 'elt coq_R_mem =
   | R_mem_0 of 'elt t
   | R_mem_1 of 'elt t * X.t * 'elt * (X.t * 'elt) list
-  | R_mem_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list * bool * 'elt coq_R_mem
+  | R_mem_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list * 
+     bool * 'elt coq_R_mem
 
   (** val coq_R_mem_rect :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool -> 'a1
-      coq_R_mem -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ ->
+      bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool
+      -> 'a1 coq_R_mem -> 'a2 **)
 
   let rec coq_R_mem_rect k f f0 f1 _ _ = function
   | R_mem_0 s -> f s __
   | R_mem_1 (s, k', _x, l) -> f0 s k' _x l __ __ __
   | R_mem_2 (s, k', _x, l, _res, r0) ->
-    f1 s k' _x l __ __ __ _res r0 (coq_R_mem_rect k f f0 f1 l _res r0)
+    f1 s k' _x l __ __ __ _res r0
+      (coq_R_mem_rect k f f0 f1 l _res r0)
 
   (** val coq_R_mem_rec :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool -> 'a1
-      coq_R_mem -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ ->
+      bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool
+      -> 'a1 coq_R_mem -> 'a2 **)
 
   let rec coq_R_mem_rec k f f0 f1 _ _ = function
   | R_mem_0 s -> f s __
   | R_mem_1 (s, k', _x, l) -> f0 s k' _x l __ __ __
   | R_mem_2 (s, k', _x, l, _res, r0) ->
-    f1 s k' _x l __ __ __ _res r0 (coq_R_mem_rec k f f0 f1 l _res r0)
+    f1 s k' _x l __ __ __ _res r0
+      (coq_R_mem_rec k f f0 f1 l _res r0)
 
   (** val mem_rect :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2
+      -> 'a2) -> 'a1 t -> 'a2 **)
 
   let rec mem_rect k f1 f0 f s =
     let f2 = f1 s in
@@ -267,64 +282,77 @@ module Raw =
      | p :: l ->
        let (t0, e) = p in
        let f5 = f4 t0 e l __ in
-       let f6 = fun _ _ -> let hrec = mem_rect k f1 f0 f l in f5 __ __ hrec in
-       let f7 = f3 t0 e l __ in if X.eq_dec k t0 then f7 __ __ else f6 __ __)
+       let f6 = fun _ _ ->
+         let hrec = mem_rect k f1 f0 f l in f5 __ __ hrec
+       in
+       let f7 = f3 t0 e l __ in
+       if X.eq_dec k t0 then f7 __ __ else f6 __ __)
 
   (** val mem_rec :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2
+      -> 'a2) -> 'a1 t -> 'a2 **)
 
   let mem_rec =
     mem_rect
 
-  (** val coq_R_mem_correct : key -> 'a1 t -> bool -> 'a1 coq_R_mem **)
+  (** val coq_R_mem_correct :
+      key -> 'a1 t -> bool -> 'a1 coq_R_mem **)
 
   let coq_R_mem_correct k s _res =
-    Obj.magic mem_rect k (fun y _ _ _ -> R_mem_0 y) (fun y y0 y1 y2 _ _ _ _ _ ->
-      R_mem_1 (y, y0, y1, y2)) (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_mem_2 (y, y0, y1,
-      y2, (mem k y2), (y6 (mem k y2) __))) s _res __
+    Obj.magic mem_rect k (fun y _ _ _ -> R_mem_0 y)
+      (fun y y0 y1 y2 _ _ _ _ _ -> R_mem_1 (y, y0, y1, y2))
+      (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_mem_2 (y, y0, y1, y2,
+      (mem k y2), (y6 (mem k y2) __))) s _res __
 
   (** val find : key -> 'a1 t -> 'a1 option **)
 
   let rec find k = function
   | [] -> None
-  | p :: s' -> let (k', x) = p in if X.eq_dec k k' then Some x else find k s'
+  | p :: s' ->
+    let (k', x) = p in
+    if X.eq_dec k k' then Some x else find k s'
 
   type 'elt coq_R_find =
   | R_find_0 of 'elt t
   | R_find_1 of 'elt t * X.t * 'elt * (X.t * 'elt) list
-  | R_find_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list * 'elt option
-     * 'elt coq_R_find
+  | R_find_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list
+     * 'elt option * 'elt coq_R_find
 
   (** val coq_R_find_rect :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a1 option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1 option
-      -> 'a1 coq_R_find -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a1
+      option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1
+      option -> 'a1 coq_R_find -> 'a2 **)
 
   let rec coq_R_find_rect k f f0 f1 _ _ = function
   | R_find_0 s -> f s __
   | R_find_1 (s, k', x, s') -> f0 s k' x s' __ __ __
   | R_find_2 (s, k', x, s', _res, r0) ->
-    f1 s k' x s' __ __ __ _res r0 (coq_R_find_rect k f f0 f1 s' _res r0)
+    f1 s k' x s' __ __ __ _res r0
+      (coq_R_find_rect k f f0 f1 s' _res r0)
 
   (** val coq_R_find_rec :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a1 option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1 option
-      -> 'a1 coq_R_find -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a1
+      option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1
+      option -> 'a1 coq_R_find -> 'a2 **)
 
   let rec coq_R_find_rec k f f0 f1 _ _ = function
   | R_find_0 s -> f s __
   | R_find_1 (s, k', x, s') -> f0 s k' x s' __ __ __
   | R_find_2 (s, k', x, s', _res, r0) ->
-    f1 s k' x s' __ __ __ _res r0 (coq_R_find_rec k f f0 f1 s' _res r0)
+    f1 s k' x s' __ __ __ _res r0
+      (coq_R_find_rec k f f0 f1 s' _res r0)
 
   (** val find_rect :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2
+      -> 'a2) -> 'a1 t -> 'a2 **)
 
   let rec find_rect k f1 f0 f s =
     let f2 = f1 s in
@@ -335,64 +363,79 @@ module Raw =
      | p :: l ->
        let (t0, e) = p in
        let f5 = f4 t0 e l __ in
-       let f6 = fun _ _ -> let hrec = find_rect k f1 f0 f l in f5 __ __ hrec in
-       let f7 = f3 t0 e l __ in if X.eq_dec k t0 then f7 __ __ else f6 __ __)
+       let f6 = fun _ _ ->
+         let hrec = find_rect k f1 f0 f l in f5 __ __ hrec
+       in
+       let f7 = f3 t0 e l __ in
+       if X.eq_dec k t0 then f7 __ __ else f6 __ __)
 
   (** val find_rec :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2
+      -> 'a2) -> 'a1 t -> 'a2 **)
 
   let find_rec =
     find_rect
 
-  (** val coq_R_find_correct : key -> 'a1 t -> 'a1 option -> 'a1 coq_R_find **)
+  (** val coq_R_find_correct :
+      key -> 'a1 t -> 'a1 option -> 'a1 coq_R_find **)
 
   let coq_R_find_correct k s _res =
-    Obj.magic find_rect k (fun y _ _ _ -> R_find_0 y) (fun y y0 y1 y2 _ _ _ _ _ ->
-      R_find_1 (y, y0, y1, y2)) (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_find_2 (y, y0,
-      y1, y2, (find k y2), (y6 (find k y2) __))) s _res __
+    Obj.magic find_rect k (fun y _ _ _ -> R_find_0 y)
+      (fun y y0 y1 y2 _ _ _ _ _ -> R_find_1 (y, y0, y1, y2))
+      (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_find_2 (y, y0, y1,
+      y2, (find k y2), (y6 (find k y2) __))) s _res __
 
   (** val add : key -> 'a1 -> 'a1 t -> 'a1 t **)
 
   let rec add k x = function
   | [] -> (k, x) :: []
   | p :: l ->
-    let (k', y) = p in if X.eq_dec k k' then (k, x) :: l else (k', y) :: (add k x l)
+    let (k', y) = p in
+    if X.eq_dec k k'
+    then (k, x) :: l
+    else (k', y) :: (add k x l)
 
   type 'elt coq_R_add =
   | R_add_0 of 'elt t
   | R_add_1 of 'elt t * X.t * 'elt * (X.t * 'elt) list
-  | R_add_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list * 'elt t * 'elt coq_R_add
+  | R_add_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list
+     * 'elt t * 'elt coq_R_add
 
   (** val coq_R_add_rect :
-      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1)
-      list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list ->
-      __ -> __ -> __ -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t ->
-      'a1 coq_R_add -> 'a2 **)
+      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t ->
+      'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) ->
+      ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ ->
+      __ -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t ->
+      'a1 t -> 'a1 coq_R_add -> 'a2 **)
 
   let rec coq_R_add_rect k x f f0 f1 _ _ = function
   | R_add_0 s -> f s __
   | R_add_1 (s, k', y, l) -> f0 s k' y l __ __ __
   | R_add_2 (s, k', y, l, _res, r0) ->
-    f1 s k' y l __ __ __ _res r0 (coq_R_add_rect k x f f0 f1 l _res r0)
+    f1 s k' y l __ __ __ _res r0
+      (coq_R_add_rect k x f f0 f1 l _res r0)
 
   (** val coq_R_add_rec :
-      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1)
-      list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list ->
-      __ -> __ -> __ -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t ->
-      'a1 coq_R_add -> 'a2 **)
+      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t ->
+      'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) ->
+      ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ ->
+      __ -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t ->
+      'a1 t -> 'a1 coq_R_add -> 'a2 **)
 
   let rec coq_R_add_rec k x f f0 f1 _ _ = function
   | R_add_0 s -> f s __
   | R_add_1 (s, k', y, l) -> f0 s k' y l __ __ __
   | R_add_2 (s, k', y, l, _res, r0) ->
-    f1 s k' y l __ __ __ _res r0 (coq_R_add_rec k x f f0 f1 l _res r0)
+    f1 s k' y l __ __ __ _res r0
+      (coq_R_add_rec k x f f0 f1 l _res r0)
 
   (** val add_rect :
-      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1)
-      list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list ->
-      __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t ->
+      'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) ->
+      ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ ->
+      __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
 
   let rec add_rect k x f1 f0 f s =
     let f2 = f1 s in
@@ -403,22 +446,28 @@ module Raw =
      | p :: l ->
        let (t0, e) = p in
        let f5 = f4 t0 e l __ in
-       let f6 = fun _ _ -> let hrec = add_rect k x f1 f0 f l in f5 __ __ hrec in
-       let f7 = f3 t0 e l __ in if X.eq_dec k t0 then f7 __ __ else f6 __ __)
+       let f6 = fun _ _ ->
+         let hrec = add_rect k x f1 f0 f l in f5 __ __ hrec
+       in
+       let f7 = f3 t0 e l __ in
+       if X.eq_dec k t0 then f7 __ __ else f6 __ __)
 
   (** val add_rec :
-      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1)
-      list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list ->
-      __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t ->
+      'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) ->
+      ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ ->
+      __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
 
   let add_rec =
     add_rect
 
-  (** val coq_R_add_correct : key -> 'a1 -> 'a1 t -> 'a1 t -> 'a1 coq_R_add **)
+  (** val coq_R_add_correct :
+      key -> 'a1 -> 'a1 t -> 'a1 t -> 'a1 coq_R_add **)
 
   let coq_R_add_correct k x s _res =
-    add_rect k x (fun y _ _ _ -> R_add_0 y) (fun y y0 y1 y2 _ _ _ _ _ -> R_add_1
-      (y, y0, y1, y2)) (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_add_2 (y, y0, y1, y2,
+    add_rect k x (fun y _ _ _ -> R_add_0 y)
+      (fun y y0 y1 y2 _ _ _ _ _ -> R_add_1 (y, y0, y1, y2))
+      (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_add_2 (y, y0, y1, y2,
       (add k x y2), (y6 (add k x y2) __))) s _res __
 
   (** val remove : key -> 'a1 t -> 'a1 t **)
@@ -426,42 +475,48 @@ module Raw =
   let rec remove k = function
   | [] -> []
   | p :: l ->
-    let (k', x) = p in if X.eq_dec k k' then l else (k', x) :: (remove k l)
+    let (k', x) = p in
+    if X.eq_dec k k' then l else (k', x) :: (remove k l)
 
   type 'elt coq_R_remove =
   | R_remove_0 of 'elt t
   | R_remove_1 of 'elt t * X.t * 'elt * (X.t * 'elt) list
-  | R_remove_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list * 'elt t
-     * 'elt coq_R_remove
+  | R_remove_2 of 'elt t * X.t * 'elt * (X.t * 'elt) list
+     * 'elt t * 'elt coq_R_remove
 
   (** val coq_R_remove_rect :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a1 t -> 'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t -> 'a1
-      coq_R_remove -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a1
+      t -> 'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t
+      -> 'a1 coq_R_remove -> 'a2 **)
 
   let rec coq_R_remove_rect k f f0 f1 _ _ = function
   | R_remove_0 s -> f s __
   | R_remove_1 (s, k', x, l) -> f0 s k' x l __ __ __
   | R_remove_2 (s, k', x, l, _res, r0) ->
-    f1 s k' x l __ __ __ _res r0 (coq_R_remove_rect k f f0 f1 l _res r0)
+    f1 s k' x l __ __ __ _res r0
+      (coq_R_remove_rect k f f0 f1 l _res r0)
 
   (** val coq_R_remove_rec :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a1 t -> 'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t -> 'a1
-      coq_R_remove -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a1
+      t -> 'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t
+      -> 'a1 coq_R_remove -> 'a2 **)
 
   let rec coq_R_remove_rec k f f0 f1 _ _ = function
   | R_remove_0 s -> f s __
   | R_remove_1 (s, k', x, l) -> f0 s k' x l __ __ __
   | R_remove_2 (s, k', x, l, _res, r0) ->
-    f1 s k' x l __ __ __ _res r0 (coq_R_remove_rec k f f0 f1 l _res r0)
+    f1 s k' x l __ __ __ _res r0
+      (coq_R_remove_rec k f f0 f1 l _res r0)
 
   (** val remove_rect :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2
+      -> 'a2) -> 'a1 t -> 'a2 **)
 
   let rec remove_rect k f1 f0 f s =
     let f2 = f1 s in
@@ -472,31 +527,37 @@ module Raw =
      | p :: l ->
        let (t0, e) = p in
        let f5 = f4 t0 e l __ in
-       let f6 = fun _ _ -> let hrec = remove_rect k f1 f0 f l in f5 __ __ hrec in
-       let f7 = f3 t0 e l __ in if X.eq_dec k t0 then f7 __ __ else f6 __ __)
+       let f6 = fun _ _ ->
+         let hrec = remove_rect k f1 f0 f l in f5 __ __ hrec
+       in
+       let f7 = f3 t0 e l __ in
+       if X.eq_dec k t0 then f7 __ __ else f6 __ __)
 
   (** val remove_rec :
-      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __
-      -> __ -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __
-      -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2 **)
+      key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> X.t -> 'a1 ->
+      (X.t * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
+      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> __ -> __ -> 'a2
+      -> 'a2) -> 'a1 t -> 'a2 **)
 
   let remove_rec =
     remove_rect
 
-  (** val coq_R_remove_correct : key -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove **)
+  (** val coq_R_remove_correct :
+      key -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove **)
 
   let coq_R_remove_correct k s _res =
     Obj.magic remove_rect k (fun y _ _ _ -> R_remove_0 y)
-      (fun y y0 y1 y2 _ _ _ _ _ -> R_remove_1 (y, y0, y1, y2))
-      (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_remove_2 (y, y0, y1, y2, (remove k y2),
-      (y6 (remove k y2) __))) s _res __
+      (fun y y0 y1 y2 _ _ _ _ _ -> R_remove_1 (y, y0, y1,
+      y2)) (fun y y0 y1 y2 _ _ _ y6 _ _ -> R_remove_2 (y, y0,
+      y1, y2, (remove k y2), (y6 (remove k y2) __))) s _res __
 
   (** val elements : 'a1 t -> 'a1 t **)
 
   let elements m =
     m
 
-  (** val fold : (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 **)
+  (** val fold :
+      (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 **)
 
   let rec fold f m acc =
     match m with
@@ -505,32 +566,37 @@ module Raw =
 
   type ('elt, 'a) coq_R_fold =
   | R_fold_0 of 'elt t * 'a
-  | R_fold_1 of 'elt t * 'a * X.t * 'elt * (X.t * 'elt) list * 'a
-     * ('elt, 'a) coq_R_fold
+  | R_fold_1 of 'elt t * 'a * X.t * 'elt * (X.t * 'elt) list
+     * 'a * ('elt, 'a) coq_R_fold
 
   (** val coq_R_fold_rect :
-      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t -> 'a2 ->
-      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3
-      -> 'a3) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 **)
+      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ ->
+      'a3) -> ('a1 t -> 'a2 -> X.t -> 'a1 -> (X.t * 'a1) list
+      -> __ -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 -> 'a3) ->
+      'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 **)
 
   let rec coq_R_fold_rect f f0 f1 _ _ _ = function
   | R_fold_0 (m, acc) -> f0 m acc __
   | R_fold_1 (m, acc, k, e, m', _res, r0) ->
-    f1 m acc k e m' __ _res r0 (coq_R_fold_rect f f0 f1 m' (f k e acc) _res r0)
+    f1 m acc k e m' __ _res r0
+      (coq_R_fold_rect f f0 f1 m' (f k e acc) _res r0)
 
   (** val coq_R_fold_rec :
-      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t -> 'a2 ->
-      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3
-      -> 'a3) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 **)
+      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ ->
+      'a3) -> ('a1 t -> 'a2 -> X.t -> 'a1 -> (X.t * 'a1) list
+      -> __ -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 -> 'a3) ->
+      'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 **)
 
   let rec coq_R_fold_rec f f0 f1 _ _ _ = function
   | R_fold_0 (m, acc) -> f0 m acc __
   | R_fold_1 (m, acc, k, e, m', _res, r0) ->
-    f1 m acc k e m' __ _res r0 (coq_R_fold_rec f f0 f1 m' (f k e acc) _res r0)
+    f1 m acc k e m' __ _res r0
+      (coq_R_fold_rec f f0 f1 m' (f k e acc) _res r0)
 
   (** val fold_rect :
-      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t -> 'a2 ->
-      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3 **)
+      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ ->
+      'a3) -> ('a1 t -> 'a2 -> X.t -> 'a1 -> (X.t * 'a1) list
+      -> __ -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3 **)
 
   let rec fold_rect f1 f0 f m acc =
     let f2 = f0 m acc in
@@ -543,36 +609,43 @@ module Raw =
        let hrec = fold_rect f1 f0 f l (f1 t0 e acc) in f4 hrec)
 
   (** val fold_rec :
-      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t -> 'a2 ->
-      X.t -> 'a1 -> (X.t * 'a1) list -> __ -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3 **)
+      (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ ->
+      'a3) -> ('a1 t -> 'a2 -> X.t -> 'a1 -> (X.t * 'a1) list
+      -> __ -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3 **)
 
   let fold_rec =
     fold_rect
 
   (** val coq_R_fold_correct :
-      (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold **)
+      (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 ->
+      ('a1, 'a2) coq_R_fold **)
 
   let coq_R_fold_correct f m acc _res =
-    fold_rect f (fun y y0 _ _ _ -> R_fold_0 (y, y0)) (fun y y0 y1 y2 y3 _ y5 _ _ ->
-      R_fold_1 (y, y0, y1, y2, y3, (fold f y3 (f y1 y2 y0)),
+    fold_rect f (fun y y0 _ _ _ -> R_fold_0 (y, y0))
+      (fun y y0 y1 y2 y3 _ y5 _ _ -> R_fold_1 (y, y0, y1, y2,
+      y3, (fold f y3 (f y1 y2 y0)),
       (y5 (fold f y3 (f y1 y2 y0)) __))) m acc _res __
 
-  (** val check : ('a1 -> 'a1 -> bool) -> key -> 'a1 -> 'a1 t -> bool **)
+  (** val check :
+      ('a1 -> 'a1 -> bool) -> key -> 'a1 -> 'a1 t -> bool **)
 
   let check cmp k e m' =
     match find k m' with
     | Some e' -> cmp e e'
     | None -> false
 
-  (** val submap : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool **)
+  (** val submap :
+      ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool **)
 
   let submap cmp m m' =
     fold (fun k e b -> (&&) (check cmp k e m') b) m true
 
-  (** val equal : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool **)
+  (** val equal :
+      ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool **)
 
   let equal cmp m m' =
-    (&&) (submap cmp m m') (submap (fun e' e -> cmp e e') m' m)
+    (&&) (submap cmp m m')
+      (submap (fun e' e -> cmp e e') m' m)
 
   (** val map : ('a1 -> 'a2) -> 'a1 t -> 'a2 t **)
 
@@ -586,29 +659,35 @@ module Raw =
   | [] -> []
   | p :: m' -> let (k, e) = p in (k, (f k e)) :: (mapi f m')
 
-  (** val combine_l : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t **)
+  (** val combine_l :
+      'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t **)
 
   let combine_l m m' =
     mapi (fun k e -> ((Some e), (find k m'))) m
 
-  (** val combine_r : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t **)
+  (** val combine_r :
+      'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t **)
 
   let combine_r m m' =
     mapi (fun k e' -> ((find k m), (Some e'))) m'
 
   (** val fold_right_pair :
-      ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a3 -> ('a1 * 'a2) list -> 'a3 **)
+      ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a3 -> ('a1 * 'a2) list
+      -> 'a3 **)
 
   let fold_right_pair f =
     fold_right (fun p -> f (fst p) (snd p))
 
-  (** val combine : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t **)
+  (** val combine :
+      'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t **)
 
   let combine m m' =
-    let l = combine_l m m' in let r = combine_r m m' in fold_right_pair add r l
+    let l = combine_l m m' in
+    let r = combine_r m m' in fold_right_pair add r l
 
   (** val at_least_left :
-      'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option **)
+      'a1 option -> 'a2 option -> ('a1 option * 'a2 option)
+      option **)
 
   let at_least_left o o' =
     match o with
@@ -616,24 +695,28 @@ module Raw =
     | None -> None
 
   (** val at_least_right :
-      'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option **)
+      'a1 option -> 'a2 option -> ('a1 option * 'a2 option)
+      option **)
 
   let at_least_right o o' = match o' with
   | Some _ -> Some (o, o')
   | None -> None
 
   (** val at_least_one :
-      'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option **)
+      'a1 option -> 'a2 option -> ('a1 option * 'a2 option)
+      option **)
 
   let at_least_one o o' =
     match o with
     | Some _ -> Some (o, o')
-    | None -> (match o' with
-               | Some _ -> Some (o, o')
-               | None -> None)
+    | None ->
+      (match o' with
+       | Some _ -> Some (o, o')
+       | None -> None)
 
   (** val option_cons :
-      key -> 'a1 option -> (key * 'a1) list -> (key * 'a1) list **)
+      key -> 'a1 option -> (key * 'a1) list -> (key * 'a1)
+      list **)
 
   let option_cons k o l =
     match o with
@@ -641,7 +724,8 @@ module Raw =
     | None -> l
 
   (** val map2 :
-      ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t -> (key * 'a3) list **)
+      ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t ->
+      'a2 t -> (key * 'a3) list **)
 
   let map2 f m m' =
     let m0 = combine m m' in
@@ -649,8 +733,8 @@ module Raw =
     fold_right_pair option_cons [] m1
 
   (** val at_least_one_then_f :
-      ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 option -> 'a2 option -> 'a3
-      option **)
+      ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 option
+      -> 'a2 option -> 'a3 option **)
 
   let at_least_one_then_f f o o' =
     match o with
@@ -721,7 +805,8 @@ module Make =
     Raw.mapi f (this m)
 
   (** val map2 :
-      ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t -> 'a3 t **)
+      ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t ->
+      'a2 t -> 'a3 t **)
 
   let map2 f m m' =
     Raw.map2 f (this m) (this m')
@@ -736,12 +821,14 @@ module Make =
   let cardinal m =
     length (this m)
 
-  (** val fold : (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 **)
+  (** val fold :
+      (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 **)
 
   let fold f m i =
     Raw.fold f (this m) i
 
-  (** val equal : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool **)
+  (** val equal :
+      ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool **)
 
   let equal cmp m m' =
     Raw.equal cmp (this m) (this m')
@@ -982,47 +1069,59 @@ module WPropertiesOn =
     M.elements
 
   (** val fold_rec :
-      (M.elt -> 'a1 -> 'a1) -> 'a1 -> M.t -> (M.t -> __ -> 'a2) -> (M.elt -> 'a1 ->
-      M.t -> M.t -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a2 **)
+      (M.elt -> 'a1 -> 'a1) -> 'a1 -> M.t -> (M.t -> __ ->
+      'a2) -> (M.elt -> 'a1 -> M.t -> M.t -> __ -> __ -> __
+      -> 'a2 -> 'a2) -> 'a2 **)
 
   let fold_rec f i s pempty pstep =
     let l = rev (M.elements s) in
-    let pstep' = fun x a s' s'' x0 -> pstep x a s' s'' __ __ __ x0 in
+    let pstep' = fun x a s' s'' x0 ->
+      pstep x a s' s'' __ __ __ x0
+    in
     let rec f0 l0 pstep'0 s0 =
       match l0 with
       | [] -> pempty s0 __
       | y :: l1 ->
-        pstep'0 y (fold_right f i l1) (of_list l1) s0 __ __ __
-          (f0 l1 (fun x a0 s' s'' _ _ _ x0 -> pstep'0 x a0 s' s'' __ __ __ x0)
-            (of_list l1))
-    in f0 l (fun x a s' s'' _ _ _ x0 -> pstep' x a s' s'' x0) s
+        pstep'0 y (fold_right f i l1) (of_list l1) s0 __ __
+          __
+          (f0 l1 (fun x a0 s' s'' _ _ _ x0 ->
+            pstep'0 x a0 s' s'' __ __ __ x0) (of_list l1))
+    in f0 l (fun x a s' s'' _ _ _ x0 -> pstep' x a s' s'' x0)
+         s
 
   (** val fold_rec_bis :
-      (M.elt -> 'a1 -> 'a1) -> 'a1 -> M.t -> (M.t -> M.t -> 'a1 -> __ -> 'a2 ->
-      'a2) -> 'a2 -> (M.elt -> 'a1 -> M.t -> __ -> __ -> 'a2 -> 'a2) -> 'a2 **)
+      (M.elt -> 'a1 -> 'a1) -> 'a1 -> M.t -> (M.t -> M.t ->
+      'a1 -> __ -> 'a2 -> 'a2) -> 'a2 -> (M.elt -> 'a1 -> M.t
+      -> __ -> __ -> 'a2 -> 'a2) -> 'a2 **)
 
   let fold_rec_bis f i s pmorphism pempty pstep =
-    fold_rec f i s (fun s' _ -> pmorphism M.empty s' i __ pempty)
+    fold_rec f i s (fun s' _ ->
+      pmorphism M.empty s' i __ pempty)
       (fun x a s' s'' _ _ _ x0 ->
-      pmorphism (M.add x s') s'' (f x a) __ (pstep x a s' __ __ x0))
+      pmorphism (M.add x s') s'' (f x a) __
+        (pstep x a s' __ __ x0))
 
   (** val fold_rec_nodep :
-      (M.elt -> 'a1 -> 'a1) -> 'a1 -> M.t -> 'a2 -> (M.elt -> 'a1 -> __ -> 'a2 ->
-      'a2) -> 'a2 **)
+      (M.elt -> 'a1 -> 'a1) -> 'a1 -> M.t -> 'a2 -> (M.elt ->
+      'a1 -> __ -> 'a2 -> 'a2) -> 'a2 **)
 
   let fold_rec_nodep f i s x x0 =
-    fold_rec_bis f i s (fun _ _ _ _ x1 -> x1) x (fun x1 a _ _ _ x2 -> x0 x1 a __ x2)
+    fold_rec_bis f i s (fun _ _ _ _ x1 -> x1) x
+      (fun x1 a _ _ _ x2 -> x0 x1 a __ x2)
 
   (** val fold_rec_weak :
-      (M.elt -> 'a1 -> 'a1) -> 'a1 -> (M.t -> M.t -> 'a1 -> __ -> 'a2 -> 'a2) ->
-      'a2 -> (M.elt -> 'a1 -> M.t -> __ -> 'a2 -> 'a2) -> M.t -> 'a2 **)
+      (M.elt -> 'a1 -> 'a1) -> 'a1 -> (M.t -> M.t -> 'a1 ->
+      __ -> 'a2 -> 'a2) -> 'a2 -> (M.elt -> 'a1 -> M.t -> __
+      -> 'a2 -> 'a2) -> M.t -> 'a2 **)
 
   let fold_rec_weak f i x x0 x1 s =
-    fold_rec_bis f i s x x0 (fun x2 a s' _ _ x3 -> x1 x2 a s' __ x3)
+    fold_rec_bis f i s x x0 (fun x2 a s' _ _ x3 ->
+      x1 x2 a s' __ x3)
 
   (** val fold_rel :
-      (M.elt -> 'a1 -> 'a1) -> (M.elt -> 'a2 -> 'a2) -> 'a1 -> 'a2 -> M.t -> 'a3 ->
-      (M.elt -> 'a1 -> 'a2 -> __ -> 'a3 -> 'a3) -> 'a3 **)
+      (M.elt -> 'a1 -> 'a1) -> (M.elt -> 'a2 -> 'a2) -> 'a1
+      -> 'a2 -> M.t -> 'a3 -> (M.elt -> 'a1 -> 'a2 -> __ ->
+      'a3 -> 'a3) -> 'a3 **)
 
   let fold_rel f g i j s rempty rstep =
     let l = rev (M.elements s) in
@@ -1036,20 +1135,20 @@ module WPropertiesOn =
     in f0 l (fun x a b _ x0 -> rstep' x a b x0)
 
   (** val set_induction :
-      (M.t -> __ -> 'a1) -> (M.t -> M.t -> 'a1 -> M.elt -> __ -> __ -> 'a1) -> M.t
-      -> 'a1 **)
+      (M.t -> __ -> 'a1) -> (M.t -> M.t -> 'a1 -> M.elt -> __
+      -> __ -> 'a1) -> M.t -> 'a1 **)
 
   let set_induction x x0 s =
-    fold_rec (fun _ _ -> ()) () s x (fun x1 _ s' s'' _ _ _ x2 ->
-      x0 s' s'' x2 x1 __ __)
+    fold_rec (fun _ _ -> ()) () s x
+      (fun x1 _ s' s'' _ _ _ x2 -> x0 s' s'' x2 x1 __ __)
 
   (** val set_induction_bis :
-      (M.t -> M.t -> __ -> 'a1 -> 'a1) -> 'a1 -> (M.elt -> M.t -> __ -> 'a1 -> 'a1)
-      -> M.t -> 'a1 **)
+      (M.t -> M.t -> __ -> 'a1 -> 'a1) -> 'a1 -> (M.elt ->
+      M.t -> __ -> 'a1 -> 'a1) -> M.t -> 'a1 **)
 
   let set_induction_bis x x0 x1 s =
-    fold_rec_bis (fun _ _ -> ()) () s (fun s0 s' _ _ x2 -> x s0 s' __ x2) x0
-      (fun x2 _ s' _ _ x3 -> x1 x2 s' __ x3)
+    fold_rec_bis (fun _ _ -> ()) () s (fun s0 s' _ _ x2 ->
+      x s0 s' __ x2) x0 (fun x2 _ s' _ _ x3 -> x1 x2 s' __ x3)
 
   (** val cardinal_inv_2 : M.t -> nat -> M.elt **)
 
@@ -1134,11 +1233,12 @@ module WEqPropertiesOn =
      | None -> assert false (* absurd case *))
 
   (** val set_rec :
-      (M.t -> M.t -> __ -> 'a1 -> 'a1) -> (M.t -> M.elt -> __ -> 'a1 -> 'a1) -> 'a1
-      -> M.t -> 'a1 **)
+      (M.t -> M.t -> __ -> 'a1 -> 'a1) -> (M.t -> M.elt -> __
+      -> 'a1 -> 'a1) -> 'a1 -> M.t -> 'a1 **)
 
   let set_rec x x0 x1 s =
-    MP.set_induction (fun s0 _ -> x M.empty s0 __ x1) (fun s0 s' x2 x3 _ _ ->
+    MP.set_induction (fun s0 _ -> x M.empty s0 __ x1)
+      (fun s0 s' x2 x3 _ _ ->
       x (M.add x3 s0) s' __ (x0 s0 x3 __ x2)) s
 
   (** val for_all_mem_4 : (M.elt -> bool) -> M.t -> M.elt **)
@@ -1257,7 +1357,8 @@ module MakeRaw =
   let rec partition f = function
   | [] -> ([], [])
   | x :: l ->
-    let (s1, s2) = partition f l in if f x then ((x :: s1), s2) else (s1, (x :: s2))
+    let (s1, s2) = partition f l in
+    if f x then ((x :: s1), s2) else (s1, (x :: s2))
 
   (** val cardinal : t -> nat **)
 
@@ -1299,7 +1400,8 @@ module Coq_Make =
 
   type elt = X.t
 
-  type t_ = Raw.t
+  type t_ =
+    Raw.t
     (* singleton inductive, whose constructor was Mkt *)
 
   (** val this : t_ -> Raw.t **)
@@ -1410,6 +1512,22 @@ module Coq_Make =
     let b = Raw.equal s0 s'0 in if b then true else false
  end
 
+(** val prependToAll :
+    char list -> char list list -> char list **)
+
+let rec prependToAll sep = function
+| [] -> []
+| s :: ss' -> append sep (append s (prependToAll sep ss'))
+
+(** val intersperse :
+    char list -> char list list -> char list **)
+
+let intersperse sep = function
+| [] -> []
+| s :: ss' -> append s (prependToAll sep ss')
+
+type tuple = __
+
 module type SYMBOL_TYPES =
  sig
   type terminal
@@ -1420,9 +1538,9 @@ module type SYMBOL_TYPES =
 
   val nt_eq_dec : nonterminal -> nonterminal -> bool
 
-  val show_t : terminal -> char list
+  val showT : terminal -> char list
 
-  val show_nt : nonterminal -> char list
+  val showNT : nonterminal -> char list
 
   type t_semty
 
@@ -1432,90 +1550,66 @@ module type SYMBOL_TYPES =
 module DefsFn =
  functor (Ty:SYMBOL_TYPES) ->
  struct
-  type symbol =
-  | T of Ty.terminal
-  | NT of Ty.nonterminal
+  module CoreDefs =
+   struct
+    type symbol =
+    | T of Ty.terminal
+    | NT of Ty.nonterminal
 
-  (** val symbol_rect :
-      (Ty.terminal -> 'a1) -> (Ty.nonterminal -> 'a1) -> symbol -> 'a1 **)
+    (** val symbol_rect :
+        (Ty.terminal -> 'a1) -> (Ty.nonterminal -> 'a1) ->
+        symbol -> 'a1 **)
 
-  let symbol_rect f f0 = function
-  | T x -> f x
-  | NT x -> f0 x
+    let symbol_rect f f0 = function
+    | T x -> f x
+    | NT x -> f0 x
 
-  (** val symbol_rec :
-      (Ty.terminal -> 'a1) -> (Ty.nonterminal -> 'a1) -> symbol -> 'a1 **)
+    (** val symbol_rec :
+        (Ty.terminal -> 'a1) -> (Ty.nonterminal -> 'a1) ->
+        symbol -> 'a1 **)
 
-  let symbol_rec f f0 = function
-  | T x -> f x
-  | NT x -> f0 x
+    let symbol_rec f f0 = function
+    | T x -> f x
+    | NT x -> f0 x
 
-  type production = Ty.nonterminal * symbol list
+    (** val symbol_eq_dec : symbol -> symbol -> bool **)
 
-  (** val symbol_eq_dec : symbol -> symbol -> bool **)
+    let symbol_eq_dec s s' =
+      match s with
+      | T x ->
+        (match s' with
+         | T t0 -> Ty.t_eq_dec x t0
+         | NT _ -> false)
+      | NT x ->
+        (match s' with
+         | T _ -> false
+         | NT n0 -> Ty.nt_eq_dec x n0)
 
-  let symbol_eq_dec s s' =
-    match s with
-    | T x -> (match s' with
-              | T t0 -> Ty.t_eq_dec x t0
-              | NT _ -> false)
-    | NT x -> (match s' with
-               | T _ -> false
-               | NT n0 -> Ty.nt_eq_dec x n0)
+    type symbol_semty = __
 
-  (** val show_symbol : symbol -> char list **)
+    type rhs_semty = tuple
 
-  let show_symbol = function
-  | T a -> append ('T'::(' '::[])) (Ty.show_t a)
-  | NT x -> append ('N'::('T'::(' '::[]))) (Ty.show_nt x)
+    type base_production = Ty.nonterminal * symbol list
 
-  (** val prependToAll : char list -> char list list -> char list **)
+    type action_ty = __
 
-  let rec prependToAll sep = function
-  | [] -> []
-  | s :: ss' -> append sep (append s (prependToAll sep ss'))
+    type production = (base_production, action_ty) sigT
 
-  (** val intersperse : char list -> char list list -> char list **)
+    type token = (Ty.terminal, Ty.t_semty) sigT
 
-  let intersperse sep = function
-  | [] -> []
-  | s :: ss' -> append s (prependToAll sep ss')
+    type grammar = { start : Ty.nonterminal;
+                     prods : production list }
 
-  (** val show_rhs : symbol list -> char list **)
+    (** val start : grammar -> Ty.nonterminal **)
 
-  let show_rhs gamma =
-    intersperse (','::(' '::[])) (map show_symbol gamma)
+    let start g =
+      g.start
 
-  (** val show_prod : production -> char list **)
+    (** val prods : grammar -> production list **)
 
-  let show_prod = function
-  | (x, gamma) ->
-    append (Ty.show_nt x)
-      (append (' '::('-'::('-'::('>'::(' '::[]))))) (show_rhs gamma))
-
-  type symbol_semty = __
-
-  type tuple = __
-
-  type rhs_semty = tuple
-
-  type action_ty = __
-
-  type xprod = (production, action_ty) sigT
-
-  type token = (Ty.terminal, Ty.t_semty) sigT
-
-  type grammar = { start : Ty.nonterminal; prods : xprod list }
-
-  (** val start : grammar -> Ty.nonterminal **)
-
-  let start g =
-    g.start
-
-  (** val prods : grammar -> xprod list **)
-
-  let prods g =
-    g.prods
+    let prods g =
+      g.prods
+   end
 
   module Tree =
    struct
@@ -1524,14 +1618,16 @@ module DefsFn =
     | Node of Ty.nonterminal * tree list
 
     (** val tree_rect :
-        (Ty.terminal -> 'a1) -> (Ty.nonterminal -> tree list -> 'a1) -> tree -> 'a1 **)
+        (Ty.terminal -> 'a1) -> (Ty.nonterminal -> tree list
+        -> 'a1) -> tree -> 'a1 **)
 
     let tree_rect f f0 = function
     | Leaf x -> f x
     | Node (x, x0) -> f0 x x0
 
     (** val tree_rec :
-        (Ty.terminal -> 'a1) -> (Ty.nonterminal -> tree list -> 'a1) -> tree -> 'a1 **)
+        (Ty.terminal -> 'a1) -> (Ty.nonterminal -> tree list
+        -> 'a1) -> tree -> 'a1 **)
 
     let tree_rec f f0 = function
     | Leaf x -> f x
@@ -1555,22 +1651,24 @@ module DefsFn =
     | LA of Ty.terminal
     | EOF
 
-    (** val lookahead_rect : (Ty.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1 **)
+    (** val lookahead_rect :
+        (Ty.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1 **)
 
     let lookahead_rect f f0 = function
     | LA x -> f x
     | EOF -> f0
 
-    (** val lookahead_rec : (Ty.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1 **)
+    (** val lookahead_rec :
+        (Ty.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1 **)
 
     let lookahead_rec f f0 = function
     | LA x -> f x
     | EOF -> f0
 
-    (** val show_lookahead : lookahead -> char list **)
+    (** val showLookahead : lookahead -> char list **)
 
-    let show_lookahead = function
-    | LA a -> Ty.show_t a
+    let showLookahead = function
+    | LA a -> Ty.showT a
     | EOF -> 'E'::('O'::('F'::[]))
    end
 
@@ -1580,7 +1678,8 @@ module DefsFn =
      struct
       type t = Ty.nonterminal
 
-      (** val eq_dec : Ty.nonterminal -> Ty.nonterminal -> bool **)
+      (** val eq_dec :
+          Ty.nonterminal -> Ty.nonterminal -> bool **)
 
       let eq_dec =
         Ty.nt_eq_dec
@@ -1610,7 +1709,8 @@ module DefsFn =
      struct
       type t = Lookahead.lookahead
 
-      (** val eq_dec : Lookahead.lookahead -> Lookahead.lookahead -> bool **)
+      (** val eq_dec :
+          Lookahead.lookahead -> Lookahead.lookahead -> bool **)
 
       let eq_dec =
         lookahead_eq_dec
@@ -1657,18 +1757,21 @@ module DefsFn =
 
     type follow_map = LaSet.t NtMap.t
 
-    type parse_table = xprod ParseTable.t
+    type parse_table = CoreDefs.production ParseTable.t
    end
 
   module CollectionFacts =
    struct
-    module NtSetFacts = WFactsOn(Collections.NT_as_DT)(Collections.NtSet)
+    module NtSetFacts =
+     WFactsOn(Collections.NT_as_DT)(Collections.NtSet)
 
     module NtSetEqProps = EqProperties(Collections.NtSet)
 
-    module NtMapFacts = WFacts_fun(Collections.NT_as_DT)(Collections.NtMap)
+    module NtMapFacts =
+     WFacts_fun(Collections.NT_as_DT)(Collections.NtMap)
 
-    module LaSetFacts = WFactsOn(Collections.Lookahead_as_DT)(Collections.LaSet)
+    module LaSetFacts =
+     WFactsOn(Collections.Lookahead_as_DT)(Collections.LaSet)
 
     module LaSetEqProps = EqProperties(Collections.LaSet)
 
@@ -1677,16 +1780,19 @@ module DefsFn =
 
     module NP = Properties(Collections.NtSet)
 
-    module ND = WDecideOn(Collections.NT_as_DT)(Collections.NtSet)
+    module ND =
+     WDecideOn(Collections.NT_as_DT)(Collections.NtSet)
 
     module LP = Properties(Collections.LaSet)
 
-    module LD = WDecideOn(Collections.Lookahead_as_DT)(Collections.LaSet)
+    module LD =
+     WDecideOn(Collections.Lookahead_as_DT)(Collections.LaSet)
    end
 
   module Derivation =
    struct
-    (** val peek : token list -> Lookahead.lookahead **)
+    (** val peek :
+        CoreDefs.token list -> Lookahead.lookahead **)
 
     let peek = function
     | [] -> Lookahead.EOF
@@ -1695,56 +1801,91 @@ module DefsFn =
 
   module Utils =
    struct
-    (** val isNT : symbol -> bool **)
+    (** val isNT : CoreDefs.symbol -> bool **)
 
     let isNT = function
-    | T _ -> false
-    | NT _ -> true
+    | CoreDefs.T _ -> false
+    | CoreDefs.NT _ -> true
 
-    (** val isT : symbol -> bool **)
+    (** val isT : CoreDefs.symbol -> bool **)
 
     let isT = function
-    | T _ -> true
-    | NT _ -> false
+    | CoreDefs.T _ -> true
+    | CoreDefs.NT _ -> false
 
-    (** val lhs : xprod -> Ty.nonterminal **)
+    (** val lhs : CoreDefs.production -> Ty.nonterminal **)
 
     let lhs = function
     | ExistT (x0, _) -> let (x, _) = x0 in x
 
-    (** val rhs : xprod -> symbol list **)
+    (** val rhs :
+        CoreDefs.production -> CoreDefs.symbol list **)
 
     let rhs = function
     | ExistT (x, _) -> let (_, gamma) = x in gamma
 
-    (** val prodOf : xprod -> production **)
+    (** val baseProduction :
+        CoreDefs.production -> CoreDefs.base_production **)
 
-    let prodOf = function
-    | ExistT (p, _) -> p
+    let baseProduction = function
+    | ExistT (b, _) -> b
 
-    (** val prodsOf : grammar -> production list **)
+    (** val baseProductions :
+        CoreDefs.grammar -> CoreDefs.base_production list **)
 
-    let prodsOf g =
-      map prodOf (prods g)
+    let baseProductions g =
+      map baseProduction (CoreDefs.prods g)
 
     (** val pt_lookup :
-        Ty.nonterminal -> Lookahead.lookahead -> Collections.parse_table -> xprod
-        option **)
+        Ty.nonterminal -> Lookahead.lookahead ->
+        Collections.parse_table -> CoreDefs.production option **)
 
     let pt_lookup x la tbl =
       Collections.ParseTable.find (x, la) tbl
 
     (** val pt_add :
-        Ty.nonterminal -> Lookahead.lookahead -> xprod -> Collections.parse_table
-        -> Collections.parse_table **)
+        Ty.nonterminal -> Lookahead.lookahead ->
+        CoreDefs.production -> Collections.parse_table ->
+        Collections.parse_table **)
 
     let pt_add x la p tbl =
       Collections.ParseTable.add (x, la) p tbl
 
-    (** val fromNtList : Ty.nonterminal list -> Collections.NtSet.t **)
+    (** val fromNtList :
+        Ty.nonterminal list -> Collections.NtSet.t **)
 
     let fromNtList ls =
-      fold_right Collections.NtSet.add Collections.NtSet.empty ls
+      fold_right Collections.NtSet.add
+        Collections.NtSet.empty ls
+   end
+
+  module Formatting =
+   struct
+    (** val showSymbol : CoreDefs.symbol -> char list **)
+
+    let showSymbol = function
+    | CoreDefs.T a -> append ('T'::(' '::[])) (Ty.showT a)
+    | CoreDefs.NT x ->
+      append ('N'::('T'::(' '::[]))) (Ty.showNT x)
+
+    (** val showRhs : CoreDefs.symbol list -> char list **)
+
+    let showRhs gamma =
+      intersperse (','::(' '::[])) (map showSymbol gamma)
+
+    (** val showBaseProd :
+        CoreDefs.base_production -> char list **)
+
+    let showBaseProd = function
+    | (x, gamma) ->
+      append (Ty.showNT x)
+        (append (' '::('-'::('-'::('>'::(' '::[])))))
+          (showRhs gamma))
+
+    (** val showProd : CoreDefs.production -> char list **)
+
+    let showProd p =
+      showBaseProd (Utils.baseProduction p)
    end
 
   module Specs =
@@ -1762,47 +1903,41 @@ module type T =
 
   module Defs :
    sig
-    type symbol =
-    | T of SymTy.terminal
-    | NT of SymTy.nonterminal
+    module CoreDefs :
+     sig
+      type symbol =
+      | T of SymTy.terminal
+      | NT of SymTy.nonterminal
 
-    val symbol_rect :
-      (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> 'a1) -> symbol -> 'a1
+      val symbol_rect :
+        (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> 'a1)
+        -> symbol -> 'a1
 
-    val symbol_rec :
-      (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> 'a1) -> symbol -> 'a1
+      val symbol_rec :
+        (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> 'a1)
+        -> symbol -> 'a1
 
-    type production = SymTy.nonterminal * symbol list
+      val symbol_eq_dec : symbol -> symbol -> bool
 
-    val symbol_eq_dec : symbol -> symbol -> bool
+      type symbol_semty = __
 
-    val show_symbol : symbol -> char list
+      type rhs_semty = tuple
 
-    val prependToAll : char list -> char list list -> char list
+      type base_production = SymTy.nonterminal * symbol list
 
-    val intersperse : char list -> char list list -> char list
+      type action_ty = __
 
-    val show_rhs : symbol list -> char list
+      type production = (base_production, action_ty) sigT
 
-    val show_prod : production -> char list
+      type token = (SymTy.terminal, SymTy.t_semty) sigT
 
-    type symbol_semty = __
+      type grammar = { start : SymTy.nonterminal;
+                       prods : production list }
 
-    type tuple = __
+      val start : grammar -> SymTy.nonterminal
 
-    type rhs_semty = tuple
-
-    type action_ty = __
-
-    type xprod = (production, action_ty) sigT
-
-    type token = (SymTy.terminal, SymTy.t_semty) sigT
-
-    type grammar = { start : SymTy.nonterminal; prods : xprod list }
-
-    val start : grammar -> SymTy.nonterminal
-
-    val prods : grammar -> xprod list
+      val prods : grammar -> production list
+     end
 
     module Tree :
      sig
@@ -1811,12 +1946,12 @@ module type T =
       | Node of SymTy.nonterminal * tree list
 
       val tree_rect :
-        (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> tree list -> 'a1) -> tree
-        -> 'a1
+        (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> tree
+        list -> 'a1) -> tree -> 'a1
 
       val tree_rec :
-        (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> tree list -> 'a1) -> tree
-        -> 'a1
+        (SymTy.terminal -> 'a1) -> (SymTy.nonterminal -> tree
+        list -> 'a1) -> tree -> 'a1
 
       val isNode : tree -> bool
 
@@ -1829,11 +1964,13 @@ module type T =
       | LA of SymTy.terminal
       | EOF
 
-      val lookahead_rect : (SymTy.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1
+      val lookahead_rect :
+        (SymTy.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1
 
-      val lookahead_rec : (SymTy.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1
+      val lookahead_rec :
+        (SymTy.terminal -> 'a1) -> 'a1 -> lookahead -> 'a1
 
-      val show_lookahead : lookahead -> char list
+      val showLookahead : lookahead -> char list
      end
 
     module Collections :
@@ -1842,14 +1979,16 @@ module type T =
        sig
         type t = SymTy.nonterminal
 
-        val eq_dec : SymTy.nonterminal -> SymTy.nonterminal -> bool
+        val eq_dec :
+          SymTy.nonterminal -> SymTy.nonterminal -> bool
        end
 
       module NT_as_DT :
        sig
         type t = SymTy.nonterminal
 
-        val eq_dec : SymTy.nonterminal -> SymTy.nonterminal -> bool
+        val eq_dec :
+          SymTy.nonterminal -> SymTy.nonterminal -> bool
        end
 
       module NtSet :
@@ -1905,12 +2044,14 @@ module type T =
          sig
           type t = SymTy.nonterminal
 
-          val eq_dec : SymTy.nonterminal -> SymTy.nonterminal -> bool
+          val eq_dec :
+            SymTy.nonterminal -> SymTy.nonterminal -> bool
          end
 
         type elt = SymTy.nonterminal
 
-        type t_ = Raw.t
+        type t_ =
+          Raw.t
           (* singleton inductive, whose constructor was Mkt *)
 
         val this : t_ -> Raw.t
@@ -1981,72 +2122,92 @@ module type T =
           | R_mem_1 of 'elt t * SymTy.nonterminal * 'elt
              * (SymTy.nonterminal * 'elt) list
           | R_mem_2 of 'elt t * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list * bool * 'elt coq_R_mem
+             * (SymTy.nonterminal * 'elt) list * bool
+             * 'elt coq_R_mem
 
           val coq_R_mem_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool -> 'a1
-            coq_R_mem -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t
+            -> bool -> 'a1 coq_R_mem -> 'a2
 
           val coq_R_mem_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool -> 'a1
-            coq_R_mem -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> bool -> 'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t
+            -> bool -> 'a1 coq_R_mem -> 'a2
 
           val mem_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
           val mem_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
-          val coq_R_mem_correct : key -> 'a1 t -> bool -> 'a1 coq_R_mem
+          val coq_R_mem_correct :
+            key -> 'a1 t -> bool -> 'a1 coq_R_mem
 
           val find : key -> 'a1 t -> 'a1 option
 
           type 'elt coq_R_find =
           | R_find_0 of 'elt t
-          | R_find_1 of 'elt t * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list
-          | R_find_2 of 'elt t * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list * 'elt option * 'elt coq_R_find
+          | R_find_1 of 'elt t * SymTy.nonterminal * 
+             'elt * (SymTy.nonterminal * 'elt) list
+          | R_find_2 of 'elt t * SymTy.nonterminal * 
+             'elt * (SymTy.nonterminal * 'elt) list
+             * 'elt option * 'elt coq_R_find
 
           val coq_R_find_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a1 option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1
-            option -> 'a1 coq_R_find -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a1 option -> 'a1 coq_R_find -> 'a2 -> 'a2) ->
+            'a1 t -> 'a1 option -> 'a1 coq_R_find -> 'a2
 
           val coq_R_find_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a1 option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1
-            option -> 'a1 coq_R_find -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a1 option -> 'a1 coq_R_find -> 'a2 -> 'a2) ->
+            'a1 t -> 'a1 option -> 'a1 coq_R_find -> 'a2
 
           val find_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
           val find_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
-          val coq_R_find_correct : key -> 'a1 t -> 'a1 option -> 'a1 coq_R_find
+          val coq_R_find_correct :
+            key -> 'a1 t -> 'a1 option -> 'a1 coq_R_find
 
           val add : key -> 'a1 -> 'a1 t -> 'a1 t
 
@@ -2055,153 +2216,194 @@ module type T =
           | R_add_1 of 'elt t * SymTy.nonterminal * 'elt
              * (SymTy.nonterminal * 'elt) list
           | R_add_2 of 'elt t * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list * 'elt t * 'elt coq_R_add
+             * (SymTy.nonterminal * 'elt) list * 'elt t
+             * 'elt coq_R_add
 
           val coq_R_add_rect :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal ->
-            'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1
-            t -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> __ -> __ -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t
-            -> 'a1 coq_R_add -> 'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t
+            -> 'a1 t -> 'a1 coq_R_add -> 'a2
 
           val coq_R_add_rec :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal ->
-            'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1
-            t -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> __ -> __ -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t
-            -> 'a1 coq_R_add -> 'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a1 t -> 'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t
+            -> 'a1 t -> 'a1 coq_R_add -> 'a2
 
           val add_rect :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal ->
-            'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1
-            t -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
           val add_rec :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal ->
-            'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1
-            t -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
-          val coq_R_add_correct : key -> 'a1 -> 'a1 t -> 'a1 t -> 'a1 coq_R_add
+          val coq_R_add_correct :
+            key -> 'a1 -> 'a1 t -> 'a1 t -> 'a1 coq_R_add
 
           val remove : key -> 'a1 t -> 'a1 t
 
           type 'elt coq_R_remove =
           | R_remove_0 of 'elt t
-          | R_remove_1 of 'elt t * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list
-          | R_remove_2 of 'elt t * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list * 'elt t * 'elt coq_R_remove
+          | R_remove_1 of 'elt t * SymTy.nonterminal * 
+             'elt * (SymTy.nonterminal * 'elt) list
+          | R_remove_2 of 'elt t * SymTy.nonterminal * 
+             'elt * (SymTy.nonterminal * 'elt) list * 
+             'elt t * 'elt coq_R_remove
 
           val coq_R_remove_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a1 t -> 'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t ->
-            'a1 coq_R_remove -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a1 t -> 'a1 coq_R_remove -> 'a2 -> 'a2) ->
+            'a1 t -> 'a1 t -> 'a1 coq_R_remove -> 'a2
 
           val coq_R_remove_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a1 t -> 'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t ->
-            'a1 coq_R_remove -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a1 t -> 'a1 coq_R_remove -> 'a2 -> 'a2) ->
+            'a1 t -> 'a1 t -> 'a1 coq_R_remove -> 'a2
 
           val remove_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
           val remove_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
-            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t ->
-            SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __ -> __
-            -> __ -> 'a2 -> 'a2) -> 'a1 t -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> SymTy.nonterminal -> 'a1 ->
+            (SymTy.nonterminal * 'a1) list -> __ -> __ -> __
+            -> 'a2 -> 'a2) -> 'a1 t -> 'a2
 
-          val coq_R_remove_correct : key -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove
+          val coq_R_remove_correct :
+            key -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove
 
           val elements : 'a1 t -> 'a1 t
 
-          val fold : (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
+          val fold :
+            (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
 
           type ('elt, 'a) coq_R_fold =
           | R_fold_0 of 'elt t * 'a
-          | R_fold_1 of 'elt t * 'a * SymTy.nonterminal * 'elt
-             * (SymTy.nonterminal * 'elt) list * 'a * ('elt, 'a) coq_R_fold
+          | R_fold_1 of 'elt t * 'a * SymTy.nonterminal
+             * 'elt * (SymTy.nonterminal * 'elt) list * 
+             'a * ('elt, 'a) coq_R_fold
 
           val coq_R_fold_rect :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a2
-            -> ('a1, 'a2) coq_R_fold -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> SymTy.nonterminal ->
+            'a1 -> (SymTy.nonterminal * 'a1) list -> __ ->
+            'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 -> 'a3) ->
+            'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold ->
+            'a3
 
           val coq_R_fold_rec :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> 'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a2
-            -> ('a1, 'a2) coq_R_fold -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> SymTy.nonterminal ->
+            'a1 -> (SymTy.nonterminal * 'a1) list -> __ ->
+            'a2 -> ('a1, 'a2) coq_R_fold -> 'a3 -> 'a3) ->
+            'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2) coq_R_fold ->
+            'a3
 
           val fold_rect :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> SymTy.nonterminal ->
+            'a1 -> (SymTy.nonterminal * 'a1) list -> __ ->
+            'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3
 
           val fold_rec :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> SymTy.nonterminal -> 'a1 -> (SymTy.nonterminal * 'a1) list -> __
-            -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> SymTy.nonterminal ->
+            'a1 -> (SymTy.nonterminal * 'a1) list -> __ ->
+            'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a3
 
           val coq_R_fold_correct :
-            (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2)
-            coq_R_fold
+            (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
+            -> ('a1, 'a2) coq_R_fold
 
-          val check : ('a1 -> 'a1 -> bool) -> key -> 'a1 -> 'a1 t -> bool
+          val check :
+            ('a1 -> 'a1 -> bool) -> key -> 'a1 -> 'a1 t ->
+            bool
 
-          val submap : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
+          val submap :
+            ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
 
-          val equal : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
+          val equal :
+            ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
 
           val map : ('a1 -> 'a2) -> 'a1 t -> 'a2 t
 
           val mapi : (key -> 'a1 -> 'a2) -> 'a1 t -> 'a2 t
 
-          val combine_l : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
+          val combine_l :
+            'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
 
-          val combine_r : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
+          val combine_r :
+            'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
 
           val fold_right_pair :
-            ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a3 -> ('a1 * 'a2) list -> 'a3
+            ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a3 -> ('a1 * 'a2)
+            list -> 'a3
 
-          val combine : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
+          val combine :
+            'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
 
           val at_least_left :
-            'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option
+            'a1 option -> 'a2 option -> ('a1 option * 'a2
+            option) option
 
           val at_least_right :
-            'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option
+            'a1 option -> 'a2 option -> ('a1 option * 'a2
+            option) option
 
           val at_least_one :
-            'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option
+            'a1 option -> 'a2 option -> ('a1 option * 'a2
+            option) option
 
           val option_cons :
-            key -> 'a1 option -> (key * 'a1) list -> (key * 'a1) list
+            key -> 'a1 option -> (key * 'a1) list ->
+            (key * 'a1) list
 
           val map2 :
-            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t ->
-            (key * 'a3) list
+            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t
+            -> 'a2 t -> (key * 'a3) list
 
           val at_least_one_then_f :
-            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 option -> 'a2 option ->
-            'a3 option
+            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1
+            option -> 'a2 option -> 'a3 option
          end
 
         module E :
          sig
           type t = SymTy.nonterminal
 
-          val eq_dec : SymTy.nonterminal -> SymTy.nonterminal -> bool
+          val eq_dec :
+            SymTy.nonterminal -> SymTy.nonterminal -> bool
          end
 
         type key = SymTy.nonterminal
@@ -2231,31 +2433,37 @@ module type T =
         val mapi : (key -> 'a1 -> 'a2) -> 'a1 t -> 'a2 t
 
         val map2 :
-          ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t -> 'a3 t
+          ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t
+          -> 'a2 t -> 'a3 t
 
         val elements : 'a1 t -> (key * 'a1) list
 
         val cardinal : 'a1 t -> nat
 
-        val fold : (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
+        val fold :
+          (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
 
-        val equal : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
+        val equal :
+          ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
        end
 
-      val lookahead_eq_dec : Lookahead.lookahead -> Lookahead.lookahead -> bool
+      val lookahead_eq_dec :
+        Lookahead.lookahead -> Lookahead.lookahead -> bool
 
       module MDT_Lookahead :
        sig
         type t = Lookahead.lookahead
 
-        val eq_dec : Lookahead.lookahead -> Lookahead.lookahead -> bool
+        val eq_dec :
+          Lookahead.lookahead -> Lookahead.lookahead -> bool
        end
 
       module Lookahead_as_DT :
        sig
         type t = Lookahead.lookahead
 
-        val eq_dec : Lookahead.lookahead -> Lookahead.lookahead -> bool
+        val eq_dec :
+          Lookahead.lookahead -> Lookahead.lookahead -> bool
        end
 
       module LaSet :
@@ -2311,12 +2519,14 @@ module type T =
          sig
           type t = Lookahead.lookahead
 
-          val eq_dec : Lookahead.lookahead -> Lookahead.lookahead -> bool
+          val eq_dec :
+            Lookahead.lookahead -> Lookahead.lookahead -> bool
          end
 
         type elt = Lookahead.lookahead
 
-        type t_ = Raw.t
+        type t_ =
+          Raw.t
           (* singleton inductive, whose constructor was Mkt *)
 
         val this : t_ -> Raw.t
@@ -2402,213 +2612,263 @@ module type T =
 
           type 'elt coq_R_mem =
           | R_mem_0 of 'elt t
-          | R_mem_1 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list
-          | R_mem_2 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list * bool
-             * 'elt coq_R_mem
+          | R_mem_1 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list
+          | R_mem_2 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list * bool * 'elt coq_R_mem
 
           val coq_R_mem_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> bool -> 'a1 coq_R_mem
-            -> 'a2 -> 'a2) -> 'a1 t -> bool -> 'a1 coq_R_mem -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> bool ->
+            'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool ->
+            'a1 coq_R_mem -> 'a2
 
           val coq_R_mem_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> bool -> 'a1 coq_R_mem
-            -> 'a2 -> 'a2) -> 'a1 t -> bool -> 'a1 coq_R_mem -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> bool ->
+            'a1 coq_R_mem -> 'a2 -> 'a2) -> 'a1 t -> bool ->
+            'a1 coq_R_mem -> 'a2
 
           val mem_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
           val mem_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
-          val coq_R_mem_correct : key -> 'a1 t -> bool -> 'a1 coq_R_mem
+          val coq_R_mem_correct :
+            key -> 'a1 t -> bool -> 'a1 coq_R_mem
 
           val find : key -> 'a1 t -> 'a1 option
 
           type 'elt coq_R_find =
           | R_find_0 of 'elt t
-          | R_find_1 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list
-          | R_find_2 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list * 'elt option
+          | R_find_1 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list
+          | R_find_2 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list * 'elt option
              * 'elt coq_R_find
 
           val coq_R_find_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 option -> 'a1
-            coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1 option -> 'a1 coq_R_find ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1
+            option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t
+            -> 'a1 option -> 'a1 coq_R_find -> 'a2
 
           val coq_R_find_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 option -> 'a1
-            coq_R_find -> 'a2 -> 'a2) -> 'a1 t -> 'a1 option -> 'a1 coq_R_find ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1
+            option -> 'a1 coq_R_find -> 'a2 -> 'a2) -> 'a1 t
+            -> 'a1 option -> 'a1 coq_R_find -> 'a2
 
           val find_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
           val find_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
-          val coq_R_find_correct : key -> 'a1 t -> 'a1 option -> 'a1 coq_R_find
+          val coq_R_find_correct :
+            key -> 'a1 t -> 'a1 option -> 'a1 coq_R_find
 
           val add : key -> 'a1 -> 'a1 t -> 'a1 t
 
           type 'elt coq_R_add =
           | R_add_0 of 'elt t
-          | R_add_1 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list
-          | R_add_2 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list * 'elt t
-             * 'elt coq_R_add
+          | R_add_1 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list
+          | R_add_2 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list * 'elt t * 'elt coq_R_add
 
           val coq_R_add_rect :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t -> 'a1 coq_R_add
-            -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t -> 'a1 coq_R_add -> 'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> __
+            -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t ->
+            'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t ->
+            'a1 coq_R_add -> 'a2
 
           val coq_R_add_rec :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t -> 'a1 coq_R_add
-            -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t -> 'a1 coq_R_add -> 'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> __
+            -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t ->
+            'a1 coq_R_add -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t ->
+            'a1 coq_R_add -> 'a2
 
           val add_rect :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> __
+            -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
           val add_rec :
-            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> 'a1 -> ('a1 t -> __ -> 'a2) -> ('a1 t ->
+            pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> __
+            -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
-          val coq_R_add_correct : key -> 'a1 -> 'a1 t -> 'a1 t -> 'a1 coq_R_add
+          val coq_R_add_correct :
+            key -> 'a1 -> 'a1 t -> 'a1 t -> 'a1 coq_R_add
 
           val remove : key -> 'a1 t -> 'a1 t
 
           type 'elt coq_R_remove =
           | R_remove_0 of 'elt t
-          | R_remove_1 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list
-          | R_remove_2 of 'elt t * pt_key * 'elt * (pt_key * 'elt) list * 'elt t
+          | R_remove_1 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list
+          | R_remove_2 of 'elt t * pt_key * 'elt
+             * (pt_key * 'elt) list * 'elt t
              * 'elt coq_R_remove
 
           val coq_R_remove_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t -> 'a1
-            coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t ->
+            'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t
+            -> 'a1 coq_R_remove -> 'a2
 
           val coq_R_remove_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t -> 'a1
-            coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove -> 'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a1 t ->
+            'a1 coq_R_remove -> 'a2 -> 'a2) -> 'a1 t -> 'a1 t
+            -> 'a1 coq_R_remove -> 'a2
 
           val remove_rect :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
           val remove_rec :
-            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
-            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2) -> ('a1 t -> pt_key ->
-            'a1 -> (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 -> 'a2) -> 'a1 t ->
-            'a2
+            key -> ('a1 t -> __ -> 'a2) -> ('a1 t -> pt_key
+            -> 'a1 -> (pt_key * 'a1) list -> __ -> __ -> __
+            -> 'a2) -> ('a1 t -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> __ -> __ -> 'a2 ->
+            'a2) -> 'a1 t -> 'a2
 
-          val coq_R_remove_correct : key -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove
+          val coq_R_remove_correct :
+            key -> 'a1 t -> 'a1 t -> 'a1 coq_R_remove
 
           val elements : 'a1 t -> 'a1 t
 
-          val fold : (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
+          val fold :
+            (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
 
           type ('elt, 'a) coq_R_fold =
           | R_fold_0 of 'elt t * 'a
-          | R_fold_1 of 'elt t * 'a * pt_key * 'elt * (pt_key * 'elt) list * 
-             'a * ('elt, 'a) coq_R_fold
+          | R_fold_1 of 'elt t * 'a * pt_key * 'elt
+             * (pt_key * 'elt) list * 'a
+             * ('elt, 'a) coq_R_fold
 
           val coq_R_fold_rect :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> 'a2 -> ('a1, 'a2)
-            coq_R_fold -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2)
-            coq_R_fold -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> 'a2 -> ('a1, 'a2)
+            coq_R_fold -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a2
+            -> ('a1, 'a2) coq_R_fold -> 'a3
 
           val coq_R_fold_rec :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> 'a2 -> ('a1, 'a2)
-            coq_R_fold -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2)
-            coq_R_fold -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> 'a2 -> ('a1, 'a2)
+            coq_R_fold -> 'a3 -> 'a3) -> 'a1 t -> 'a2 -> 'a2
+            -> ('a1, 'a2) coq_R_fold -> 'a3
 
           val fold_rect :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> 'a3 -> 'a3) -> 'a1
-            t -> 'a2 -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> 'a3 -> 'a3) -> 'a1 t
+            -> 'a2 -> 'a3
 
           val fold_rec :
-            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __ -> 'a3) -> ('a1 t ->
-            'a2 -> pt_key -> 'a1 -> (pt_key * 'a1) list -> __ -> 'a3 -> 'a3) -> 'a1
-            t -> 'a2 -> 'a3
+            (key -> 'a1 -> 'a2 -> 'a2) -> ('a1 t -> 'a2 -> __
+            -> 'a3) -> ('a1 t -> 'a2 -> pt_key -> 'a1 ->
+            (pt_key * 'a1) list -> __ -> 'a3 -> 'a3) -> 'a1 t
+            -> 'a2 -> 'a3
 
           val coq_R_fold_correct :
-            (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2 -> ('a1, 'a2)
-            coq_R_fold
+            (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
+            -> ('a1, 'a2) coq_R_fold
 
-          val check : ('a1 -> 'a1 -> bool) -> key -> 'a1 -> 'a1 t -> bool
+          val check :
+            ('a1 -> 'a1 -> bool) -> key -> 'a1 -> 'a1 t ->
+            bool
 
-          val submap : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
+          val submap :
+            ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
 
-          val equal : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
+          val equal :
+            ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
 
           val map : ('a1 -> 'a2) -> 'a1 t -> 'a2 t
 
           val mapi : (key -> 'a1 -> 'a2) -> 'a1 t -> 'a2 t
 
-          val combine_l : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
+          val combine_l :
+            'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
 
-          val combine_r : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
+          val combine_r :
+            'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
 
           val fold_right_pair :
-            ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a3 -> ('a1 * 'a2) list -> 'a3
+            ('a1 -> 'a2 -> 'a3 -> 'a3) -> 'a3 -> ('a1 * 'a2)
+            list -> 'a3
 
-          val combine : 'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
+          val combine :
+            'a1 t -> 'a2 t -> ('a1 option * 'a2 option) t
 
           val at_least_left :
-            'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option
+            'a1 option -> 'a2 option -> ('a1 option * 'a2
+            option) option
 
           val at_least_right :
-            'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option
+            'a1 option -> 'a2 option -> ('a1 option * 'a2
+            option) option
 
           val at_least_one :
-            'a1 option -> 'a2 option -> ('a1 option * 'a2 option) option
+            'a1 option -> 'a2 option -> ('a1 option * 'a2
+            option) option
 
           val option_cons :
-            key -> 'a1 option -> (key * 'a1) list -> (key * 'a1) list
+            key -> 'a1 option -> (key * 'a1) list ->
+            (key * 'a1) list
 
           val map2 :
-            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t ->
-            (key * 'a3) list
+            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t
+            -> 'a2 t -> (key * 'a3) list
 
           val at_least_one_then_f :
-            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 option -> 'a2 option ->
-            'a3 option
+            ('a1 option -> 'a2 option -> 'a3 option) -> 'a1
+            option -> 'a2 option -> 'a3 option
          end
 
         module E :
@@ -2645,29 +2905,33 @@ module type T =
         val mapi : (key -> 'a1 -> 'a2) -> 'a1 t -> 'a2 t
 
         val map2 :
-          ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t -> 'a2 t -> 'a3 t
+          ('a1 option -> 'a2 option -> 'a3 option) -> 'a1 t
+          -> 'a2 t -> 'a3 t
 
         val elements : 'a1 t -> (key * 'a1) list
 
         val cardinal : 'a1 t -> nat
 
-        val fold : (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
+        val fold :
+          (key -> 'a1 -> 'a2 -> 'a2) -> 'a1 t -> 'a2 -> 'a2
 
-        val equal : ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
+        val equal :
+          ('a1 -> 'a1 -> bool) -> 'a1 t -> 'a1 t -> bool
        end
 
       type first_map = LaSet.t NtMap.t
 
       type follow_map = LaSet.t NtMap.t
 
-      type parse_table = xprod ParseTable.t
+      type parse_table = CoreDefs.production ParseTable.t
      end
 
     module CollectionFacts :
      sig
       module NtSetFacts :
        sig
-        val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+        val eqb :
+          SymTy.nonterminal -> SymTy.nonterminal -> bool
        end
 
       module NtSetEqProps :
@@ -2678,7 +2942,8 @@ module type T =
            sig
             module F :
              sig
-              val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+              val eqb :
+                SymTy.nonterminal -> SymTy.nonterminal -> bool
              end
 
             module MSetLogicalFacts :
@@ -2696,85 +2961,112 @@ module type T =
 
           module FM :
            sig
-            val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+            val eqb :
+              SymTy.nonterminal -> SymTy.nonterminal -> bool
            end
 
-          val coq_In_dec : Collections.NtSet.elt -> Collections.NtSet.t -> bool
+          val coq_In_dec :
+            Collections.NtSet.elt -> Collections.NtSet.t ->
+            bool
 
-          val of_list : Collections.NtSet.elt list -> Collections.NtSet.t
+          val of_list :
+            Collections.NtSet.elt list -> Collections.NtSet.t
 
-          val to_list : Collections.NtSet.t -> Collections.NtSet.elt list
+          val to_list :
+            Collections.NtSet.t -> Collections.NtSet.elt list
 
           val fold_rec :
-            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.NtSet.t ->
-            (Collections.NtSet.t -> __ -> 'a2) -> (Collections.NtSet.elt -> 'a1 ->
-            Collections.NtSet.t -> Collections.NtSet.t -> __ -> __ -> __ -> 'a2 ->
-            'a2) -> 'a2
+            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            Collections.NtSet.t -> (Collections.NtSet.t -> __
+            -> 'a2) -> (Collections.NtSet.elt -> 'a1 ->
+            Collections.NtSet.t -> Collections.NtSet.t -> __
+            -> __ -> __ -> 'a2 -> 'a2) -> 'a2
 
           val fold_rec_bis :
-            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.NtSet.t ->
-            (Collections.NtSet.t -> Collections.NtSet.t -> 'a1 -> __ -> 'a2 -> 'a2)
-            -> 'a2 -> (Collections.NtSet.elt -> 'a1 -> Collections.NtSet.t -> __ ->
-            __ -> 'a2 -> 'a2) -> 'a2
+            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            Collections.NtSet.t -> (Collections.NtSet.t ->
+            Collections.NtSet.t -> 'a1 -> __ -> 'a2 -> 'a2)
+            -> 'a2 -> (Collections.NtSet.elt -> 'a1 ->
+            Collections.NtSet.t -> __ -> __ -> 'a2 -> 'a2) ->
+            'a2
 
           val fold_rec_nodep :
-            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.NtSet.t ->
-            'a2 -> (Collections.NtSet.elt -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2
+            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            Collections.NtSet.t -> 'a2 ->
+            (Collections.NtSet.elt -> 'a1 -> __ -> 'a2 ->
+            'a2) -> 'a2
 
           val fold_rec_weak :
-            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> (Collections.NtSet.t ->
-            Collections.NtSet.t -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2 ->
-            (Collections.NtSet.elt -> 'a1 -> Collections.NtSet.t -> __ -> 'a2 ->
-            'a2) -> Collections.NtSet.t -> 'a2
+            (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            (Collections.NtSet.t -> Collections.NtSet.t ->
+            'a1 -> __ -> 'a2 -> 'a2) -> 'a2 ->
+            (Collections.NtSet.elt -> 'a1 ->
+            Collections.NtSet.t -> __ -> 'a2 -> 'a2) ->
+            Collections.NtSet.t -> 'a2
 
           val fold_rel :
-            (Collections.NtSet.elt -> 'a1 -> 'a1) -> (Collections.NtSet.elt -> 'a2
-            -> 'a2) -> 'a1 -> 'a2 -> Collections.NtSet.t -> 'a3 ->
-            (Collections.NtSet.elt -> 'a1 -> 'a2 -> __ -> 'a3 -> 'a3) -> 'a3
+            (Collections.NtSet.elt -> 'a1 -> 'a1) ->
+            (Collections.NtSet.elt -> 'a2 -> 'a2) -> 'a1 ->
+            'a2 -> Collections.NtSet.t -> 'a3 ->
+            (Collections.NtSet.elt -> 'a1 -> 'a2 -> __ -> 'a3
+            -> 'a3) -> 'a3
 
           val set_induction :
-            (Collections.NtSet.t -> __ -> 'a1) -> (Collections.NtSet.t ->
-            Collections.NtSet.t -> 'a1 -> Collections.NtSet.elt -> __ -> __ -> 'a1)
+            (Collections.NtSet.t -> __ -> 'a1) ->
+            (Collections.NtSet.t -> Collections.NtSet.t ->
+            'a1 -> Collections.NtSet.elt -> __ -> __ -> 'a1)
             -> Collections.NtSet.t -> 'a1
 
           val set_induction_bis :
-            (Collections.NtSet.t -> Collections.NtSet.t -> __ -> 'a1 -> 'a1) -> 'a1
-            -> (Collections.NtSet.elt -> Collections.NtSet.t -> __ -> 'a1 -> 'a1)
-            -> Collections.NtSet.t -> 'a1
+            (Collections.NtSet.t -> Collections.NtSet.t -> __
+            -> 'a1 -> 'a1) -> 'a1 -> (Collections.NtSet.elt
+            -> Collections.NtSet.t -> __ -> 'a1 -> 'a1) ->
+            Collections.NtSet.t -> 'a1
 
-          val cardinal_inv_2 : Collections.NtSet.t -> nat -> Collections.NtSet.elt
+          val cardinal_inv_2 :
+            Collections.NtSet.t -> nat ->
+            Collections.NtSet.elt
 
-          val cardinal_inv_2b : Collections.NtSet.t -> Collections.NtSet.elt
+          val cardinal_inv_2b :
+            Collections.NtSet.t -> Collections.NtSet.elt
          end
 
-        val choose_mem_3 : Collections.NtSet.t -> Collections.NtSet.elt
+        val choose_mem_3 :
+          Collections.NtSet.t -> Collections.NtSet.elt
 
         val set_rec :
-          (Collections.NtSet.t -> Collections.NtSet.t -> __ -> 'a1 -> 'a1) ->
-          (Collections.NtSet.t -> Collections.NtSet.elt -> __ -> 'a1 -> 'a1) -> 'a1
+          (Collections.NtSet.t -> Collections.NtSet.t -> __
+          -> 'a1 -> 'a1) -> (Collections.NtSet.t ->
+          Collections.NtSet.elt -> __ -> 'a1 -> 'a1) -> 'a1
           -> Collections.NtSet.t -> 'a1
 
         val for_all_mem_4 :
-          (Collections.NtSet.elt -> bool) -> Collections.NtSet.t ->
-          Collections.NtSet.elt
+          (Collections.NtSet.elt -> bool) ->
+          Collections.NtSet.t -> Collections.NtSet.elt
 
         val exists_mem_4 :
-          (Collections.NtSet.elt -> bool) -> Collections.NtSet.t ->
-          Collections.NtSet.elt
+          (Collections.NtSet.elt -> bool) ->
+          Collections.NtSet.t -> Collections.NtSet.elt
 
-        val sum : (Collections.NtSet.elt -> nat) -> Collections.NtSet.t -> nat
+        val sum :
+          (Collections.NtSet.elt -> nat) ->
+          Collections.NtSet.t -> nat
        end
 
       module NtMapFacts :
        sig
-        val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+        val eqb :
+          SymTy.nonterminal -> SymTy.nonterminal -> bool
 
-        val coq_In_dec : 'a1 Collections.NtMap.t -> Collections.NtMap.key -> bool
+        val coq_In_dec :
+          'a1 Collections.NtMap.t -> Collections.NtMap.key ->
+          bool
        end
 
       module LaSetFacts :
        sig
-        val eqb : Lookahead.lookahead -> Lookahead.lookahead -> bool
+        val eqb :
+          Lookahead.lookahead -> Lookahead.lookahead -> bool
        end
 
       module LaSetEqProps :
@@ -2785,7 +3077,9 @@ module type T =
            sig
             module F :
              sig
-              val eqb : Lookahead.lookahead -> Lookahead.lookahead -> bool
+              val eqb :
+                Lookahead.lookahead -> Lookahead.lookahead ->
+                bool
              end
 
             module MSetLogicalFacts :
@@ -2803,81 +3097,107 @@ module type T =
 
           module FM :
            sig
-            val eqb : Lookahead.lookahead -> Lookahead.lookahead -> bool
+            val eqb :
+              Lookahead.lookahead -> Lookahead.lookahead ->
+              bool
            end
 
-          val coq_In_dec : Collections.LaSet.elt -> Collections.LaSet.t -> bool
+          val coq_In_dec :
+            Collections.LaSet.elt -> Collections.LaSet.t ->
+            bool
 
-          val of_list : Collections.LaSet.elt list -> Collections.LaSet.t
+          val of_list :
+            Collections.LaSet.elt list -> Collections.LaSet.t
 
-          val to_list : Collections.LaSet.t -> Collections.LaSet.elt list
+          val to_list :
+            Collections.LaSet.t -> Collections.LaSet.elt list
 
           val fold_rec :
-            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.LaSet.t ->
-            (Collections.LaSet.t -> __ -> 'a2) -> (Collections.LaSet.elt -> 'a1 ->
-            Collections.LaSet.t -> Collections.LaSet.t -> __ -> __ -> __ -> 'a2 ->
-            'a2) -> 'a2
+            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            Collections.LaSet.t -> (Collections.LaSet.t -> __
+            -> 'a2) -> (Collections.LaSet.elt -> 'a1 ->
+            Collections.LaSet.t -> Collections.LaSet.t -> __
+            -> __ -> __ -> 'a2 -> 'a2) -> 'a2
 
           val fold_rec_bis :
-            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.LaSet.t ->
-            (Collections.LaSet.t -> Collections.LaSet.t -> 'a1 -> __ -> 'a2 -> 'a2)
-            -> 'a2 -> (Collections.LaSet.elt -> 'a1 -> Collections.LaSet.t -> __ ->
-            __ -> 'a2 -> 'a2) -> 'a2
+            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            Collections.LaSet.t -> (Collections.LaSet.t ->
+            Collections.LaSet.t -> 'a1 -> __ -> 'a2 -> 'a2)
+            -> 'a2 -> (Collections.LaSet.elt -> 'a1 ->
+            Collections.LaSet.t -> __ -> __ -> 'a2 -> 'a2) ->
+            'a2
 
           val fold_rec_nodep :
-            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.LaSet.t ->
-            'a2 -> (Collections.LaSet.elt -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2
+            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            Collections.LaSet.t -> 'a2 ->
+            (Collections.LaSet.elt -> 'a1 -> __ -> 'a2 ->
+            'a2) -> 'a2
 
           val fold_rec_weak :
-            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> (Collections.LaSet.t ->
-            Collections.LaSet.t -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2 ->
-            (Collections.LaSet.elt -> 'a1 -> Collections.LaSet.t -> __ -> 'a2 ->
-            'a2) -> Collections.LaSet.t -> 'a2
+            (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+            (Collections.LaSet.t -> Collections.LaSet.t ->
+            'a1 -> __ -> 'a2 -> 'a2) -> 'a2 ->
+            (Collections.LaSet.elt -> 'a1 ->
+            Collections.LaSet.t -> __ -> 'a2 -> 'a2) ->
+            Collections.LaSet.t -> 'a2
 
           val fold_rel :
-            (Collections.LaSet.elt -> 'a1 -> 'a1) -> (Collections.LaSet.elt -> 'a2
-            -> 'a2) -> 'a1 -> 'a2 -> Collections.LaSet.t -> 'a3 ->
-            (Collections.LaSet.elt -> 'a1 -> 'a2 -> __ -> 'a3 -> 'a3) -> 'a3
+            (Collections.LaSet.elt -> 'a1 -> 'a1) ->
+            (Collections.LaSet.elt -> 'a2 -> 'a2) -> 'a1 ->
+            'a2 -> Collections.LaSet.t -> 'a3 ->
+            (Collections.LaSet.elt -> 'a1 -> 'a2 -> __ -> 'a3
+            -> 'a3) -> 'a3
 
           val set_induction :
-            (Collections.LaSet.t -> __ -> 'a1) -> (Collections.LaSet.t ->
-            Collections.LaSet.t -> 'a1 -> Collections.LaSet.elt -> __ -> __ -> 'a1)
+            (Collections.LaSet.t -> __ -> 'a1) ->
+            (Collections.LaSet.t -> Collections.LaSet.t ->
+            'a1 -> Collections.LaSet.elt -> __ -> __ -> 'a1)
             -> Collections.LaSet.t -> 'a1
 
           val set_induction_bis :
-            (Collections.LaSet.t -> Collections.LaSet.t -> __ -> 'a1 -> 'a1) -> 'a1
-            -> (Collections.LaSet.elt -> Collections.LaSet.t -> __ -> 'a1 -> 'a1)
-            -> Collections.LaSet.t -> 'a1
+            (Collections.LaSet.t -> Collections.LaSet.t -> __
+            -> 'a1 -> 'a1) -> 'a1 -> (Collections.LaSet.elt
+            -> Collections.LaSet.t -> __ -> 'a1 -> 'a1) ->
+            Collections.LaSet.t -> 'a1
 
-          val cardinal_inv_2 : Collections.LaSet.t -> nat -> Collections.LaSet.elt
+          val cardinal_inv_2 :
+            Collections.LaSet.t -> nat ->
+            Collections.LaSet.elt
 
-          val cardinal_inv_2b : Collections.LaSet.t -> Collections.LaSet.elt
+          val cardinal_inv_2b :
+            Collections.LaSet.t -> Collections.LaSet.elt
          end
 
-        val choose_mem_3 : Collections.LaSet.t -> Collections.LaSet.elt
+        val choose_mem_3 :
+          Collections.LaSet.t -> Collections.LaSet.elt
 
         val set_rec :
-          (Collections.LaSet.t -> Collections.LaSet.t -> __ -> 'a1 -> 'a1) ->
-          (Collections.LaSet.t -> Collections.LaSet.elt -> __ -> 'a1 -> 'a1) -> 'a1
+          (Collections.LaSet.t -> Collections.LaSet.t -> __
+          -> 'a1 -> 'a1) -> (Collections.LaSet.t ->
+          Collections.LaSet.elt -> __ -> 'a1 -> 'a1) -> 'a1
           -> Collections.LaSet.t -> 'a1
 
         val for_all_mem_4 :
-          (Collections.LaSet.elt -> bool) -> Collections.LaSet.t ->
-          Collections.LaSet.elt
+          (Collections.LaSet.elt -> bool) ->
+          Collections.LaSet.t -> Collections.LaSet.elt
 
         val exists_mem_4 :
-          (Collections.LaSet.elt -> bool) -> Collections.LaSet.t ->
-          Collections.LaSet.elt
+          (Collections.LaSet.elt -> bool) ->
+          Collections.LaSet.t -> Collections.LaSet.elt
 
-        val sum : (Collections.LaSet.elt -> nat) -> Collections.LaSet.t -> nat
+        val sum :
+          (Collections.LaSet.elt -> nat) ->
+          Collections.LaSet.t -> nat
        end
 
       module ParseTableFacts :
        sig
-        val eqb : Collections.pt_key -> Collections.pt_key -> bool
+        val eqb :
+          Collections.pt_key -> Collections.pt_key -> bool
 
         val coq_In_dec :
-          'a1 Collections.ParseTable.t -> Collections.ParseTable.key -> bool
+          'a1 Collections.ParseTable.t ->
+          Collections.ParseTable.key -> bool
        end
 
       module NP :
@@ -2886,7 +3206,8 @@ module type T =
          sig
           module F :
            sig
-            val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+            val eqb :
+              SymTy.nonterminal -> SymTy.nonterminal -> bool
            end
 
           module MSetLogicalFacts :
@@ -2904,62 +3225,80 @@ module type T =
 
         module FM :
          sig
-          val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+          val eqb :
+            SymTy.nonterminal -> SymTy.nonterminal -> bool
          end
 
-        val coq_In_dec : Collections.NtSet.elt -> Collections.NtSet.t -> bool
+        val coq_In_dec :
+          Collections.NtSet.elt -> Collections.NtSet.t -> bool
 
-        val of_list : Collections.NtSet.elt list -> Collections.NtSet.t
+        val of_list :
+          Collections.NtSet.elt list -> Collections.NtSet.t
 
-        val to_list : Collections.NtSet.t -> Collections.NtSet.elt list
+        val to_list :
+          Collections.NtSet.t -> Collections.NtSet.elt list
 
         val fold_rec :
-          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.NtSet.t ->
-          (Collections.NtSet.t -> __ -> 'a2) -> (Collections.NtSet.elt -> 'a1 ->
-          Collections.NtSet.t -> Collections.NtSet.t -> __ -> __ -> __ -> 'a2 ->
-          'a2) -> 'a2
+          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          Collections.NtSet.t -> (Collections.NtSet.t -> __
+          -> 'a2) -> (Collections.NtSet.elt -> 'a1 ->
+          Collections.NtSet.t -> Collections.NtSet.t -> __ ->
+          __ -> __ -> 'a2 -> 'a2) -> 'a2
 
         val fold_rec_bis :
-          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.NtSet.t ->
-          (Collections.NtSet.t -> Collections.NtSet.t -> 'a1 -> __ -> 'a2 -> 'a2)
-          -> 'a2 -> (Collections.NtSet.elt -> 'a1 -> Collections.NtSet.t -> __ ->
-          __ -> 'a2 -> 'a2) -> 'a2
+          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          Collections.NtSet.t -> (Collections.NtSet.t ->
+          Collections.NtSet.t -> 'a1 -> __ -> 'a2 -> 'a2) ->
+          'a2 -> (Collections.NtSet.elt -> 'a1 ->
+          Collections.NtSet.t -> __ -> __ -> 'a2 -> 'a2) ->
+          'a2
 
         val fold_rec_nodep :
-          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.NtSet.t ->
-          'a2 -> (Collections.NtSet.elt -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2
+          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          Collections.NtSet.t -> 'a2 ->
+          (Collections.NtSet.elt -> 'a1 -> __ -> 'a2 -> 'a2)
+          -> 'a2
 
         val fold_rec_weak :
-          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 -> (Collections.NtSet.t ->
-          Collections.NtSet.t -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2 ->
-          (Collections.NtSet.elt -> 'a1 -> Collections.NtSet.t -> __ -> 'a2 -> 'a2)
-          -> Collections.NtSet.t -> 'a2
+          (Collections.NtSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          (Collections.NtSet.t -> Collections.NtSet.t -> 'a1
+          -> __ -> 'a2 -> 'a2) -> 'a2 ->
+          (Collections.NtSet.elt -> 'a1 ->
+          Collections.NtSet.t -> __ -> 'a2 -> 'a2) ->
+          Collections.NtSet.t -> 'a2
 
         val fold_rel :
-          (Collections.NtSet.elt -> 'a1 -> 'a1) -> (Collections.NtSet.elt -> 'a2 ->
-          'a2) -> 'a1 -> 'a2 -> Collections.NtSet.t -> 'a3 ->
-          (Collections.NtSet.elt -> 'a1 -> 'a2 -> __ -> 'a3 -> 'a3) -> 'a3
+          (Collections.NtSet.elt -> 'a1 -> 'a1) ->
+          (Collections.NtSet.elt -> 'a2 -> 'a2) -> 'a1 -> 'a2
+          -> Collections.NtSet.t -> 'a3 ->
+          (Collections.NtSet.elt -> 'a1 -> 'a2 -> __ -> 'a3
+          -> 'a3) -> 'a3
 
         val set_induction :
-          (Collections.NtSet.t -> __ -> 'a1) -> (Collections.NtSet.t ->
-          Collections.NtSet.t -> 'a1 -> Collections.NtSet.elt -> __ -> __ -> 'a1)
-          -> Collections.NtSet.t -> 'a1
-
-        val set_induction_bis :
-          (Collections.NtSet.t -> Collections.NtSet.t -> __ -> 'a1 -> 'a1) -> 'a1
-          -> (Collections.NtSet.elt -> Collections.NtSet.t -> __ -> 'a1 -> 'a1) ->
+          (Collections.NtSet.t -> __ -> 'a1) ->
+          (Collections.NtSet.t -> Collections.NtSet.t -> 'a1
+          -> Collections.NtSet.elt -> __ -> __ -> 'a1) ->
           Collections.NtSet.t -> 'a1
 
-        val cardinal_inv_2 : Collections.NtSet.t -> nat -> Collections.NtSet.elt
+        val set_induction_bis :
+          (Collections.NtSet.t -> Collections.NtSet.t -> __
+          -> 'a1 -> 'a1) -> 'a1 -> (Collections.NtSet.elt ->
+          Collections.NtSet.t -> __ -> 'a1 -> 'a1) ->
+          Collections.NtSet.t -> 'a1
 
-        val cardinal_inv_2b : Collections.NtSet.t -> Collections.NtSet.elt
+        val cardinal_inv_2 :
+          Collections.NtSet.t -> nat -> Collections.NtSet.elt
+
+        val cardinal_inv_2b :
+          Collections.NtSet.t -> Collections.NtSet.elt
        end
 
       module ND :
        sig
         module F :
          sig
-          val eqb : SymTy.nonterminal -> SymTy.nonterminal -> bool
+          val eqb :
+            SymTy.nonterminal -> SymTy.nonterminal -> bool
          end
 
         module MSetLogicalFacts :
@@ -2981,7 +3320,9 @@ module type T =
          sig
           module F :
            sig
-            val eqb : Lookahead.lookahead -> Lookahead.lookahead -> bool
+            val eqb :
+              Lookahead.lookahead -> Lookahead.lookahead ->
+              bool
            end
 
           module MSetLogicalFacts :
@@ -2999,62 +3340,80 @@ module type T =
 
         module FM :
          sig
-          val eqb : Lookahead.lookahead -> Lookahead.lookahead -> bool
+          val eqb :
+            Lookahead.lookahead -> Lookahead.lookahead -> bool
          end
 
-        val coq_In_dec : Collections.LaSet.elt -> Collections.LaSet.t -> bool
+        val coq_In_dec :
+          Collections.LaSet.elt -> Collections.LaSet.t -> bool
 
-        val of_list : Collections.LaSet.elt list -> Collections.LaSet.t
+        val of_list :
+          Collections.LaSet.elt list -> Collections.LaSet.t
 
-        val to_list : Collections.LaSet.t -> Collections.LaSet.elt list
+        val to_list :
+          Collections.LaSet.t -> Collections.LaSet.elt list
 
         val fold_rec :
-          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.LaSet.t ->
-          (Collections.LaSet.t -> __ -> 'a2) -> (Collections.LaSet.elt -> 'a1 ->
-          Collections.LaSet.t -> Collections.LaSet.t -> __ -> __ -> __ -> 'a2 ->
-          'a2) -> 'a2
+          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          Collections.LaSet.t -> (Collections.LaSet.t -> __
+          -> 'a2) -> (Collections.LaSet.elt -> 'a1 ->
+          Collections.LaSet.t -> Collections.LaSet.t -> __ ->
+          __ -> __ -> 'a2 -> 'a2) -> 'a2
 
         val fold_rec_bis :
-          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.LaSet.t ->
-          (Collections.LaSet.t -> Collections.LaSet.t -> 'a1 -> __ -> 'a2 -> 'a2)
-          -> 'a2 -> (Collections.LaSet.elt -> 'a1 -> Collections.LaSet.t -> __ ->
-          __ -> 'a2 -> 'a2) -> 'a2
+          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          Collections.LaSet.t -> (Collections.LaSet.t ->
+          Collections.LaSet.t -> 'a1 -> __ -> 'a2 -> 'a2) ->
+          'a2 -> (Collections.LaSet.elt -> 'a1 ->
+          Collections.LaSet.t -> __ -> __ -> 'a2 -> 'a2) ->
+          'a2
 
         val fold_rec_nodep :
-          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> Collections.LaSet.t ->
-          'a2 -> (Collections.LaSet.elt -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2
+          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          Collections.LaSet.t -> 'a2 ->
+          (Collections.LaSet.elt -> 'a1 -> __ -> 'a2 -> 'a2)
+          -> 'a2
 
         val fold_rec_weak :
-          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 -> (Collections.LaSet.t ->
-          Collections.LaSet.t -> 'a1 -> __ -> 'a2 -> 'a2) -> 'a2 ->
-          (Collections.LaSet.elt -> 'a1 -> Collections.LaSet.t -> __ -> 'a2 -> 'a2)
-          -> Collections.LaSet.t -> 'a2
+          (Collections.LaSet.elt -> 'a1 -> 'a1) -> 'a1 ->
+          (Collections.LaSet.t -> Collections.LaSet.t -> 'a1
+          -> __ -> 'a2 -> 'a2) -> 'a2 ->
+          (Collections.LaSet.elt -> 'a1 ->
+          Collections.LaSet.t -> __ -> 'a2 -> 'a2) ->
+          Collections.LaSet.t -> 'a2
 
         val fold_rel :
-          (Collections.LaSet.elt -> 'a1 -> 'a1) -> (Collections.LaSet.elt -> 'a2 ->
-          'a2) -> 'a1 -> 'a2 -> Collections.LaSet.t -> 'a3 ->
-          (Collections.LaSet.elt -> 'a1 -> 'a2 -> __ -> 'a3 -> 'a3) -> 'a3
+          (Collections.LaSet.elt -> 'a1 -> 'a1) ->
+          (Collections.LaSet.elt -> 'a2 -> 'a2) -> 'a1 -> 'a2
+          -> Collections.LaSet.t -> 'a3 ->
+          (Collections.LaSet.elt -> 'a1 -> 'a2 -> __ -> 'a3
+          -> 'a3) -> 'a3
 
         val set_induction :
-          (Collections.LaSet.t -> __ -> 'a1) -> (Collections.LaSet.t ->
-          Collections.LaSet.t -> 'a1 -> Collections.LaSet.elt -> __ -> __ -> 'a1)
-          -> Collections.LaSet.t -> 'a1
-
-        val set_induction_bis :
-          (Collections.LaSet.t -> Collections.LaSet.t -> __ -> 'a1 -> 'a1) -> 'a1
-          -> (Collections.LaSet.elt -> Collections.LaSet.t -> __ -> 'a1 -> 'a1) ->
+          (Collections.LaSet.t -> __ -> 'a1) ->
+          (Collections.LaSet.t -> Collections.LaSet.t -> 'a1
+          -> Collections.LaSet.elt -> __ -> __ -> 'a1) ->
           Collections.LaSet.t -> 'a1
 
-        val cardinal_inv_2 : Collections.LaSet.t -> nat -> Collections.LaSet.elt
+        val set_induction_bis :
+          (Collections.LaSet.t -> Collections.LaSet.t -> __
+          -> 'a1 -> 'a1) -> 'a1 -> (Collections.LaSet.elt ->
+          Collections.LaSet.t -> __ -> 'a1 -> 'a1) ->
+          Collections.LaSet.t -> 'a1
 
-        val cardinal_inv_2b : Collections.LaSet.t -> Collections.LaSet.elt
+        val cardinal_inv_2 :
+          Collections.LaSet.t -> nat -> Collections.LaSet.elt
+
+        val cardinal_inv_2b :
+          Collections.LaSet.t -> Collections.LaSet.elt
        end
 
       module LD :
        sig
         module F :
          sig
-          val eqb : Lookahead.lookahead -> Lookahead.lookahead -> bool
+          val eqb :
+            Lookahead.lookahead -> Lookahead.lookahead -> bool
          end
 
         module MSetLogicalFacts :
@@ -3073,39 +3432,55 @@ module type T =
 
     module Derivation :
      sig
-      val peek : token list -> Lookahead.lookahead
+      val peek : CoreDefs.token list -> Lookahead.lookahead
      end
 
     module Utils :
      sig
-      val isNT : symbol -> bool
+      val isNT : CoreDefs.symbol -> bool
 
-      val isT : symbol -> bool
+      val isT : CoreDefs.symbol -> bool
 
-      val lhs : xprod -> SymTy.nonterminal
+      val lhs : CoreDefs.production -> SymTy.nonterminal
 
-      val rhs : xprod -> symbol list
+      val rhs : CoreDefs.production -> CoreDefs.symbol list
 
-      val prodOf : xprod -> production
+      val baseProduction :
+        CoreDefs.production -> CoreDefs.base_production
 
-      val prodsOf : grammar -> production list
+      val baseProductions :
+        CoreDefs.grammar -> CoreDefs.base_production list
 
       val pt_lookup :
-        SymTy.nonterminal -> Lookahead.lookahead -> Collections.parse_table ->
-        xprod option
+        SymTy.nonterminal -> Lookahead.lookahead ->
+        Collections.parse_table -> CoreDefs.production option
 
       val pt_add :
-        SymTy.nonterminal -> Lookahead.lookahead -> xprod ->
-        Collections.parse_table -> Collections.parse_table
+        SymTy.nonterminal -> Lookahead.lookahead ->
+        CoreDefs.production -> Collections.parse_table ->
+        Collections.parse_table
 
-      val fromNtList : SymTy.nonterminal list -> Collections.NtSet.t
+      val fromNtList :
+        SymTy.nonterminal list -> Collections.NtSet.t
+     end
+
+    module Formatting :
+     sig
+      val showSymbol : CoreDefs.symbol -> char list
+
+      val showRhs : CoreDefs.symbol list -> char list
+
+      val showBaseProd : CoreDefs.base_production -> char list
+
+      val showProd : CoreDefs.production -> char list
      end
 
     module Specs :
      sig
       type first_map = Collections.LaSet.t Collections.NtMap.t
 
-      type follow_map = Collections.LaSet.t Collections.NtMap.t
+      type follow_map =
+        Collections.LaSet.t Collections.NtMap.t
      end
    end
  end
@@ -3113,28 +3488,34 @@ module type T =
 module LemmasFn =
  functor (G:T) ->
  struct
-  (** val production_eq_dec : G.Defs.production -> G.Defs.production -> bool **)
+  (** val base_production_eq_dec :
+      G.Defs.CoreDefs.base_production ->
+      G.Defs.CoreDefs.base_production -> bool **)
 
-  let production_eq_dec p p' =
-    let (x, x0) = p in
-    let (n, l) = p' in
+  let base_production_eq_dec b b' =
+    let (x, x0) = b in
+    let (n, l) = b' in
     if G.SymTy.nt_eq_dec x n
     then let rec f l0 x1 =
            match l0 with
-           | [] -> (match x1 with
-                    | [] -> true
-                    | _ :: _ -> false)
+           | [] ->
+             (match x1 with
+              | [] -> true
+              | _ :: _ -> false)
            | y :: l1 ->
              (match x1 with
               | [] -> false
               | s :: l2 ->
-                if G.Defs.symbol_rect (fun t0 x2 ->
+                if G.Defs.CoreDefs.symbol_rect (fun t0 x2 ->
                      match x2 with
-                     | G.Defs.T t1 -> G.SymTy.t_eq_dec t0 t1
-                     | G.Defs.NT _ -> false) (fun n0 x2 ->
+                     | G.Defs.CoreDefs.T t1 ->
+                       G.SymTy.t_eq_dec t0 t1
+                     | G.Defs.CoreDefs.NT _ -> false)
+                     (fun n0 x2 ->
                      match x2 with
-                     | G.Defs.T _ -> false
-                     | G.Defs.NT n1 -> G.SymTy.nt_eq_dec n0 n1) y s
+                     | G.Defs.CoreDefs.T _ -> false
+                     | G.Defs.CoreDefs.NT n1 ->
+                       G.SymTy.nt_eq_dec n0 n1) y s
                 then f l1 l2
                 else false)
          in f x0 l
@@ -3146,29 +3527,33 @@ module ParserFn =
  struct
   module L = LemmasFn(G)
 
-  (** val t_eq_dec : G.SymTy.terminal -> G.SymTy.terminal -> bool **)
+  (** val t_eq_dec :
+      G.SymTy.terminal -> G.SymTy.terminal -> bool **)
 
   let t_eq_dec =
     G.SymTy.t_eq_dec
 
-  (** val nt_eq_dec : G.SymTy.nonterminal -> G.SymTy.nonterminal -> bool **)
+  (** val nt_eq_dec :
+      G.SymTy.nonterminal -> G.SymTy.nonterminal -> bool **)
 
   let nt_eq_dec =
     G.SymTy.nt_eq_dec
 
   type sym_arg =
-  | F_arg of G.Defs.symbol
-  | G_arg of G.Defs.symbol list
+  | F_arg of G.Defs.CoreDefs.symbol
+  | G_arg of G.Defs.CoreDefs.symbol list
 
   (** val sym_arg_rect :
-      (G.Defs.symbol -> 'a1) -> (G.Defs.symbol list -> 'a1) -> sym_arg -> 'a1 **)
+      (G.Defs.CoreDefs.symbol -> 'a1) ->
+      (G.Defs.CoreDefs.symbol list -> 'a1) -> sym_arg -> 'a1 **)
 
   let sym_arg_rect f f0 = function
   | F_arg x -> f x
   | G_arg x -> f0 x
 
   (** val sym_arg_rec :
-      (G.Defs.symbol -> 'a1) -> (G.Defs.symbol list -> 'a1) -> sym_arg -> 'a1 **)
+      (G.Defs.CoreDefs.symbol -> 'a1) ->
+      (G.Defs.CoreDefs.symbol list -> 'a1) -> sym_arg -> 'a1 **)
 
   let sym_arg_rec f f0 = function
   | F_arg x -> f x
@@ -3180,7 +3565,9 @@ module ParserFn =
   | F_arg _ -> O
   | G_arg gamma -> add (S O) (length gamma)
 
-  (** val nt_keys : G.Defs.Collections.parse_table -> G.SymTy.nonterminal list **)
+  (** val nt_keys :
+      G.Defs.Collections.parse_table -> G.SymTy.nonterminal
+      list **)
 
   let nt_keys tbl =
     map (fun pr -> let (y, _) = pr in let (x, _) = y in x)
@@ -3188,52 +3575,64 @@ module ParserFn =
 
   (** val ptlk_dec :
       G.SymTy.nonterminal -> G.Defs.Lookahead.lookahead ->
-      G.Defs.Collections.parse_table -> (__, G.Defs.xprod) sum **)
+      G.Defs.Collections.parse_table -> (__,
+      G.Defs.CoreDefs.production) sum **)
 
   let ptlk_dec x la tbl =
     let o = G.Defs.Utils.pt_lookup x la tbl in
     (match o with
-     | Some x0 -> Inr x0
+     | Some p -> Inr p
      | None -> Inl __)
 
   (** val meas :
-      G.Defs.Collections.parse_table -> G.Defs.token list ->
-      G.Defs.Collections.NtSet.t -> sym_arg -> (nat * nat) * nat **)
+      G.Defs.Collections.parse_table -> G.Defs.CoreDefs.token
+      list -> G.Defs.Collections.NtSet.t -> sym_arg ->
+      (nat * nat) * nat **)
 
   let meas tbl tokens vis sa =
     (((length tokens),
       (G.Defs.Collections.NtSet.cardinal
-        (G.Defs.Collections.NtSet.diff (G.Defs.Utils.fromNtList (nt_keys tbl)) vis))),
+        (G.Defs.Collections.NtSet.diff
+          (G.Defs.Utils.fromNtList (nt_keys tbl)) vis))),
       (sa_size sa))
 
   type parse_failure =
-  | Reject of char list * G.Defs.token list
-  | Error of char list * G.SymTy.nonterminal * G.Defs.token list
+  | Reject of char list * G.Defs.CoreDefs.token list
+  | Error of char list * G.SymTy.nonterminal
+     * G.Defs.CoreDefs.token list
 
   (** val parse_failure_rect :
-      (char list -> G.Defs.token list -> 'a1) -> (char list -> G.SymTy.nonterminal
-      -> G.Defs.token list -> 'a1) -> parse_failure -> 'a1 **)
+      (char list -> G.Defs.CoreDefs.token list -> 'a1) ->
+      (char list -> G.SymTy.nonterminal ->
+      G.Defs.CoreDefs.token list -> 'a1) -> parse_failure ->
+      'a1 **)
 
   let parse_failure_rect f f0 = function
   | Reject (x, x0) -> f x x0
   | Error (x, x0, x1) -> f0 x x0 x1
 
   (** val parse_failure_rec :
-      (char list -> G.Defs.token list -> 'a1) -> (char list -> G.SymTy.nonterminal
-      -> G.Defs.token list -> 'a1) -> parse_failure -> 'a1 **)
+      (char list -> G.Defs.CoreDefs.token list -> 'a1) ->
+      (char list -> G.SymTy.nonterminal ->
+      G.Defs.CoreDefs.token list -> 'a1) -> parse_failure ->
+      'a1 **)
 
   let parse_failure_rec f f0 = function
   | Reject (x, x0) -> f x x0
   | Error (x, x0, x1) -> f0 x x0 x1
 
-  (** val mem_dec : G.SymTy.nonterminal -> G.Defs.Collections.NtSet.t -> bool **)
+  (** val mem_dec :
+      G.SymTy.nonterminal -> G.Defs.Collections.NtSet.t ->
+      bool **)
 
   let mem_dec x s =
-    let b = G.Defs.Collections.NtSet.mem x s in if b then true else false
+    let b = G.Defs.Collections.NtSet.mem x s in
+    if b then true else false
 
   type 'a length_lt_eq = bool
 
-  (** val length_lt_eq_cons : 'a1 list -> 'a1 -> 'a1 list -> 'a1 length_lt_eq **)
+  (** val length_lt_eq_cons :
+      'a1 list -> 'a1 -> 'a1 list -> 'a1 length_lt_eq **)
 
   let length_lt_eq_cons _ _ _ =
     true
@@ -3244,28 +3643,32 @@ module ParserFn =
     false
 
   (** val length_lt_eq_trans :
-      'a1 list -> 'a1 list -> 'a1 list -> 'a1 length_lt_eq -> 'a1 length_lt_eq ->
-      'a1 length_lt_eq **)
+      'a1 list -> 'a1 list -> 'a1 list -> 'a1 length_lt_eq ->
+      'a1 length_lt_eq -> 'a1 length_lt_eq **)
 
   let length_lt_eq_trans _ _ _ h h' =
     if h then true else h'
 
-  (** val mismatchMessage : G.SymTy.terminal -> G.SymTy.terminal -> char list **)
+  (** val mismatchMessage :
+      G.SymTy.terminal -> G.SymTy.terminal -> char list **)
 
   let mismatchMessage a a' =
     append
       ('T'::('o'::('k'::('e'::('n'::(' '::('m'::('i'::('s'::('m'::('a'::('t'::('c'::('h'::(';'::(' '::('e'::('x'::('p'::('e'::('c'::('t'::('e'::('d'::(' '::[])))))))))))))))))))))))))
-      (append (G.SymTy.show_t a)
-        (append (','::(' '::('s'::('a'::('w'::(' '::[])))))) (G.SymTy.show_t a')))
+      (append (G.SymTy.showT a)
+        (append (','::(' '::('s'::('a'::('w'::(' '::[]))))))
+          (G.SymTy.showT a')))
 
-  (** val parseTree :
-      G.Defs.Collections.parse_table -> G.Defs.symbol -> G.Defs.token list ->
+  (** val parseSymbol :
+      G.Defs.Collections.parse_table ->
+      G.Defs.CoreDefs.symbol -> G.Defs.CoreDefs.token list ->
       G.Defs.Collections.NtSet.t -> (parse_failure,
-      G.Defs.symbol_semty * (G.Defs.token list, G.Defs.token length_lt_eq) sigT) sum **)
+      G.Defs.CoreDefs.symbol_semty * (G.Defs.CoreDefs.token
+      list, G.Defs.CoreDefs.token length_lt_eq) sigT) sum **)
 
-  let rec parseTree tbl sym ts vis =
+  let rec parseSymbol tbl sym ts vis =
     match sym with
-    | G.Defs.T a ->
+    | G.Defs.CoreDefs.T a ->
       (match ts with
        | [] ->
          Inl (Reject
@@ -3277,7 +3680,7 @@ module ParserFn =
          then Inr ((Obj.magic v'), (ExistT (ts',
                 (length_lt_eq_cons ts (ExistT (a', v')) ts'))))
          else Inl (Reject ((mismatchMessage a a'), ts)))
-    | G.Defs.NT x ->
+    | G.Defs.CoreDefs.NT x ->
       if mem_dec x vis
       then Inl (Error
              (('l'::('e'::('f'::('t'::(' '::('r'::('e'::('c'::('u'::('r'::('s'::('i'::('o'::('n'::(' '::('d'::('e'::('t'::('e'::('c'::('t'::('e'::('d'::[]))))))))))))))))))))))),
@@ -3291,32 +3694,39 @@ module ParserFn =
               let ExistT (x0, f) = s in
               let (x', gamma) = x0 in
               if nt_eq_dec x' x
-              then (match parseForest tbl gamma ts
-                            (G.Defs.Collections.NtSet.add x vis) with
+              then (match parseGamma tbl gamma ts
+                            (G.Defs.Collections.NtSet.add x
+                              vis) with
                     | Inl pfail -> Inl pfail
                     | Inr p ->
-                      let (vs, s0) = p in let v = Obj.magic f vs in Inr (v, s0))
+                      let (vs, s0) = p in
+                      let v = Obj.magic f vs in Inr (v, s0))
               else Inl (Error
                      (('m'::('a'::('l'::('f'::('o'::('r'::('m'::('e'::('d'::(' '::('p'::('a'::('r'::('s'::('e'::(' '::('t'::('a'::('b'::('l'::('e'::[]))))))))))))))))))))),
                      x, ts)))
 
-  (** val parseForest :
-      G.Defs.Collections.parse_table -> G.Defs.symbol list -> G.Defs.token list ->
-      G.Defs.Collections.NtSet.t -> (parse_failure,
-      G.Defs.rhs_semty * (G.Defs.token list, G.Defs.token length_lt_eq) sigT) sum **)
+  (** val parseGamma :
+      G.Defs.Collections.parse_table ->
+      G.Defs.CoreDefs.symbol list -> G.Defs.CoreDefs.token
+      list -> G.Defs.Collections.NtSet.t -> (parse_failure,
+      G.Defs.CoreDefs.rhs_semty * (G.Defs.CoreDefs.token
+      list, G.Defs.CoreDefs.token length_lt_eq) sigT) sum **)
 
-  and parseForest tbl gamma ts vis =
+  and parseGamma tbl gamma ts vis =
     match gamma with
     | [] ->
-      let vs = () in Inr ((Obj.magic vs), (ExistT (ts, (length_lt_eq_refl ts))))
+      let vs = () in
+      Inr ((Obj.magic vs), (ExistT (ts,
+      (length_lt_eq_refl ts))))
     | sym :: gamma' ->
-      (match parseTree tbl sym ts vis with
+      (match parseSymbol tbl sym ts vis with
        | Inl pfail -> Inl pfail
        | Inr p ->
          let (lSib, s) = p in
          let ExistT (ts', hle) = s in
          if hle
-         then (match parseForest tbl gamma' ts' G.Defs.Collections.NtSet.empty with
+         then (match parseGamma tbl gamma' ts'
+                       G.Defs.Collections.NtSet.empty with
                | Inl pfail -> Inl pfail
                | Inr p0 ->
                  let (rSibs, s0) = p0 in
@@ -3324,96 +3734,119 @@ module ParserFn =
                  let vs = (lSib, rSibs) in
                  Inr ((Obj.magic vs), (ExistT (ts'',
                  (length_lt_eq_trans ts'' ts' ts hle'' hle)))))
-         else (match parseForest tbl gamma' ts vis with
+         else (match parseGamma tbl gamma' ts vis with
                | Inl pfail -> Inl pfail
                | Inr p0 ->
                  let (rSibs, s0) = p0 in
-                 let vs = (lSib, rSibs) in Inr ((Obj.magic vs), s0)))
+                 let vs = (lSib, rSibs) in
+                 Inr ((Obj.magic vs), s0)))
  end
 
-(** val findDup : ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 option **)
+(** val findDup :
+    ('a1 -> 'a1 -> bool) -> 'a1 list -> 'a1 option **)
 
 let rec findDup eq_dec0 = function
 | [] -> None
-| x :: l' -> if in_dec eq_dec0 x l' then Some x else findDup eq_dec0 l'
+| x :: l' ->
+  if in_dec eq_dec0 x l' then Some x else findDup eq_dec0 l'
 
 module GeneratorFn =
  functor (G:T) ->
  struct
   module L = LemmasFn(G)
 
-  (** val lhSet : G.Defs.production list -> G.Defs.Collections.NtSet.t **)
+  (** val lhSet :
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.NtSet.t **)
 
   let lhSet ps =
-    G.Defs.Utils.fromNtList (map fst ps)
+    G.Defs.Utils.fromNtList (map G.Defs.Utils.lhs ps)
 
   (** val nullableGamma :
-      G.Defs.symbol list -> G.Defs.Collections.NtSet.t -> bool **)
+      G.Defs.CoreDefs.symbol list ->
+      G.Defs.Collections.NtSet.t -> bool **)
 
   let rec nullableGamma gamma nu =
     match gamma with
     | [] -> true
     | s :: gamma' ->
       (match s with
-       | G.Defs.T _ -> false
-       | G.Defs.NT x ->
+       | G.Defs.CoreDefs.T _ -> false
+       | G.Defs.CoreDefs.NT x ->
          if G.Defs.Collections.NtSet.mem x nu
          then nullableGamma gamma' nu
          else false)
 
   (** val updateNu :
-      G.Defs.production -> G.Defs.Collections.NtSet.t -> G.Defs.Collections.NtSet.t **)
+      G.Defs.CoreDefs.production ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Collections.NtSet.t **)
 
   let updateNu p nu =
-    let (x, gamma) = p in
-    if nullableGamma gamma nu then G.Defs.Collections.NtSet.add x nu else nu
+    let ExistT (x0, _) = p in
+    let (x, gamma) = x0 in
+    if nullableGamma gamma nu
+    then G.Defs.Collections.NtSet.add x nu
+    else nu
 
   (** val nullablePass :
-      G.Defs.production list -> G.Defs.Collections.NtSet.t ->
-      G.Defs.Collections.NtSet.t **)
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Collections.NtSet.t **)
 
   let nullablePass ps nu =
     fold_right updateNu nu ps
 
-  (** val countNullableCandidates :
-      G.Defs.production list -> G.Defs.Collections.NtSet.t -> nat **)
+  (** val countNullCands :
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.NtSet.t -> nat **)
 
-  let countNullableCandidates ps nu =
+  let countNullCands ps nu =
     let candidates = lhSet ps in
-    G.Defs.Collections.NtSet.cardinal (G.Defs.Collections.NtSet.diff candidates nu)
+    G.Defs.Collections.NtSet.cardinal
+      (G.Defs.Collections.NtSet.diff candidates nu)
 
   (** val mkNullableSet'_func :
-      (G.Defs.production list, G.Defs.Collections.NtSet.t) sigT ->
+      (G.Defs.CoreDefs.production list,
+      G.Defs.Collections.NtSet.t) sigT ->
       G.Defs.Collections.NtSet.t **)
 
   let rec mkNullableSet'_func x =
     let ps = projT1 x in
     let nu = projT2 x in
-    let mkNullableSet'0 = fun ps0 nu0 -> mkNullableSet'_func (ExistT (ps0, nu0)) in
+    let mkNullableSet'0 = fun ps0 nu0 ->
+      mkNullableSet'_func (ExistT (ps0, nu0))
+    in
     let nu' = nullablePass ps nu in
-    if G.Defs.Collections.NtSet.eq_dec nu nu' then nu else mkNullableSet'0 ps nu'
+    if G.Defs.Collections.NtSet.eq_dec nu nu'
+    then nu
+    else mkNullableSet'0 ps nu'
 
   (** val mkNullableSet' :
-      G.Defs.production list -> G.Defs.Collections.NtSet.t ->
-      G.Defs.Collections.NtSet.t **)
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Collections.NtSet.t **)
 
   let mkNullableSet' ps nu =
     mkNullableSet'_func (ExistT (ps, nu))
 
-  (** val mkNullableSet : G.Defs.grammar -> G.Defs.Collections.NtSet.t **)
+  (** val mkNullableSet :
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.NtSet.t **)
 
   let mkNullableSet g =
-    mkNullableSet' (G.Defs.Utils.prodsOf g) G.Defs.Collections.NtSet.empty
+    mkNullableSet' (G.Defs.CoreDefs.prods g)
+      G.Defs.Collections.NtSet.empty
 
-  (** val nullableSym : G.Defs.symbol -> G.Defs.Collections.NtSet.t -> bool **)
+  (** val nullableSym :
+      G.Defs.CoreDefs.symbol -> G.Defs.Collections.NtSet.t ->
+      bool **)
 
   let nullableSym sym nu =
     match sym with
-    | G.Defs.T _ -> false
-    | G.Defs.NT x -> G.Defs.Collections.NtSet.mem x nu
+    | G.Defs.CoreDefs.T _ -> false
+    | G.Defs.CoreDefs.NT x ->
+      G.Defs.Collections.NtSet.mem x nu
 
   (** val findOrEmpty :
-      G.SymTy.nonterminal -> G.Defs.Specs.first_map -> G.Defs.Collections.LaSet.t **)
+      G.SymTy.nonterminal -> G.Defs.Specs.first_map ->
+      G.Defs.Collections.LaSet.t **)
 
   let findOrEmpty x fi =
     match G.Defs.Collections.NtMap.find x fi with
@@ -3421,15 +3854,19 @@ module GeneratorFn =
     | None -> G.Defs.Collections.LaSet.empty
 
   (** val firstSym :
-      G.Defs.symbol -> G.Defs.Specs.first_map -> G.Defs.Collections.LaSet.t **)
+      G.Defs.CoreDefs.symbol -> G.Defs.Specs.first_map ->
+      G.Defs.Collections.LaSet.t **)
 
   let firstSym sym fi =
     match sym with
-    | G.Defs.T y -> G.Defs.Collections.LaSet.singleton (G.Defs.Lookahead.LA y)
-    | G.Defs.NT x -> findOrEmpty x fi
+    | G.Defs.CoreDefs.T y ->
+      G.Defs.Collections.LaSet.singleton (G.Defs.Lookahead.LA
+        y)
+    | G.Defs.CoreDefs.NT x -> findOrEmpty x fi
 
   (** val firstGamma :
-      G.Defs.symbol list -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.CoreDefs.symbol list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
       G.Defs.Collections.LaSet.t **)
 
   let rec firstGamma gamma nu fi =
@@ -3442,11 +3879,13 @@ module GeneratorFn =
       else firstSym sym fi
 
   (** val updateFi :
-      G.Defs.Collections.NtSet.t -> G.Defs.production -> G.Defs.Specs.first_map ->
+      G.Defs.Collections.NtSet.t ->
+      G.Defs.CoreDefs.production -> G.Defs.Specs.first_map ->
       G.Defs.Specs.first_map **)
 
   let updateFi nu p fi =
-    let (x, gamma) = p in
+    let ExistT (x0, _) = p in
+    let (x, gamma) = x0 in
     let fg = firstGamma gamma nu fi in
     let xFirst = findOrEmpty x fi in
     let xFirst' = G.Defs.Collections.LaSet.union fg xFirst in
@@ -3455,8 +3894,9 @@ module GeneratorFn =
     else G.Defs.Collections.NtMap.add x xFirst' fi
 
   (** val firstPass :
-      G.Defs.production list -> G.Defs.Collections.NtSet.t ->
-      G.Defs.Specs.first_map -> G.Defs.Specs.first_map **)
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.Specs.first_map **)
 
   let firstPass ps nu fi =
     fold_right (updateFi nu) fi ps
@@ -3465,10 +3905,14 @@ module GeneratorFn =
       G.Defs.Specs.first_map -> G.Defs.Specs.first_map -> bool **)
 
   let first_map_equiv_dec m m' =
-    let b = G.Defs.Collections.NtMap.equal G.Defs.Collections.LaSet.equal m m' in
+    let b =
+      G.Defs.Collections.NtMap.equal
+        G.Defs.Collections.LaSet.equal m m'
+    in
     if b then true else false
 
-  type nt_la_pair = G.SymTy.nonterminal * G.Defs.Lookahead.lookahead
+  type nt_la_pair =
+    G.SymTy.nonterminal * G.Defs.Lookahead.lookahead
 
   (** val pair_eq_dec : nt_la_pair -> nt_la_pair -> bool **)
 
@@ -3508,30 +3952,34 @@ module GeneratorFn =
   module PD = WDecideOn(Pair_as_DT)(PairSet)
 
   (** val mkPairs :
-      G.SymTy.nonterminal -> G.Defs.Collections.LaSet.t -> PairSet.t **)
+      G.SymTy.nonterminal -> G.Defs.Collections.LaSet.t ->
+      PairSet.t **)
 
   let mkPairs x laSet =
-    fold_right (fun la acc -> PairSet.add (x, la) acc) PairSet.empty
-      (G.Defs.Collections.LaSet.elements laSet)
+    fold_right (fun la acc -> PairSet.add (x, la) acc)
+      PairSet.empty (G.Defs.Collections.LaSet.elements laSet)
 
   (** val pairsOf : G.Defs.Specs.first_map -> PairSet.t **)
 
   let pairsOf fi =
-    fold_right (fun p acc -> let (x, s) = p in PairSet.union (mkPairs x s) acc)
+    fold_right (fun p acc ->
+      let (x, s) = p in PairSet.union (mkPairs x s) acc)
       PairSet.empty (G.Defs.Collections.NtMap.elements fi)
 
   (** val leftmostLookahead :
-      G.Defs.symbol list -> G.Defs.Lookahead.lookahead option **)
+      G.Defs.CoreDefs.symbol list ->
+      G.Defs.Lookahead.lookahead option **)
 
   let rec leftmostLookahead = function
   | [] -> None
   | s :: gamma' ->
     (match s with
-     | G.Defs.T y -> Some (G.Defs.Lookahead.LA y)
-     | G.Defs.NT _ -> leftmostLookahead gamma')
+     | G.Defs.CoreDefs.T y -> Some (G.Defs.Lookahead.LA y)
+     | G.Defs.CoreDefs.NT _ -> leftmostLookahead gamma')
 
   (** val leftmostLookaheads' :
-      G.Defs.symbol list list -> G.Defs.Collections.LaSet.t **)
+      G.Defs.CoreDefs.symbol list list ->
+      G.Defs.Collections.LaSet.t **)
 
   let leftmostLookaheads' gammas =
     fold_right (fun gamma acc ->
@@ -3540,68 +3988,82 @@ module GeneratorFn =
       | None -> acc) G.Defs.Collections.LaSet.empty gammas
 
   (** val leftmostLookaheads :
-      G.Defs.production list -> G.Defs.Collections.LaSet.t **)
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.LaSet.t **)
 
   let leftmostLookaheads ps =
-    leftmostLookaheads' (map snd ps)
+    leftmostLookaheads' (map G.Defs.Utils.rhs ps)
 
   (** val product :
-      G.Defs.Collections.NtSet.t -> G.Defs.Collections.LaSet.t -> PairSet.t **)
+      G.Defs.Collections.NtSet.t ->
+      G.Defs.Collections.LaSet.t -> PairSet.t **)
 
   let product n l =
     let f = fun x acc -> PairSet.union (mkPairs x l) acc in
     G.Defs.Collections.NtSet.fold f n PairSet.empty
 
-  (** val numFirstCandidates :
-      G.Defs.production list -> G.Defs.Specs.first_map -> nat **)
+  (** val countFirstCands :
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Specs.first_map -> nat **)
 
-  let numFirstCandidates ps fi =
-    let allCandidates = product (lhSet ps) (leftmostLookaheads ps) in
+  let countFirstCands ps fi =
+    let allCandidates =
+      product (lhSet ps) (leftmostLookaheads ps)
+    in
     PairSet.cardinal (PairSet.diff allCandidates (pairsOf fi))
 
   (** val mkFirstMap'_func :
-      (G.Defs.production list, (G.Defs.Collections.NtSet.t,
-      (G.Defs.Specs.first_map, __) sigT) sigT) sigT -> G.Defs.Specs.first_map **)
+      (G.Defs.CoreDefs.production list,
+      (G.Defs.Collections.NtSet.t, (G.Defs.Specs.first_map,
+      __) sigT) sigT) sigT -> G.Defs.Specs.first_map **)
 
   let rec mkFirstMap'_func x =
     let ps = projT1 x in
     let nu = projT1 (projT2 x) in
     let fi = projT1 (projT2 (projT2 x)) in
     let mkFirstMap'0 = fun ps0 nu0 fi0 ->
-      mkFirstMap'_func (ExistT (ps0, (ExistT (nu0, (ExistT (fi0, __))))))
+      mkFirstMap'_func (ExistT (ps0, (ExistT (nu0, (ExistT
+        (fi0, __))))))
     in
     let fi' = firstPass ps nu fi in
-    if first_map_equiv_dec fi fi' then fi else mkFirstMap'0 ps nu fi'
+    if first_map_equiv_dec fi fi'
+    then fi
+    else mkFirstMap'0 ps nu fi'
 
   (** val mkFirstMap' :
-      G.Defs.production list -> G.Defs.Collections.NtSet.t ->
-      G.Defs.Specs.first_map -> G.Defs.Specs.first_map **)
+      G.Defs.CoreDefs.production list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.Specs.first_map **)
 
   let mkFirstMap' ps nu fi =
-    mkFirstMap'_func (ExistT (ps, (ExistT (nu, (ExistT (fi, __))))))
+    mkFirstMap'_func (ExistT (ps, (ExistT (nu, (ExistT (fi,
+      __))))))
 
-  (** val empty_fi : G.Defs.Collections.LaSet.t G.Defs.Collections.NtMap.t **)
+  (** val empty_fi :
+      G.Defs.Collections.LaSet.t G.Defs.Collections.NtMap.t **)
 
   let empty_fi =
     G.Defs.Collections.NtMap.empty
 
   (** val mkFirstMap :
-      G.Defs.grammar -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map **)
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.NtSet.t
+      -> G.Defs.Specs.first_map **)
 
   let mkFirstMap g nu =
-    let ps = G.Defs.Utils.prodsOf g in mkFirstMap' ps nu empty_fi
+    mkFirstMap' (G.Defs.CoreDefs.prods g) nu empty_fi
 
   (** val updateFo' :
-      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map -> G.SymTy.nonterminal
-      -> G.Defs.symbol list -> G.Defs.Specs.follow_map -> G.Defs.Specs.follow_map **)
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.SymTy.nonterminal -> G.Defs.CoreDefs.symbol list ->
+      G.Defs.Specs.follow_map -> G.Defs.Specs.follow_map **)
 
   let rec updateFo' nu fi lx gamma fo =
     match gamma with
     | [] -> fo
     | s :: gamma' ->
       (match s with
-       | G.Defs.T _ -> updateFo' nu fi lx gamma' fo
-       | G.Defs.NT rx ->
+       | G.Defs.CoreDefs.T _ -> updateFo' nu fi lx gamma' fo
+       | G.Defs.CoreDefs.NT rx ->
          let fo' = updateFo' nu fi lx gamma' fo in
          let lSet = findOrEmpty lx fo' in
          let rSet = firstGamma gamma' nu fi in
@@ -3612,9 +4074,12 @@ module GeneratorFn =
          in
          (match G.Defs.Collections.NtMap.find rx fo' with
           | Some rxFollow ->
-            if G.Defs.Collections.LaSet.subset additions rxFollow
+            if G.Defs.Collections.LaSet.subset additions
+                 rxFollow
             then fo'
-            else let rxFollow' = G.Defs.Collections.LaSet.union rxFollow additions
+            else let rxFollow' =
+                   G.Defs.Collections.LaSet.union rxFollow
+                     additions
                  in
                  G.Defs.Collections.NtMap.add rx rxFollow' fo'
           | None ->
@@ -3623,15 +4088,17 @@ module GeneratorFn =
             else G.Defs.Collections.NtMap.add rx additions fo'))
 
   (** val updateFo :
-      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map -> G.Defs.production ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.CoreDefs.base_production ->
       G.Defs.Specs.follow_map -> G.Defs.Specs.follow_map **)
 
-  let updateFo nu fi p fo =
-    let (x, gamma) = p in updateFo' nu fi x gamma fo
+  let updateFo nu fi b fo =
+    let (x, gamma) = b in updateFo' nu fi x gamma fo
 
   (** val followPass :
-      G.Defs.production list -> G.Defs.Collections.NtSet.t ->
-      G.Defs.Specs.first_map -> G.Defs.Specs.follow_map -> G.Defs.Specs.follow_map **)
+      G.Defs.CoreDefs.base_production list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.Specs.follow_map -> G.Defs.Specs.follow_map **)
 
   let followPass ps nu fi fo =
     fold_right (updateFo nu fi) fo ps
@@ -3642,55 +4109,72 @@ module GeneratorFn =
   let follow_map_equiv_dec =
     first_map_equiv_dec
 
-  (** val ntsOfGamma : G.Defs.symbol list -> G.Defs.Collections.NtSet.t **)
+  (** val ntsOfGamma :
+      G.Defs.CoreDefs.symbol list ->
+      G.Defs.Collections.NtSet.t **)
 
   let rec ntsOfGamma = function
   | [] -> G.Defs.Collections.NtSet.empty
   | s :: gamma' ->
     (match s with
-     | G.Defs.T _ -> ntsOfGamma gamma'
-     | G.Defs.NT x -> G.Defs.Collections.NtSet.add x (ntsOfGamma gamma'))
+     | G.Defs.CoreDefs.T _ -> ntsOfGamma gamma'
+     | G.Defs.CoreDefs.NT x ->
+       G.Defs.Collections.NtSet.add x (ntsOfGamma gamma'))
 
-  (** val ntsOfProd : G.Defs.production -> G.Defs.Collections.NtSet.t **)
+  (** val ntsOfProd :
+      G.Defs.CoreDefs.base_production ->
+      G.Defs.Collections.NtSet.t **)
 
   let ntsOfProd = function
-  | (x, gamma) -> G.Defs.Collections.NtSet.add x (ntsOfGamma gamma)
+  | (x, gamma) ->
+    G.Defs.Collections.NtSet.add x (ntsOfGamma gamma)
 
-  (** val ntsOf : G.Defs.grammar -> G.Defs.Collections.NtSet.t **)
+  (** val ntsOf :
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.NtSet.t **)
 
   let ntsOf g =
-    fold_right (fun p acc -> G.Defs.Collections.NtSet.union (ntsOfProd p) acc)
-      (G.Defs.Collections.NtSet.singleton (G.Defs.start g)) (G.Defs.Utils.prodsOf g)
+    fold_right (fun p acc ->
+      G.Defs.Collections.NtSet.union (ntsOfProd p) acc)
+      (G.Defs.Collections.NtSet.singleton
+        (G.Defs.CoreDefs.start g))
+      (G.Defs.Utils.baseProductions g)
 
-  (** val lookaheadsOfGamma : G.Defs.symbol list -> G.Defs.Collections.LaSet.t **)
+  (** val lookaheadsOfGamma :
+      G.Defs.CoreDefs.symbol list ->
+      G.Defs.Collections.LaSet.t **)
 
   let rec lookaheadsOfGamma = function
   | [] -> G.Defs.Collections.LaSet.empty
   | s :: gamma' ->
     (match s with
-     | G.Defs.T y ->
+     | G.Defs.CoreDefs.T y ->
        G.Defs.Collections.LaSet.add (G.Defs.Lookahead.LA y)
          (lookaheadsOfGamma gamma')
-     | G.Defs.NT _ -> lookaheadsOfGamma gamma')
+     | G.Defs.CoreDefs.NT _ -> lookaheadsOfGamma gamma')
 
-  (** val lookaheadsOf : G.Defs.grammar -> G.Defs.Collections.LaSet.t **)
+  (** val lookaheadsOf :
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.LaSet.t **)
 
   let lookaheadsOf g =
     fold_right (fun p acc ->
       let (_, gamma) = p in
-      G.Defs.Collections.LaSet.union (lookaheadsOfGamma gamma) acc)
-      (G.Defs.Collections.LaSet.singleton G.Defs.Lookahead.EOF)
-      (G.Defs.Utils.prodsOf g)
+      G.Defs.Collections.LaSet.union
+        (lookaheadsOfGamma gamma) acc)
+      (G.Defs.Collections.LaSet.singleton
+        G.Defs.Lookahead.EOF) (G.Defs.Utils.baseProductions g)
 
-  (** val numFollowCandidates : G.Defs.grammar -> G.Defs.Specs.follow_map -> nat **)
+  (** val countFollowCands :
+      G.Defs.CoreDefs.grammar -> G.Defs.Specs.follow_map ->
+      nat **)
 
-  let numFollowCandidates g fo =
+  let countFollowCands g fo =
     let allCandidates = product (ntsOf g) (lookaheadsOf g) in
     PairSet.cardinal (PairSet.diff allCandidates (pairsOf fo))
 
   (** val mkFollowMap'_func :
-      (G.Defs.grammar, (G.Defs.Collections.NtSet.t, (G.Defs.Specs.first_map, (__,
-      (G.Defs.Specs.follow_map, __) sigT) sigT) sigT) sigT) sigT ->
+      (G.Defs.CoreDefs.grammar, (G.Defs.Collections.NtSet.t,
+      (G.Defs.Specs.first_map, (__, (G.Defs.Specs.follow_map,
+      __) sigT) sigT) sigT) sigT) sigT ->
       G.Defs.Specs.follow_map **)
 
   let rec mkFollowMap'_func x =
@@ -3699,45 +4183,54 @@ module GeneratorFn =
     let fi = projT1 (projT2 (projT2 x)) in
     let fo = projT1 (projT2 (projT2 (projT2 (projT2 x)))) in
     let mkFollowMap'0 = fun g0 nu0 fi0 fo0 ->
-      mkFollowMap'_func (ExistT (g0, (ExistT (nu0, (ExistT (fi0, (ExistT (__,
-        (ExistT (fo0, __))))))))))
+      mkFollowMap'_func (ExistT (g0, (ExistT (nu0, (ExistT
+        (fi0, (ExistT (__, (ExistT (fo0, __))))))))))
     in
-    let fo' = followPass (G.Defs.Utils.prodsOf g) nu fi fo in
-    if follow_map_equiv_dec fo fo' then fo else mkFollowMap'0 g nu fi fo'
+    let fo' =
+      followPass (G.Defs.Utils.baseProductions g) nu fi fo
+    in
+    if follow_map_equiv_dec fo fo'
+    then fo
+    else mkFollowMap'0 g nu fi fo'
 
   (** val mkFollowMap' :
-      G.Defs.grammar -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
-      G.Defs.Specs.follow_map -> G.Defs.Specs.follow_map **)
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.NtSet.t
+      -> G.Defs.Specs.first_map -> G.Defs.Specs.follow_map ->
+      G.Defs.Specs.follow_map **)
 
   let mkFollowMap' g nu fi fo =
-    mkFollowMap'_func (ExistT (g, (ExistT (nu, (ExistT (fi, (ExistT (__, (ExistT
-      (fo, __))))))))))
+    mkFollowMap'_func (ExistT (g, (ExistT (nu, (ExistT (fi,
+      (ExistT (__, (ExistT (fo, __))))))))))
 
   (** val initial_fo :
-      G.Defs.grammar -> G.Defs.Collections.LaSet.t G.Defs.Collections.NtMap.t **)
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.LaSet.t
+      G.Defs.Collections.NtMap.t **)
 
   let initial_fo g =
-    G.Defs.Collections.NtMap.add (G.Defs.start g)
-      (G.Defs.Collections.LaSet.singleton G.Defs.Lookahead.EOF)
-      G.Defs.Collections.NtMap.empty
+    G.Defs.Collections.NtMap.add (G.Defs.CoreDefs.start g)
+      (G.Defs.Collections.LaSet.singleton
+        G.Defs.Lookahead.EOF) G.Defs.Collections.NtMap.empty
 
   (** val mkFollowMap :
-      G.Defs.grammar -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
-      G.Defs.Specs.follow_map **)
+      G.Defs.CoreDefs.grammar -> G.Defs.Collections.NtSet.t
+      -> G.Defs.Specs.first_map -> G.Defs.Specs.follow_map **)
 
   let mkFollowMap g nu fi =
     mkFollowMap' g nu fi (initial_fo g)
 
-  type table_entry = G.Defs.xprod * G.Defs.Lookahead.lookahead
+  type table_entry =
+    G.Defs.CoreDefs.production * G.Defs.Lookahead.lookahead
 
   (** val fromLookaheadList :
-      G.Defs.xprod -> G.Defs.Lookahead.lookahead list -> table_entry list **)
+      G.Defs.CoreDefs.production ->
+      G.Defs.Lookahead.lookahead list -> table_entry list **)
 
   let fromLookaheadList xp las =
     map (fun la -> (xp, la)) las
 
   (** val firstGamma' :
-      G.Defs.symbol list -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.CoreDefs.symbol list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
       G.Defs.Lookahead.lookahead list **)
 
   let rec firstGamma' gamma nu fi =
@@ -3745,8 +4238,8 @@ module GeneratorFn =
     | [] -> []
     | s :: gamma' ->
       (match s with
-       | G.Defs.T y -> (G.Defs.Lookahead.LA y) :: []
-       | G.Defs.NT x ->
+       | G.Defs.CoreDefs.T y -> (G.Defs.Lookahead.LA y) :: []
+       | G.Defs.CoreDefs.NT x ->
          let xFirst =
            match G.Defs.Collections.NtMap.find x fi with
            | Some s0 -> G.Defs.Collections.LaSet.elements s0
@@ -3757,15 +4250,18 @@ module GeneratorFn =
          else xFirst)
 
   (** val firstEntries :
-      G.Defs.xprod -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
+      G.Defs.CoreDefs.production ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
       table_entry list **)
 
   let firstEntries xp nu fi =
-    fromLookaheadList xp (firstGamma' (G.Defs.Utils.rhs xp) nu fi)
+    fromLookaheadList xp
+      (firstGamma' (G.Defs.Utils.rhs xp) nu fi)
 
   (** val followLookahead :
-      G.SymTy.nonterminal -> G.Defs.symbol list -> G.Defs.Collections.NtSet.t ->
-      G.Defs.Specs.follow_map -> G.Defs.Lookahead.lookahead list **)
+      G.SymTy.nonterminal -> G.Defs.CoreDefs.symbol list ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.follow_map
+      -> G.Defs.Lookahead.lookahead list **)
 
   let followLookahead x gamma nu fo =
     if nullableGamma gamma nu
@@ -3775,54 +4271,64 @@ module GeneratorFn =
     else []
 
   (** val followEntries :
-      G.Defs.xprod -> G.Defs.Collections.NtSet.t -> G.Defs.Specs.follow_map ->
-      table_entry list **)
+      G.Defs.CoreDefs.production ->
+      G.Defs.Collections.NtSet.t -> G.Defs.Specs.follow_map
+      -> table_entry list **)
 
   let followEntries xp nu fo =
     fromLookaheadList xp
-      (followLookahead (G.Defs.Utils.lhs xp) (G.Defs.Utils.rhs xp) nu fo)
+      (followLookahead (G.Defs.Utils.lhs xp)
+        (G.Defs.Utils.rhs xp) nu fo)
 
   (** val entriesForProd :
       G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
-      G.Defs.Specs.follow_map -> G.Defs.xprod -> table_entry list **)
+      G.Defs.Specs.follow_map -> G.Defs.CoreDefs.production
+      -> table_entry list **)
 
   let entriesForProd nu fi fo xp =
     app (firstEntries xp nu fi) (followEntries xp nu fo)
 
   (** val mkEntries' :
       G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
-      G.Defs.Specs.follow_map -> G.Defs.xprod list -> table_entry list **)
+      G.Defs.Specs.follow_map -> G.Defs.CoreDefs.production
+      list -> table_entry list **)
 
   let mkEntries' nu fi fo xps =
     flat_map (entriesForProd nu fi fo) xps
 
   (** val mkEntries :
       G.Defs.Collections.NtSet.t -> G.Defs.Specs.first_map ->
-      G.Defs.Specs.follow_map -> G.Defs.grammar -> table_entry list **)
+      G.Defs.Specs.follow_map -> G.Defs.CoreDefs.grammar ->
+      table_entry list **)
 
   let mkEntries nu fi fo g =
-    mkEntries' nu fi fo (G.Defs.prods g)
+    mkEntries' nu fi fo (G.Defs.CoreDefs.prods g)
 
   (** val ambigMessage :
-      G.Defs.Lookahead.lookahead -> G.SymTy.nonterminal -> G.Defs.symbol list ->
-      G.Defs.symbol list -> char list **)
+      G.Defs.Lookahead.lookahead -> G.SymTy.nonterminal ->
+      G.Defs.CoreDefs.symbol list -> G.Defs.CoreDefs.symbol
+      list -> char list **)
 
   let ambigMessage la x gamma gamma' =
     append
       ('T'::('h'::('e'::(' '::('g'::('r'::('a'::('m'::('m'::('a'::('r'::(' '::('i'::('s'::(' '::('n'::('o'::('t'::(' '::('L'::('L'::('('::('1'::(')'::(';'::(' '::[]))))))))))))))))))))))))))
-      (append (G.Defs.Lookahead.show_lookahead la)
+      (append (G.Defs.Lookahead.showLookahead la)
         (append
           (' '::('i'::('s'::(' '::('a'::(' '::('l'::('o'::('o'::('k'::('a'::('h'::('e'::('a'::('d'::(' '::('t'::('o'::('k'::('e'::('n'::('\n'::(' '::(' '::(' '::(' '::(' '::('f'::('o'::('r'::(' '::('t'::('h'::('e'::(' '::('f'::('o'::('l'::('l'::('o'::('w'::('i'::('n'::('g'::(' '::('t'::('w'::('o'::(' '::('p'::('r'::('o'::('d'::('u'::('c'::('t'::('i'::('o'::('n'::('s'::(' '::('w'::('i'::('t'::('h'::(' '::('t'::('h'::('e'::(' '::('s'::('a'::('m'::('e'::(' '::('l'::('e'::('f'::('t'::('-'::('h'::('a'::('n'::('d'::(' '::('s'::('i'::('d'::('e'::(' '::('a'::('n'::('d'::('\n'::(' '::(' '::(' '::(' '::(' '::('d'::('i'::('f'::('f'::('e'::('r'::('e'::('n'::('t'::(' '::('r'::('i'::('g'::('h'::('t'::('-'::('h'::('a'::('n'::('d'::(' '::('s'::('i'::('d'::('e'::('s'::(':'::('\\'::('n'::('\\'::('n'::[]))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-          (append (G.Defs.show_prod (x, gamma))
-            (append ('\\'::('n'::[])) (G.Defs.show_prod (x, gamma'))))))
+          (append (G.Defs.Formatting.showBaseProd (x, gamma))
+            (append ('\\'::('n'::[]))
+              (G.Defs.Formatting.showBaseProd (x, gamma'))))))
 
-  (** val empty_table : G.Defs.xprod G.Defs.Collections.ParseTable.t **)
+  (** val empty_table :
+      G.Defs.CoreDefs.production
+      G.Defs.Collections.ParseTable.t **)
 
   let empty_table =
     G.Defs.Collections.ParseTable.empty
 
   (** val addEntry :
-      table_entry -> (char list, G.Defs.Collections.parse_table) sum -> (char list,
+      table_entry -> (char list,
+      G.Defs.Collections.parse_table) sum -> (char list,
       G.Defs.Collections.parse_table) sum **)
 
   let addEntry e = function
@@ -3832,26 +4338,28 @@ module GeneratorFn =
     let ExistT (x0, _) = xp in
     let (x, gamma) = x0 in
     (match G.Defs.Utils.pt_lookup x la tbl with
-     | Some x1 ->
-       let ExistT (x2, _) = x1 in
-       let (x', gamma') = x2 in
-       if L.production_eq_dec (x, gamma) (x', gamma')
+     | Some p ->
+       let ExistT (x1, _) = p in
+       let (x', gamma') = x1 in
+       if L.base_production_eq_dec (x, gamma) (x', gamma')
        then Inr tbl
        else Inl (ambigMessage la x gamma gamma')
      | None -> Inr (G.Defs.Utils.pt_add x la xp tbl))
 
   (** val mkParseTable :
-      table_entry list -> (char list, G.Defs.Collections.parse_table) sum **)
+      table_entry list -> (char list,
+      G.Defs.Collections.parse_table) sum **)
 
   let mkParseTable ps =
     fold_right addEntry (Inr empty_table) ps
 
-  (** val dupMessage : G.Defs.production -> char list **)
+  (** val dupMessage :
+      G.Defs.CoreDefs.base_production -> char list **)
 
-  let dupMessage p =
+  let dupMessage b =
     append
       ('T'::('h'::('e'::(' '::('f'::('o'::('l'::('l'::('o'::('w'::('i'::('n'::('g'::(' '::('p'::('r'::('o'::('d'::('u'::('c'::('t'::('i'::('o'::('n'::(' '::('a'::('p'::('p'::('e'::('a'::('r'::('s'::(' '::('m'::('u'::('l'::('t'::('i'::('p'::('l'::('e'::(' '::('t'::('i'::('m'::('e'::('s'::(' '::('i'::('n'::(' '::('t'::('h'::('e'::(' '::('g'::('r'::('a'::('m'::('m'::('a'::('r'::(':'::('\\'::('n'::('\\'::('n'::[])))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-      (append (G.Defs.show_prod p)
+      (append (G.Defs.Formatting.showBaseProd b)
         ('\\'::('n'::('\\'::('n'::('T'::('h'::('e'::(' '::('g'::('r'::('a'::('m'::('m'::('a'::('r'::(' '::('i'::('s'::(' '::('e'::('i'::('t'::('h'::('e'::('r'::(' '::('a'::('m'::('b'::('i'::('g'::('u'::('o'::('u'::('s'::(' '::('('::('i'::('f'::(' '::('t'::('h'::('e'::(' '::('p'::('r'::('o'::('d'::('u'::('c'::('t'::('i'::('o'::('n'::(' '::('a'::('p'::('p'::('e'::('a'::('r'::('s'::(' '::('w'::('i'::('t'::('h'::(' '::('\n'::(' '::(' '::(' '::(' '::(' '::(' '::(' '::(' '::('d'::('i'::('f'::('f'::('e'::('r'::('e'::('n'::('t'::(' '::('a'::('c'::('t'::('i'::('o'::('n'::('s'::(')'::(','::(' '::('o'::('r'::(' '::('r'::('e'::('d'::('u'::('n'::('d'::('a'::('n'::('t'::(' '::('('::('i'::('f'::(' '::('i'::('t'::(' '::('a'::('p'::('p'::('e'::('a'::('r'::('s'::(' '::('m'::('u'::('l'::('t'::('i'::('p'::('l'::('e'::(' '::('t'::('i'::('m'::('e'::('s'::(' '::('w'::('i'::('t'::('h'::('\n'::(' '::(' '::(' '::(' '::(' '::(' '::(' '::(' '::('t'::('h'::('e'::(' '::('s'::('a'::('m'::('e'::(' '::('a'::('c'::('t'::('i'::('o'::('n'::(')'::('.'::[])))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
  end
 
@@ -3892,18 +4400,22 @@ module GeneratorProofsFn =
  struct
   module EntryProofs = EntryProofsFn(G)
 
-  type pl_pair = G.Defs.production * G.Defs.Lookahead.lookahead
+  type pl_pair =
+    G.Defs.CoreDefs.base_production * G.Defs.Lookahead.lookahead
 
   (** val plPairOf :
-      EntryProofs.FollowProofs.FirstProofs.NullableProofs.Gen.table_entry ->
-      G.Defs.production * G.Defs.Lookahead.lookahead **)
+      EntryProofs.FollowProofs.FirstProofs.NullableProofs.Gen.table_entry
+      ->
+      G.Defs.CoreDefs.base_production * G.Defs.Lookahead.lookahead **)
 
   let plPairOf = function
-  | (x, la) -> let ExistT (p, _) = x in (p, la)
+  | (p0, la) -> let ExistT (p, _) = p0 in (p, la)
 
   (** val plPairsOf :
-      EntryProofs.FollowProofs.FirstProofs.NullableProofs.Gen.table_entry list ->
-      (G.Defs.production * G.Defs.Lookahead.lookahead) list **)
+      EntryProofs.FollowProofs.FirstProofs.NullableProofs.Gen.table_entry
+      list ->
+      (G.Defs.CoreDefs.base_production * G.Defs.Lookahead.lookahead)
+      list **)
 
   let plPairsOf es =
     map plPairOf es
@@ -3912,26 +4424,31 @@ module GeneratorProofsFn =
 
   let pl_pair_eq_dec p p' =
     let (x, x0) = p in
-    let (p0, l) = p' in
+    let (b0, l) = p' in
     if let (x1, x2) = x in
-       let (n, l0) = p0 in
+       let (n, l0) = b0 in
        if G.SymTy.nt_eq_dec x1 n
        then let rec f l1 x3 =
               match l1 with
-              | [] -> (match x3 with
-                       | [] -> true
-                       | _ :: _ -> false)
+              | [] ->
+                (match x3 with
+                 | [] -> true
+                 | _ :: _ -> false)
               | y :: l2 ->
                 (match x3 with
                  | [] -> false
                  | s :: l3 ->
-                   if G.Defs.symbol_rect (fun t0 x4 ->
+                   if G.Defs.CoreDefs.symbol_rect
+                        (fun t0 x4 ->
                         match x4 with
-                        | G.Defs.T t1 -> G.SymTy.t_eq_dec t0 t1
-                        | G.Defs.NT _ -> false) (fun n0 x4 ->
+                        | G.Defs.CoreDefs.T t1 ->
+                          G.SymTy.t_eq_dec t0 t1
+                        | G.Defs.CoreDefs.NT _ -> false)
+                        (fun n0 x4 ->
                         match x4 with
-                        | G.Defs.T _ -> false
-                        | G.Defs.NT n1 -> G.SymTy.nt_eq_dec n0 n1) y s
+                        | G.Defs.CoreDefs.T _ -> false
+                        | G.Defs.CoreDefs.NT n1 ->
+                          G.SymTy.nt_eq_dec n0 n1) y s
                    then f l2 l3
                    else false)
             in f x2 l0
@@ -3978,15 +4495,17 @@ module Coq0_Make =
   module ParserAndProofs = ParserProofsFn(G)
 
   (** val parseTableOf :
-      G.Defs.grammar -> (char list, G.Defs.Collections.parse_table) sum **)
+      G.Defs.CoreDefs.grammar -> (char list,
+      G.Defs.Collections.parse_table) sum **)
 
   let parseTableOf g =
-    match findDup GeneratorAndProofs.EntryProofs.FollowProofs.L.production_eq_dec
-            (G.Defs.Utils.prodsOf g) with
-    | Some p ->
+    match findDup
+            GeneratorAndProofs.EntryProofs.FollowProofs.L.base_production_eq_dec
+            (G.Defs.Utils.baseProductions g) with
+    | Some b ->
       Inl
         (GeneratorAndProofs.EntryProofs.FollowProofs.FirstProofs.NullableProofs.Gen.dupMessage
-          p)
+          b)
     | None ->
       let nu =
         GeneratorAndProofs.EntryProofs.FollowProofs.FirstProofs.NullableProofs.Gen.mkNullableSet
@@ -4008,15 +4527,19 @@ module Coq0_Make =
         es
 
   (** val parse :
-      G.Defs.Collections.parse_table -> G.Defs.symbol -> G.Defs.token list ->
+      G.Defs.Collections.parse_table ->
+      G.Defs.CoreDefs.symbol -> G.Defs.CoreDefs.token list ->
       (ParserAndProofs.ParserSafety.ParserSoundness.ParserDefs.parse_failure,
-      G.Defs.symbol_semty * G.Defs.token list) sum **)
+      G.Defs.CoreDefs.symbol_semty * G.Defs.CoreDefs.token
+      list) sum **)
 
   let parse tbl s ts =
-    match ParserAndProofs.ParserSafety.ParserSoundness.ParserDefs.parseTree tbl s
-            ts G.Defs.Collections.NtSet.empty with
+    match ParserAndProofs.ParserSafety.ParserSoundness.ParserDefs.parseSymbol
+            tbl s ts G.Defs.Collections.NtSet.empty with
     | Inl failure -> Inl failure
-    | Inr p -> let (v, s0) = p in let ExistT (ts', _) = s0 in Inr (v, ts')
+    | Inr p ->
+      let (v, s0) = p in
+      let ExistT (ts', _) = s0 in Inr (v, ts')
  end
 
 type jvalue =
@@ -4045,8 +4568,8 @@ module Json_Types =
   | Comma
 
   (** val terminal'_rect :
-      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 ->
-      'a1 -> terminal' -> 'a1 **)
+      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 ->
+      'a1 -> 'a1 -> 'a1 -> 'a1 -> terminal' -> 'a1 **)
 
   let terminal'_rect f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 = function
   | Int -> f
@@ -4063,8 +4586,8 @@ module Json_Types =
   | Comma -> f10
 
   (** val terminal'_rec :
-      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 ->
-      'a1 -> terminal' -> 'a1 **)
+      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 ->
+      'a1 -> 'a1 -> 'a1 -> 'a1 -> terminal' -> 'a1 **)
 
   let terminal'_rec f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 = function
   | Int -> f
@@ -4091,7 +4614,8 @@ module Json_Types =
   | EltsTl
 
   (** val nonterminal'_rect :
-      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> nonterminal' -> 'a1 **)
+      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> nonterminal'
+      -> 'a1 **)
 
   let nonterminal'_rect f f0 f1 f2 f3 f4 = function
   | Value -> f
@@ -4102,7 +4626,8 @@ module Json_Types =
   | EltsTl -> f4
 
   (** val nonterminal'_rec :
-      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> nonterminal' -> 'a1 **)
+      'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> 'a1 -> nonterminal'
+      -> 'a1 **)
 
   let nonterminal'_rec f f0 f1 f2 f3 f4 = function
   | Value -> f
@@ -4136,18 +4661,22 @@ module Json_Types =
     | Null -> (match t' with
                | Null -> true
                | _ -> false)
-    | LeftBrace -> (match t' with
-                    | LeftBrace -> true
-                    | _ -> false)
-    | RightBrace -> (match t' with
-                     | RightBrace -> true
-                     | _ -> false)
-    | LeftBrack -> (match t' with
-                    | LeftBrack -> true
-                    | _ -> false)
-    | RightBrack -> (match t' with
-                     | RightBrack -> true
-                     | _ -> false)
+    | LeftBrace ->
+      (match t' with
+       | LeftBrace -> true
+       | _ -> false)
+    | RightBrace ->
+      (match t' with
+       | RightBrace -> true
+       | _ -> false)
+    | LeftBrack ->
+      (match t' with
+       | LeftBrack -> true
+       | _ -> false)
+    | RightBrack ->
+      (match t' with
+       | RightBrack -> true
+       | _ -> false)
     | Colon -> (match t' with
                 | Colon -> true
                 | _ -> false)
@@ -4178,9 +4707,9 @@ module Json_Types =
                  | EltsTl -> true
                  | _ -> false)
 
-  (** val show_t : terminal -> char list **)
+  (** val showT : terminal -> char list **)
 
-  let show_t = function
+  let showT = function
   | Int -> 'I'::('n'::('t'::[]))
   | Float -> 'F'::('l'::('o'::('a'::('t'::[]))))
   | Str -> 'S'::('t'::('r'::('i'::('n'::('g'::[])))))
@@ -4194,15 +4723,17 @@ module Json_Types =
   | Colon -> ':'::[]
   | Comma -> ','::[]
 
-  (** val show_nt : nonterminal -> char list **)
+  (** val showNT : nonterminal -> char list **)
 
-  let show_nt = function
+  let showNT = function
   | Value -> 'v'::('a'::('l'::('u'::('e'::[]))))
   | Pairs -> 'p'::('a'::('i'::('r'::('s'::[]))))
-  | PairsTl -> 'p'::('a'::('i'::('r'::('s'::('_'::('t'::('l'::[])))))))
+  | PairsTl ->
+    'p'::('a'::('i'::('r'::('s'::('_'::('t'::('l'::[])))))))
   | Pair -> 'p'::('a'::('i'::('r'::[])))
   | Elts -> 'e'::('l'::('t'::('s'::[])))
-  | EltsTl -> 'e'::('l'::('t'::('s'::('_'::('t'::('l'::[]))))))
+  | EltsTl ->
+    'e'::('l'::('t'::('s'::('_'::('t'::('l'::[]))))))
 
   type t_semty = __
 
@@ -4218,47 +4749,80 @@ module G =
 
 module PG = Coq0_Make(G)
 
-(** val jsonGrammar : G.Defs.grammar **)
+(** val jsonGrammar : G.Defs.CoreDefs.grammar **)
 
 let jsonGrammar =
-  { G.Defs.start = G.SymTy.Value; G.Defs.prods = ((ExistT ((G.SymTy.Value,
-    ((G.Defs.T G.SymTy.LeftBrace) :: ((G.Defs.NT G.SymTy.Pairs) :: ((G.Defs.T
+  { G.Defs.CoreDefs.start = G.SymTy.Value;
+    G.Defs.CoreDefs.prods = ((ExistT ((G.SymTy.Value,
+    ((G.Defs.CoreDefs.T
+    G.SymTy.LeftBrace) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.Pairs) :: ((G.Defs.CoreDefs.T
     G.SymTy.RightBrace) :: [])))),
-    (Obj.magic (fun tup -> let (_, t0) = tup in let (prs, _) = t0 in JAssoc prs)))) :: ((ExistT
-    ((G.SymTy.Value, ((G.Defs.T G.SymTy.LeftBrack) :: ((G.Defs.NT
-    G.SymTy.Elts) :: ((G.Defs.T G.SymTy.RightBrack) :: [])))),
-    (Obj.magic (fun tup -> let (_, t0) = tup in let (es, _) = t0 in JList es)))) :: ((ExistT
-    ((G.SymTy.Value, ((G.Defs.T G.SymTy.Str) :: [])),
+    (Obj.magic (fun tup ->
+      let (_, t0) = tup in let (prs, _) = t0 in JAssoc prs)))) :: ((ExistT
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.LeftBrack) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.Elts) :: ((G.Defs.CoreDefs.T
+    G.SymTy.RightBrack) :: [])))),
+    (Obj.magic (fun tup ->
+      let (_, t0) = tup in let (es, _) = t0 in JList es)))) :: ((ExistT
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.Str) :: [])),
     (Obj.magic (fun tup -> let (s, _) = tup in JString s)))) :: ((ExistT
-    ((G.SymTy.Value, ((G.Defs.T G.SymTy.Int) :: [])),
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.Int) :: [])),
     (Obj.magic (fun tup -> let (n, _) = tup in JInt n)))) :: ((ExistT
-    ((G.SymTy.Value, ((G.Defs.T G.SymTy.Float) :: [])),
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.Float) :: [])),
     (Obj.magic (fun tup -> let (n, _) = tup in JFloat n)))) :: ((ExistT
-    ((G.SymTy.Value, ((G.Defs.T G.SymTy.Tru) :: [])),
-    (Obj.magic (fun _ -> JBool true)))) :: ((ExistT ((G.SymTy.Value, ((G.Defs.T
-    G.SymTy.Fls) :: [])), (Obj.magic (fun _ -> JBool false)))) :: ((ExistT
-    ((G.SymTy.Value, ((G.Defs.T G.SymTy.Null) :: [])),
-    (Obj.magic (fun _ -> JNull)))) :: ((ExistT ((G.SymTy.Pairs, []),
-    (Obj.magic (fun _ -> [])))) :: ((ExistT ((G.SymTy.Pairs, ((G.Defs.NT
-    G.SymTy.Pair) :: ((G.Defs.NT G.SymTy.PairsTl) :: []))),
-    (Obj.magic (fun tup -> let (pr, t0) = tup in let (prs, _) = t0 in pr :: prs)))) :: ((ExistT
-    ((G.SymTy.PairsTl, []), (Obj.magic (fun _ -> [])))) :: ((ExistT
-    ((G.SymTy.PairsTl, ((G.Defs.T G.SymTy.Comma) :: ((G.Defs.NT
-    G.SymTy.Pair) :: ((G.Defs.NT G.SymTy.PairsTl) :: [])))),
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.Tru) :: [])),
+    (Obj.magic (fun _ -> JBool true)))) :: ((ExistT
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.Fls) :: [])),
+    (Obj.magic (fun _ -> JBool false)))) :: ((ExistT
+    ((G.SymTy.Value, ((G.Defs.CoreDefs.T
+    G.SymTy.Null) :: [])),
+    (Obj.magic (fun _ -> JNull)))) :: ((ExistT
+    ((G.SymTy.Pairs, []),
+    (Obj.magic (fun _ -> [])))) :: ((ExistT ((G.SymTy.Pairs,
+    ((G.Defs.CoreDefs.NT
+    G.SymTy.Pair) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.PairsTl) :: []))),
     (Obj.magic (fun tup ->
-      let (_, t0) = tup in let (pr, p) = t0 in let (prs, _) = p in pr :: prs)))) :: ((ExistT
-    ((G.SymTy.Pair, ((G.Defs.T G.SymTy.Str) :: ((G.Defs.T
-    G.SymTy.Colon) :: ((G.Defs.NT G.SymTy.Value) :: [])))),
+      let (pr, t0) = tup in let (prs, _) = t0 in pr :: prs)))) :: ((ExistT
+    ((G.SymTy.PairsTl, []),
+    (Obj.magic (fun _ -> [])))) :: ((ExistT
+    ((G.SymTy.PairsTl, ((G.Defs.CoreDefs.T
+    G.SymTy.Comma) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.Pair) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.PairsTl) :: [])))),
     (Obj.magic (fun tup ->
-      let (s, t0) = tup in let (_, p) = t0 in let (v, _) = p in (s, v))))) :: ((ExistT
-    ((G.SymTy.Elts, []), (Obj.magic (fun _ -> [])))) :: ((ExistT ((G.SymTy.Elts,
-    ((G.Defs.NT G.SymTy.Value) :: ((G.Defs.NT G.SymTy.EltsTl) :: []))),
-    (Obj.magic (fun tup -> let (v, t0) = tup in let (vs, _) = t0 in v :: vs)))) :: ((ExistT
-    ((G.SymTy.EltsTl, []), (Obj.magic (fun _ -> [])))) :: ((ExistT
-    ((G.SymTy.EltsTl, ((G.Defs.T G.SymTy.Comma) :: ((G.Defs.NT
-    G.SymTy.Value) :: ((G.Defs.NT G.SymTy.EltsTl) :: [])))),
+      let (_, t0) = tup in
+      let (pr, p) = t0 in let (prs, _) = p in pr :: prs)))) :: ((ExistT
+    ((G.SymTy.Pair, ((G.Defs.CoreDefs.T
+    G.SymTy.Str) :: ((G.Defs.CoreDefs.T
+    G.SymTy.Colon) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.Value) :: [])))),
     (Obj.magic (fun tup ->
-      let (_, t0) = tup in let (v, p) = t0 in let (vs, _) = p in v :: vs)))) :: []))))))))))))))))) }
+      let (s, t0) = tup in
+      let (_, p) = t0 in let (v, _) = p in (s, v))))) :: ((ExistT
+    ((G.SymTy.Elts, []),
+    (Obj.magic (fun _ -> [])))) :: ((ExistT ((G.SymTy.Elts,
+    ((G.Defs.CoreDefs.NT
+    G.SymTy.Value) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.EltsTl) :: []))),
+    (Obj.magic (fun tup ->
+      let (v, t0) = tup in let (vs, _) = t0 in v :: vs)))) :: ((ExistT
+    ((G.SymTy.EltsTl, []),
+    (Obj.magic (fun _ -> [])))) :: ((ExistT ((G.SymTy.EltsTl,
+    ((G.Defs.CoreDefs.T
+    G.SymTy.Comma) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.Value) :: ((G.Defs.CoreDefs.NT
+    G.SymTy.EltsTl) :: [])))),
+    (Obj.magic (fun tup ->
+      let (_, t0) = tup in
+      let (v, p) = t0 in let (vs, _) = p in v :: vs)))) :: []))))))))))))))))) }
 
 type simply_typed_token =
 | StInt of nat
@@ -4274,7 +4838,8 @@ type simply_typed_token =
 | StColon
 | StComma
 
-(** val depTokenOfSimplyTypedToken : simply_typed_token -> G.Defs.token **)
+(** val depTokenOfSimplyTypedToken :
+    simply_typed_token -> G.Defs.CoreDefs.token **)
 
 let depTokenOfSimplyTypedToken = function
 | StInt n -> ExistT (G.SymTy.Int, (Obj.magic n))
