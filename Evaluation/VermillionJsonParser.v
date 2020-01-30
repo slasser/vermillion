@@ -56,7 +56,7 @@ Module Json_Types <: SYMBOL_TYPES.
       {nt = nt'} + {nt <> nt'}.
   Proof. decide equality. Defined.
 
-  Definition show_t (a : terminal) : string :=
+  Definition showT (a : terminal) : string :=
     match a with
     | Int        => "Int"
     | Float      => "Float"
@@ -72,7 +72,7 @@ Module Json_Types <: SYMBOL_TYPES.
     | Comma      => ","
     end.
 
-  Definition show_nt (x : nonterminal) : string :=
+  Definition showNT (x : nonterminal) : string :=
     match x with
     | Value    => "value"
     | Pairs    => "pairs"
