@@ -3,9 +3,9 @@ SOURCES = json.ml mlexer.mll vlexer.mll jsonParser.mly jsonTokenizer.mly vermill
 
 RESULT = test
 
-OCAMLC = ~/OCaml/bin/ocamlc
+OCAMLC = ocamlc
 
-OCAMLOPT = ~/OCaml/bin/ocamlopt
+OCAMLOPT = ocamlopt
 
 OCAMLYACC = menhir
 
