@@ -176,7 +176,7 @@ let main (data_dir : string) (out_f : string) : unit =
   (* Finally, write the results file *)
   let out_c = open_out out_f                in
   let ()    = output_string out_c json_str  in
-  compare_semantic_values "more_data/gendata/nobel_05000.json"
+  compare_semantic_values "nobel_data/nobel_05000.json"
                
 let () = main Sys.argv.(1) Sys.argv.(2)
 

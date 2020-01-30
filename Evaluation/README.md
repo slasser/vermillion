@@ -6,7 +6,7 @@ To run the evaluation experiment:
 
 2. `./test <JSON_test_data_directory> <benchmark_results_file>`
 
--    This runs the evaluation and writes the results to `benchmark_results_file`.
+-    This runs the evaluation and writes the results to `benchmark_results_file` (it might take ~30 seconds).
 
 -    Example: `./test nobel_data benchmark_results.json`
 
